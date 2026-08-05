@@ -1,9 +1,23 @@
-<div class="min-h-screen flex flex-col items-center justify-center gap-4">
-  <h1 class="text-2xl font-semibold">Dashboard</h1>
+<app-app-layout>
 
-  <button
-    class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
-    (click)="logout()">
-    Logout
-  </button>
-</div>
+  <div class="space-y-6">
+
+    <div class="min-w-0">
+      <app-hero-card />
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[1.2fr_0.95fr] lg:items-stretch">
+
+      <div class="min-w-0 h-full">
+        <app-spending-trend />
+      </div>
+
+      <div class="min-w-0 h-full">
+        <app-recent-activity />
+      </div>
+
+    </div>
+
+  </div>
+
+</app-app-layout>

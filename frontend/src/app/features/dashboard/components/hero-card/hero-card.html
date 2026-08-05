@@ -1,0 +1,60 @@
+<div class="rounded-3xl bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white p-6 shadow-sm space-y-4">
+
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+
+    <div>
+      <p class="text-sm uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+        This Month
+      </p>
+
+      <h2 class="mt-3 text-5xl font-bold tracking-tight text-zinc-900 dark:text-white">
+        ₹{{ spent | number }}
+      </h2>
+
+      <p class="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+        Spending activity overview
+      </p>
+    </div>
+
+    <div class="flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-emerald-400 bg-emerald-500/10">
+      <div class="text-center">
+        <p class="text-xs uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+          Used
+        </p>
+        <p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
+          {{ percentage }}%
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="space-y-4">
+    <div class="flex items-center justify-between text-sm text-zinc-500 dark:text-zinc-400">
+      <span class="font-medium text-zinc-500 dark:text-zinc-400">Budget usage</span>
+      <span class="font-semibold text-zinc-900 dark:text-white">₹{{ budget | number }}</span>
+    </div>
+
+    <div class="space-y-3">
+      <div class="h-3 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+        <div class="h-full rounded-full bg-emerald-500 transition-all duration-300" [style.width.%]="percentage"></div>
+      </div>
+      <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+        <span>₹{{ budget - spent | number }} remaining</span>
+        <span>{{ percentage | number:'1.0-0' }}% used</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div class="rounded-3xl bg-zinc-50 p-4 dark:bg-zinc-950/60">
+      <p class="text-xs uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">Spent</p>
+      <p class="mt-2 text-lg font-semibold text-zinc-900 dark:text-white">₹{{ spent | number }}</p>
+    </div>
+    <div class="rounded-3xl bg-zinc-50 p-4 dark:bg-zinc-950/60">
+      <p class="text-xs uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">Days left</p>
+      <p class="mt-2 text-lg font-semibold text-zinc-900 dark:text-white">{{ daysLeft }} days</p>
+    </div>
+  </div>
+
+</div>
