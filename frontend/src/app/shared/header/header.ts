@@ -7,8 +7,6 @@ import { Component } from '@angular/core';
   styleUrl: './header.css',
 })
 export class Header {
-
-  greeting = 'Good Afternoon';
-
+  greeting = 'Good Afternoon, Aditya';
   today = 'Tuesday, 5 August';
 }

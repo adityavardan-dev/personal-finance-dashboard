@@ -9,7 +9,7 @@ import { DecimalPipe, NgFor } from '@angular/common';
 export class RecentActivity {
   transactions = [
     {
-      icon: '☕️',
+      icon: '☕',
       merchant: 'Brew & Co.',
       category: 'Coffee',
       date: 'Aug 4',
@@ -17,7 +17,7 @@ export class RecentActivity {
       type: 'debit',
     },
     {
-      icon: '🛍️',
+      icon: '🛍',
       merchant: 'Moda Street',
       category: 'Shopping',
       date: 'Aug 3',
