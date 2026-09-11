@@ -1,0 +1,21 @@
+<div class="min-h-screen overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
+  <div class="mx-auto max-w-6xl px-3 py-3 sm:px-4 sm:py-4">
+    <app-header />
+
+    <div class="mt-2.5 grid gap-4 md:grid-cols-[auto_1fr] md:items-start">
+      <div class="hidden md:block md:w-20 lg:w-72">
+        <app-sidebar />
+      </div>
+
+      <main class="min-w-0 flex-1 overflow-y-auto pb-24 md:pb-10">
+        <div class="space-y-3.5">
+          <ng-content />
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="md:hidden">
+    <app-bottom-nav />
+  </div>
+</div>
