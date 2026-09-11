@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AppLayout } from '../../shared/app-layout/app-layout';
+import { CategoryIcon } from '../../shared/category-icon/category-icon';
 
 interface Transaction {
   merchant: string;
@@ -9,23 +10,22 @@ interface Transaction {
   date: string;
   amount: number;
   type: 'debit' | 'credit';
-  icon: string;
 }
 
 @Component({
   selector: 'app-history',
-  imports: [AppLayout, DecimalPipe, RouterLink],
+  imports: [AppLayout, DecimalPipe, RouterLink, CategoryIcon],
   templateUrl: './history.html',
 })
 export class HistoryComponent {
   readonly transactions: Transaction[] = [
-    { merchant: 'Brew & Co.', category: 'Coffee', date: 'Today · Aug 4', amount: 720, type: 'debit', icon: '☕' },
-    { merchant: 'Moda Street', category: 'Shopping', date: 'Yesterday · Aug 3', amount: 2480, type: 'debit', icon: '🛍' },
-    { merchant: 'Parcel Hub', category: 'Delivery', date: 'Aug 2', amount: 1150, type: 'debit', icon: '📦' },
-    { merchant: 'Energy Co.', category: 'Utilities', date: 'Aug 1', amount: 3620, type: 'debit', icon: '⚡' },
-    { merchant: 'Payroll', category: 'Income', date: 'Jul 31', amount: 52200, type: 'credit', icon: '💼' },
-    { merchant: 'City Transit', category: 'Transport', date: 'Jul 30', amount: 680, type: 'debit', icon: '🚇' },
-    { merchant: 'Streambox', category: 'Entertainment', date: 'Jul 29', amount: 799, type: 'debit', icon: '🎬' },
+    { merchant: 'Brew & Co.', category: 'Coffee', date: 'Today · Aug 4', amount: 720, type: 'debit' },
+    { merchant: 'Moda Street', category: 'Shopping', date: 'Yesterday · Aug 3', amount: 2480, type: 'debit' },
+    { merchant: 'Parcel Hub', category: 'Delivery', date: 'Aug 2', amount: 1150, type: 'debit' },
+    { merchant: 'Energy Co.', category: 'Utilities', date: 'Aug 1', amount: 3620, type: 'debit' },
+    { merchant: 'Payroll', category: 'Income', date: 'Jul 31', amount: 52200, type: 'credit' },
+    { merchant: 'City Transit', category: 'Transport', date: 'Jul 30', amount: 680, type: 'debit' },
+    { merchant: 'Streambox', category: 'Entertainment', date: 'Jul 29', amount: 799, type: 'debit' },
   ];
 
   protected filter: 'all' | 'expenses' | 'income' = 'all';
