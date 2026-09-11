@@ -319,7 +319,7 @@ Standard Mobile
 
 Large Mobile
 
-430px
+425px
 
 Tablet
 
