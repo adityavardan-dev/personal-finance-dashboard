@@ -1,14 +1,14 @@
-<div class="min-h-screen overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
-  <div class="mx-auto max-w-6xl px-3 py-3 sm:px-4 sm:py-4">
+<div class="min-h-screen overflow-x-clip bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-white">
+  <div class="mx-auto min-h-screen max-w-7xl px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
     <app-header />
 
-    <div class="mt-2.5 grid gap-4 md:grid-cols-[auto_1fr] md:items-start">
-      <div class="hidden md:block md:w-20 lg:w-72">
+    <div class="mt-5 grid gap-5 md:grid-cols-[5rem_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-6">
+      <aside class="hidden md:block">
         <app-sidebar />
-      </div>
+      </aside>
 
-      <main class="min-w-0 flex-1 overflow-y-auto pb-24 md:pb-10">
-        <div class="space-y-3.5">
+      <main class="min-w-0 pb-24 md:pb-8 lg:pb-2" tabindex="-1">
+        <div class="space-y-6">
           <ng-content />
         </div>
       </main>
