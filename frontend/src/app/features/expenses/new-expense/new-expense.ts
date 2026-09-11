@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { AppLayout } from '../../../shared/app-layout/app-layout';
 
 interface CategoryOption {
   name: string;
@@ -9,7 +10,7 @@ interface CategoryOption {
 
 @Component({
   selector: 'app-new-expense',
-  imports: [FormsModule, RouterLink],
+  imports: [AppLayout, FormsModule, RouterLink],
   templateUrl: './new-expense.html',
 })
 export class NewExpenseComponent {
