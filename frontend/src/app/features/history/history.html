@@ -12,60 +12,17 @@
     </header>
 
     <section class="grid gap-4 sm:grid-cols-3" aria-label="Transaction summary">
-      <article class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
-        <p class="text-sm text-zinc-500 dark:text-zinc-400">All activity</p>
-        <p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">{{ transactions.length }}</p>
-        <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Recent transactions</p>
-      </article>
-      <article class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
-        <p class="text-sm text-zinc-500 dark:text-zinc-400">Expenses</p>
-        <p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">₹{{ totalExpenses | number }}</p>
-        <p class="mt-1 text-xs text-red-600 dark:text-red-400">Money out</p>
-      </article>
-      <article class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
-        <p class="text-sm text-zinc-500 dark:text-zinc-400">Income</p>
-        <p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">₹{{ totalIncome | number }}</p>
-        <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">Money in</p>
-      </article>
+      <article class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6"><p class="text-sm text-zinc-500 dark:text-zinc-400">All activity</p><p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">{{ transactions.length }}</p><p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Recent transactions</p></article>
+      <article class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6"><p class="text-sm text-zinc-500 dark:text-zinc-400">Expenses</p><p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">₹{{ totalExpenses | number }}</p><p class="mt-1 text-xs text-red-600 dark:text-red-400">Money out</p></article>
+      <article class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6"><p class="text-sm text-zinc-500 dark:text-zinc-400">Income</p><p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">₹{{ totalIncome | number }}</p><p class="mt-1 text-xs text-blue-600 dark:text-blue-400">Money in</p></article>
     </section>
 
     <section class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6" aria-labelledby="transactions-title">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Activity</p>
-          <h3 id="transactions-title" class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white">Recent transactions</h3>
-        </div>
-        <div class="flex rounded-2xl bg-zinc-100 p-1 dark:bg-zinc-950" role="group" aria-label="Filter transactions">
-          @for (option of [{key: 'all', label: 'All'}, {key: 'expenses', label: 'Expenses'}, {key: 'income', label: 'Income'}]; track option.key) {
-            <button type="button" (click)="setFilter($any(option.key))" [attr.aria-pressed]="filter === option.key"
-              class="min-h-10 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-              [class.bg-white]="filter === option.key" [class.text-zinc-950]="filter === option.key" [class.shadow-sm]="filter === option.key"
-              [class.dark:bg-zinc-800]="filter === option.key" [class.dark:text-white]="filter === option.key"
-              [class.text-zinc-500]="filter !== option.key" [class.dark:text-zinc-400]="filter !== option.key">{{ option.label }}</button>
-          }
-        </div>
-      </div>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Activity</p><h3 id="transactions-title" class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white">Recent transactions</h3></div><div class="flex rounded-2xl bg-zinc-100 p-1 dark:bg-zinc-950" role="group" aria-label="Filter transactions">@for (option of [{key: 'all', label: 'All'}, {key: 'expenses', label: 'Expenses'}, {key: 'income', label: 'Income'}]; track option.key) {<button type="button" (click)="setFilter($any(option.key))" [attr.aria-pressed]="filter === option.key" class="min-h-10 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" [class.bg-white]="filter === option.key" [class.text-zinc-950]="filter === option.key" [class.shadow-sm]="filter === option.key" [class.dark:bg-zinc-800]="filter === option.key" [class.dark:text-white]="filter === option.key" [class.text-zinc-500]="filter !== option.key" [class.dark:text-zinc-400]="filter !== option.key">{{ option.label }}</button>}</div></div>
 
-      <div class="mt-5 divide-y divide-zinc-100 dark:divide-zinc-800">
-        @for (item of filteredTransactions; track item.merchant + item.date) {
-          <article class="flex min-h-16 items-center gap-3 py-3 first:pt-0 last:pb-0 sm:gap-4">
-            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-base dark:bg-zinc-800" aria-hidden="true">{{ item.icon }}</div>
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold text-zinc-900 dark:text-white">{{ item.merchant }}</p>
-              <p class="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ item.category }} · {{ item.date }}</p>
-            </div>
-            <div class="shrink-0 text-right">
-              <p class="text-sm font-semibold" [class.text-red-600]="item.type === 'debit'" [class.dark:text-red-400]="item.type === 'debit'" [class.text-blue-600]="item.type === 'credit'" [class.dark:text-blue-400]="item.type === 'credit'">{{ item.type === 'credit' ? '+' : '-' }}₹{{ item.amount | number }}</p>
-              <p class="mt-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-zinc-400">{{ item.type === 'credit' ? 'Income' : 'Expense' }}</p>
-            </div>
-          </article>
-        }
-      </div>
+      <div class="mt-5 divide-y divide-zinc-100 dark:divide-zinc-800">@for (item of filteredTransactions; track item.merchant + item.date) {<article class="flex min-h-16 items-center gap-3 py-3 first:pt-0 last:pb-0 sm:gap-4"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-300"><app-category-icon [category]="item.category" /></span><div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-zinc-900 dark:text-white">{{ item.merchant }}</p><p class="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ item.category }} · {{ item.date }}</p></div><div class="shrink-0 text-right"><p class="text-sm font-semibold" [class.text-red-600]="item.type === 'debit'" [class.dark:text-red-400]="item.type === 'debit'" [class.text-blue-600]="item.type === 'credit'" [class.dark:text-blue-400]="item.type === 'credit'">{{ item.type === 'credit' ? '+' : '-' }}₹{{ item.amount | number }}</p><p class="mt-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-zinc-400">{{ item.type === 'credit' ? 'Income' : 'Expense' }}</p></div></article>}</div>
     </section>
 
-    <section class="rounded-3xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-800 dark:bg-zinc-900/60 sm:p-6">
-      <p class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Showing a local demo history for Priority 1.</p>
-      <p class="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">Live transaction persistence and server-backed filtering will be connected when the expense data API is implemented.</p>
-    </section>
+    <section class="rounded-3xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-800 dark:bg-zinc-900/60 sm:p-6"><p class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Showing a local demo history for Priority 1.</p><p class="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">Live transaction persistence and server-backed filtering will be connected when the expense data API is implemented.</p></section>
   </div>
 </app-app-layout>
