@@ -3,6 +3,7 @@ import { DashboardComponent } from './features/dashboard/dashboard';
 import { InsightsComponent } from './features/insights/insights';
 import { NewExpenseComponent } from './features/expenses/new-expense/new-expense';
 import { HistoryComponent } from './features/history/history';
+import { ProfileComponent } from './features/profile/profile';
 import { LoginComponent } from './features/auth/login/login';
 import { SignupComponent } from './features/auth/signup/signup';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password';
@@ -44,6 +45,11 @@ export const routes: Routes = [
   {
     path: 'history',
     component: HistoryComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'profile',
+    component: ProfileComponent,
     canActivate: [authGuard],
   },
 ];
