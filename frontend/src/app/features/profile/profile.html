@@ -1,0 +1,70 @@
+<app-layout>
+  <section class="mx-auto max-w-3xl space-y-6" aria-labelledby="profile-title">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-sm font-medium text-emerald-700 dark:text-emerald-400">Account</p>
+        <h1 id="profile-title" class="mt-1 text-3xl font-bold tracking-tight">Your profile</h1>
+        <p class="mt-2 max-w-xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+          Keep your account details and money preferences in one place.
+        </p>
+      </div>
+    </div>
+
+    <section class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6" aria-labelledby="account-title">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-lg font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" aria-hidden="true">
+          {{ user.initials }}
+        </div>
+        <div class="min-w-0">
+          <h2 id="account-title" class="text-xl font-semibold">{{ user.name }}</h2>
+          <p class="mt-1 break-all text-sm text-zinc-500 dark:text-zinc-400">{{ user.email }}</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6" aria-labelledby="preferences-title">
+      <div>
+        <h2 id="preferences-title" class="text-lg font-semibold">Preferences</h2>
+        <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Your current display and currency settings.</p>
+      </div>
+
+      <div class="mt-5 divide-y divide-zinc-100 dark:divide-zinc-800">
+        @for (preference of preferences; track preference.label) {
+          <div class="flex min-h-14 items-center justify-between gap-4 py-3">
+            <span class="text-sm font-medium text-zinc-700 dark:text-zinc-200">{{ preference.label }}</span>
+            <span class="text-right text-sm text-zinc-500 dark:text-zinc-400">{{ preference.value }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6" aria-labelledby="quick-links-title">
+      <div>
+        <h2 id="quick-links-title" class="text-lg font-semibold">Quick links</h2>
+        <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Jump back into the parts of XPENSE you use most.</p>
+      </div>
+      <div class="mt-5 grid gap-3 sm:grid-cols-2">
+        <a routerLink="/dashboard" class="flex min-h-12 items-center justify-between rounded-2xl border border-zinc-200 px-4 text-sm font-medium transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-zinc-700 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:focus:ring-offset-zinc-900">
+          Dashboard
+          <span aria-hidden="true">→</span>
+        </a>
+        <a routerLink="/history" class="flex min-h-12 items-center justify-between rounded-2xl border border-zinc-200 px-4 text-sm font-medium transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-zinc-700 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:focus:ring-offset-zinc-900">
+          Transaction history
+          <span aria-hidden="true">→</span>
+        </a>
+        <a routerLink="/insights" class="flex min-h-12 items-center justify-between rounded-2xl border border-zinc-200 px-4 text-sm font-medium transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-zinc-700 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:focus:ring-offset-zinc-900">
+          Spending insights
+          <span aria-hidden="true">→</span>
+        </a>
+        <a routerLink="/expenses/new" class="flex min-h-12 items-center justify-between rounded-2xl border border-zinc-200 px-4 text-sm font-medium transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-zinc-700 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:focus:ring-offset-zinc-900">
+          Add an expense
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </section>
+
+    <p class="rounded-2xl border border-dashed border-zinc-200 px-4 py-3 text-xs leading-5 text-zinc-500 dark:border-zinc-800 dark:text-zinc-500">
+      Demo profile: account editing and preference persistence will be connected when the live account API is enabled.
+    </p>
+  </section>
+</app-layout>
