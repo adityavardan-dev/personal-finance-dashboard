@@ -5,7 +5,6 @@ import { AppLayout } from '../../../shared/app-layout/app-layout';
 
 interface CategoryOption {
   name: string;
-  icon: string;
 }
 
 @Component({
@@ -22,19 +21,16 @@ export class NewExpenseComponent {
   protected saved = false;
 
   readonly categories: CategoryOption[] = [
-    { name: 'Food & Dining', icon: '🍽' },
-    { name: 'Shopping', icon: '🛍' },
-    { name: 'Transport', icon: '🚗' },
-    { name: 'Utilities', icon: '⚡' },
-    { name: 'Entertainment', icon: '🎬' },
-    { name: 'Other', icon: '•••' },
+    { name: 'Food & Dining' },
+    { name: 'Shopping' },
+    { name: 'Transport' },
+    { name: 'Utilities' },
+    { name: 'Entertainment' },
+    { name: 'Other' },
   ];
 
   protected saveExpense(): void {
-    if (!this.amount || Number(this.amount) <= 0 || !this.merchant.trim()) {
-      return;
-    }
-
+    if (!this.amount || Number(this.amount) <= 0 || !this.merchant.trim()) return;
     this.saved = true;
   }
 
