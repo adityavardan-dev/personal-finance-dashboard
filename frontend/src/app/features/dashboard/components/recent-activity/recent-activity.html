@@ -11,7 +11,9 @@
     @for (item of transactions; track item.merchant) {
       <a routerLink="/history" class="group flex min-h-14 items-center justify-between gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-zinc-950/70">
         <div class="flex min-w-0 items-center gap-3">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-base dark:bg-zinc-800" aria-hidden="true">{{ item.icon }}</div>
+          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-300">
+            <app-category-icon [category]="item.category" />
+          </span>
           <div class="min-w-0">
             <p class="truncate text-sm font-semibold text-zinc-900 dark:text-white">{{ item.merchant }}</p>
             <p class="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ item.category }} · {{ item.date }}</p>
