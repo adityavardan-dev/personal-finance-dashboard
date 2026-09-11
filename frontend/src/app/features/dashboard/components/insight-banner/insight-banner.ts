@@ -8,5 +8,5 @@ import { Component } from '@angular/core';
 })
 export class InsightBanner {
   readonly title = 'Your spending is trending higher';
-  readonly message = 'Dining and shopping are your biggest flexible categories this month.';
+  readonly message = 'Shopping and dining are your biggest flexible categories this month. This intelligence surface is designed to become richer as XPENSE adds personalized AI analysis.';
 }
