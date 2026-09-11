@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
+import { API_CONFIG } from '../../core/config/api.config';
 
 interface AuthResponse {
   accessToken?: string;
@@ -14,7 +15,7 @@ interface AuthResponse {
 })
 export class AuthService {
   private readonly TOKEN_KEY = 'accessToken';
-  private readonly API_URL = 'http://localhost:3000/auth';
+  private readonly API_URL = `${API_CONFIG.baseUrl}/auth`;
   private readonly http = inject(HttpClient);
 
   login(email: string, password: string) {
