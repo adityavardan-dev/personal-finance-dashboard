@@ -7,49 +7,56 @@
       <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Stay on top of your money, one day at a time.</p>
     </div>
 
-    <form [formGroup]="loginForm" (ngSubmit)="login()" class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+    <form [formGroup]="loginForm" (ngSubmit)="login()" [attr.aria-busy]="isSubmitting" novalidate class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
       @if (errorMessage) {
-        <div role="alert" class="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{{ errorMessage }}</div>
+        <div id="login-error" role="alert" aria-live="polite" class="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{{ errorMessage }}</div>
       }
 
       <div class="space-y-5">
         <div>
           <label for="email" class="mb-2 block text-sm font-medium">Email address</label>
           <input id="email" type="email" autocomplete="email" formControlName="email" placeholder="you@example.com"
-            class="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-emerald-400"
-            [attr.aria-invalid]="loginForm.controls.email.invalid && loginForm.controls.email.touched" />
+            class="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-emerald-400"
+            [attr.aria-invalid]="loginForm.controls.email.invalid && loginForm.controls.email.touched"
+            [attr.aria-describedby]="loginForm.controls.email.touched && loginForm.controls.email.invalid ? 'email-error' : null"
+            [disabled]="isSubmitting" />
           @if (loginForm.controls.email.touched && loginForm.controls.email.invalid) {
-            <p class="mt-2 text-xs text-red-600 dark:text-red-400">Enter a valid email address.</p>
+            <p id="email-error" class="mt-2 text-xs text-red-600 dark:text-red-400">Enter a valid email address.</p>
           }
         </div>
 
         <div>
           <div class="mb-2 flex items-center justify-between gap-3">
             <label for="password" class="block text-sm font-medium">Password</label>
-            <a routerLink="/forgot-password" class="text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-400">Forgot password?</a>
+            <a routerLink="/forgot-password" class="text-xs font-semibold text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:text-emerald-400 dark:focus-visible:ring-offset-zinc-900">Forgot password?</a>
           </div>
           <div class="relative">
             <input id="password" [type]="showPassword ? 'text' : 'password'" autocomplete="current-password" formControlName="password" placeholder="Enter your password"
-              class="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 pr-20 text-base outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-emerald-400"
-              [attr.aria-invalid]="loginForm.controls.password.invalid && loginForm.controls.password.touched" />
-            <button type="button" (click)="showPassword = !showPassword" class="absolute right-1 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-xl px-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 dark:hover:bg-zinc-800 dark:hover:text-zinc-100" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'" [attr.aria-pressed]="showPassword">
+              class="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 pr-20 text-base outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-emerald-400"
+              [attr.aria-invalid]="loginForm.controls.password.invalid && loginForm.controls.password.touched"
+              [attr.aria-describedby]="loginForm.controls.password.touched && loginForm.controls.password.invalid ? 'password-error' : null"
+              [disabled]="isSubmitting" />
+            <button type="button" (click)="showPassword = !showPassword" [disabled]="isSubmitting" class="absolute right-1 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-xl px-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-zinc-800 dark:hover:text-zinc-100" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'" [attr.aria-pressed]="showPassword">
               {{ showPassword ? 'Hide' : 'Show' }}
             </button>
           </div>
           @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
-            <p class="mt-2 text-xs text-red-600 dark:text-red-400">Password must be at least 8 characters.</p>
+            <p id="password-error" class="mt-2 text-xs text-red-600 dark:text-red-400">Password must be at least 8 characters.</p>
           }
         </div>
       </div>
 
       <button type="submit" [disabled]="loginForm.invalid || isSubmitting"
-        class="mt-7 min-h-12 w-full rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white transition hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-950">
-        {{ isSubmitting ? 'Signing in…' : 'Sign in' }}
+        class="mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white transition hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-950">
+        @if (isSubmitting) {
+          <span class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true"></span>
+        }
+        <span>{{ isSubmitting ? 'Signing in…' : 'Sign in' }}</span>
       </button>
 
       <p class="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
         Don't have an account?
-        <a routerLink="/signup" class="ml-1 font-semibold text-emerald-700 hover:underline dark:text-emerald-400">Create one</a>
+        <a routerLink="/signup" class="ml-1 font-semibold text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:text-emerald-400 dark:focus-visible:ring-offset-zinc-900">Create one</a>
       </p>
     </form>
 
