@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../auth';
 
 @Component({
   selector: 'app-signup',
@@ -11,9 +12,10 @@ import { Router, RouterLink } from '@angular/router';
 export class SignupComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
 
   protected readonly signupForm = this.formBuilder.group({
-    name: ['', [Validators.required, Validators.minLength(2)]],
+    name: ['', [Validators.required, Validators.minLength(3)]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]],
     confirmPassword: ['', [Validators.required]],
@@ -23,6 +25,7 @@ export class SignupComponent {
   protected showConfirmPassword = false;
   protected isSubmitting = false;
   protected errorMessage = '';
+  protected successMessage = '';
 
   protected togglePassword(): void {
     this.showPassword = !this.showPassword;
@@ -38,6 +41,7 @@ export class SignupComponent {
 
   protected submit(): void {
     this.errorMessage = '';
+    this.successMessage = '';
 
     if (this.signupForm.invalid || !this.passwordsMatch()) {
       this.signupForm.markAllAsTouched();
@@ -47,14 +51,22 @@ export class SignupComponent {
       return;
     }
 
-    // Registration API is not present in the current backend, so this checkpoint
-    // intentionally implements the complete UI/form flow without inventing an endpoint.
     this.isSubmitting = true;
-    this.errorMessage = 'Account creation will be connected when the registration API is added.';
-    this.isSubmitting = false;
-  }
+    const { name, email, password } = this.signupForm.getRawValue();
 
-  protected goToLogin(): void {
-    void this.router.navigate(['/login']);
+    this.authService.signup(name, email, password).subscribe({
+      next: () => {
+        this.isSubmitting = false;
+        this.successMessage = 'Your account is ready. Redirecting you to sign in…';
+        setTimeout(() => void this.router.navigate(['/login']), 900);
+      },
+      error: (error: { error?: { message?: string | string[] } }) => {
+        this.isSubmitting = false;
+        const message = error.error?.message;
+        this.errorMessage = Array.isArray(message)
+          ? message.join(' ')
+          : message || 'We couldn’t create your account. Please try again.';
+      },
+    });
   }
 }
