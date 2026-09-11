@@ -1,26 +1,59 @@
-<nav class="space-y-2">
+<nav aria-label="Primary navigation" class="sticky top-5">
+  <div class="mb-4 hidden rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm lg:block dark:border-zinc-800 dark:bg-zinc-900">
+    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">Your money</p>
+    <p class="mt-1 text-sm font-medium text-zinc-500 dark:text-zinc-400">Stay intentional with every expense.</p>
+  </div>
 
-  @for (item of navigationItems; track item.route) {
+  <div class="rounded-3xl border border-zinc-200 bg-white p-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:p-3">
+    <div class="space-y-1">
+      @for (item of navigationItems; track item.route) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+          #active="routerLinkActive"
+          [attr.aria-current]="active.isActive ? 'page' : null"
+          [attr.title]="item.label"
+          class="group flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-inset dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white lg:px-4">
 
-    <button
-      class="flex w-full items-center gap-4
-             rounded-2xl
-             px-4 py-3
-             transition
-             hover:bg-zinc-100
-             dark:hover:bg-zinc-800">
+          @switch (item.icon) {
+            @case ('home') {
+              <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 10.5 12 3l9 7.5" />
+                <path d="M5 10v9h14v-9" />
+              </svg>
+            }
+            @case ('chart') {
+              <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19V9" />
+                <path d="M20 19V5" />
+                <path d="M4 15c2.2 0 3.6-1.7 5-3 1.2-1.2 2.4-2.2 4-2.2 1.8 0 3.3.8 5 2" />
+              </svg>
+            }
+            @case ('plus') {
+              <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                <path d="M12 5v14" />
+                <path d="M5 12h14" />
+              </svg>
+            }
+            @case ('history') {
+              <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                <path d="M3 4v5h5" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+            }
+            @case ('user') {
+              <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
+                <path d="M5 20a7 7 0 0 1 14 0" />
+              </svg>
+            }
+          }
 
-      <!-- Placeholder Icon -->
-      <div
-        class="h-6 w-6 rounded bg-zinc-300 dark:bg-zinc-700">
-      </div>
-
-      <span class="hidden lg:block font-semibold text-zinc-900 dark:text-white">
-        {{ item.label }}
-      </span>
-
-    </button>
-
-  }
-
+          <span class="hidden min-w-0 flex-1 truncate text-sm font-semibold lg:block">{{ item.label }}</span>
+          <span class="sr-only">{{ item.description }}</span>
+        </a>
+      }
+    </div>
+  </div>
 </nav>
