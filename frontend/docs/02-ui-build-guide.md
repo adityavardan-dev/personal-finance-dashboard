@@ -124,7 +124,7 @@ Every screen must be designed and verified in the following order.
 375px
 
 3. Large Mobile
-430px
+425px
 
 4. Tablet
 768px
@@ -145,7 +145,7 @@ Design and validate every component in the following order.
 
 1. Small Mobile (320px)
 2. Standard Mobile (375px)
-3. Large Mobile (430px)
+3. Large Mobile (425px)
 4. Tablet (768px)
 5. Desktop (1024px)
 6. Large Desktop (1440px)

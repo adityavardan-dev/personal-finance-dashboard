@@ -3,9 +3,6 @@ import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
 import { AuthService } from '../auth';
 
-// The decorator @Component is used to define a component in Angular. 
-// It takes an object with metadata properties that describe the component, 
-// such as its selector, template, and styles. 
 @Component({
   selector: 'app-login',
   imports: [RouterLink, ReactiveFormsModule],
@@ -13,45 +10,38 @@ import { AuthService } from '../auth';
   styleUrl: './login.css',
 })
 export class LoginComponent {
+  private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
 
-  // The inject function is used to inject dependencies into the component.
-  private router = inject(Router);
-  private authService = inject(AuthService);
+  readonly loginForm = new FormGroup({
+    email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
+    password: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(8)] }),
+  });
 
-  loginForm = new FormGroup({
-    email: new FormControl('', [Validators.required, Validators.email]),
-    password: new FormControl('', [Validators.required, Validators.minLength(8)]),
-  })
+  showPassword = false;
+  isSubmitting = false;
+  errorMessage = '';
 
-  constructor() {
-    // Initialize the login form
-    // console.log(this.loginForm);
-  }
+  login(): void {
+    this.errorMessage = '';
 
-    login() {
-
-      if (this.loginForm.invalid) {
-        console.log('Form is invalid');
-        return;
-      }
-
-      const email = this.loginForm.get('email')?.value;
-      const password = this.loginForm.get('password')?.value;
-
-      return this.authService.login(email!, password!).subscribe({
-        next: (response) => {
-          console.log('Login successful:', response);
-          // Navigate to the dashboard after successful login
-          this.router.navigate(['/dashboard']);
-        },
-        error: (error) => {
-          console.error('Login failed:', error);
-          // Handle login error (e.g., show an error message to the user)
-        }
-      });
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
     }
 
-  logClick() {
-    console.log('Signup clicked');
+    this.isSubmitting = true;
+    const { email, password } = this.loginForm.getRawValue();
+
+    this.authService.login(email, password).subscribe({
+      next: () => {
+        this.isSubmitting = false;
+        void this.router.navigate(['/dashboard']);
+      },
+      error: () => {
+        this.isSubmitting = false;
+        this.errorMessage = 'We couldn’t sign you in. Check your email and password and try again.';
+      },
+    });
   }
 }

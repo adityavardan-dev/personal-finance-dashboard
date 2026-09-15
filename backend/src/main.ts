@@ -11,7 +11,7 @@ async function bootstrap() {
     transform: true, // automatically transforms payloads to be objects typed according to their DTO classes
   })); 
   app.enableCors({
-    origin: 'http://localhost:4200',
+    origin: 'http://127.0.0.1:4200',
   });
   await app.listen(process.env.PORT ?? 3000);
 
