@@ -7,6 +7,17 @@ import { Component } from '@angular/core';
   styleUrl: './header.css',
 })
 export class Header {
-  greeting = 'Good Afternoon, Aditya';
-  today = 'Tuesday, 5 August';
+  readonly greeting = this.buildGreeting();
+  readonly today = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  private buildGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
 }

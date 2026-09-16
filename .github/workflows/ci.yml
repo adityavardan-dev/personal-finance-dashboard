@@ -31,6 +31,10 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Run Frontend Unit Tests
+        working-directory: frontend
+        run: npm test -- --run
+
 
   backend-build:
     name: Build NestJS Backend  
@@ -55,3 +59,7 @@ jobs:
       - name: Build NestJS Application
         working-directory: backend
         run: npm run build
+
+      - name: Run Backend Unit Tests
+        working-directory: backend
+        run: npm test
