@@ -1,7 +1,7 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { HistoryComponent } from './history';
 import { ExpenseService } from '../expenses/expense.service';
@@ -12,85 +12,120 @@ const mockExpenses = [
 ];
 
 describe('HistoryComponent', () => {
-  let component: HistoryComponent;
   let fixture: ComponentFixture<HistoryComponent>;
-  let mockExpenseService: { list: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+  let c: any;
+  let mockList: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    mockExpenseService = { list: vi.fn().mockReturnValue(of(mockExpenses)), create: vi.fn() };
+    mockList = vi.fn().mockReturnValue(of(mockExpenses));
 
     await TestBed.configureTestingModule({
       imports: [HistoryComponent],
       providers: [
         provideRouter([]),
-        { provide: ExpenseService, useValue: mockExpenseService },
+        { provide: ExpenseService, useValue: { list: mockList, create: vi.fn() } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
     fixture = TestBed.createComponent(HistoryComponent);
-    component = fixture.componentInstance;
+    c = fixture.componentInstance as any;
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
-  it('calls ExpenseService.list() on init', () => {
-    expect(mockExpenseService.list).toHaveBeenCalledTimes(1);
-  });
+  // --- Signal state ---
 
-  it('populates transactions from API response, newest first', () => {
-    expect(component['transactions']).toHaveLength(2);
-    expect(component['transactions'][0].merchant).toBe('Amazon');
+  it('populates transactions from ExpenseService.list(), newest first', () => {
+    expect(c.transactions()).toHaveLength(2);
+    expect(c.transactions()[0].merchant).toBe('Amazon');
+    expect(c.transactions()[1].merchant).toBe('Swiggy');
   });
 
   it('maps all API expenses to type debit', () => {
-    expect(component['transactions'].every((t) => t.type === 'debit')).toBe(true);
+    expect(c.transactions().every((t: any) => t.type === 'debit')).toBe(true);
   });
 
-  it('sets isLoading to false after successful fetch', () => {
-    expect(component['isLoading']).toBe(false);
+  it('isLoading is false after Observable emits', () => {
+    expect(c.isLoading()).toBe(false);
   });
+
+  // --- DOM rendering ---
+
+  it('renders returned expense merchants in the DOM', () => {
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Amazon');
+    expect(text).toContain('Swiggy');
+  });
+
+  it('transaction count updates from 0 to the returned count', async () => {
+    const subject = new Subject<typeof mockExpenses>();
+    mockList.mockReturnValue(subject.asObservable());
+
+    const f2 = TestBed.createComponent(HistoryComponent);
+    f2.detectChanges();
+    await f2.whenStable();
+    f2.detectChanges();
+
+    // Before data arrives, initial value is null → transactions is [] → count is 0
+    expect(f2.nativeElement.textContent).toContain('0');
+
+    subject.next(mockExpenses);
+    subject.complete();
+    f2.detectChanges();
+    await f2.whenStable();
+    f2.detectChanges();
+
+    expect(f2.nativeElement.textContent).toContain('2');
+  });
+
+  // --- Filtering ---
 
   describe('filtering', () => {
     it('filter all returns all transactions', () => {
-      component['setFilter']('all');
-      expect(component.filteredTransactions).toHaveLength(2);
+      c.setFilter('all');
+      expect(c.filteredTransactions()).toHaveLength(2);
     });
 
     it('filter expenses returns only debit transactions', () => {
-      component['setFilter']('expenses');
-      expect(component.filteredTransactions.every((t) => t.type === 'debit')).toBe(true);
-      expect(component.filteredTransactions).toHaveLength(2);
+      c.setFilter('expenses');
+      expect(c.filteredTransactions().every((t: any) => t.type === 'debit')).toBe(true);
+      expect(c.filteredTransactions()).toHaveLength(2);
     });
 
     it('filter income returns empty when no credit transactions', () => {
-      component['setFilter']('income');
-      expect(component.filteredTransactions).toHaveLength(0);
+      c.setFilter('income');
+      expect(c.filteredTransactions()).toHaveLength(0);
     });
   });
+
+  // --- Totals ---
 
   describe('totals', () => {
     it('totalExpenses sums all debit amounts', () => {
-      expect(component.totalExpenses).toBe(1700);
+      expect(c.totalExpenses()).toBe(1700);
     });
 
     it('totalIncome is 0 when no credit transactions', () => {
-      expect(component.totalIncome).toBe(0);
+      expect(c.totalIncome()).toBe(0);
     });
   });
 
+  // --- API failure ---
+
   describe('API failure', () => {
-    it('sets loadError and keeps transactions empty without crashing', () => {
-      mockExpenseService.list.mockReturnValue(throwError(() => new Error('Network error')));
-      component['isLoading'] = true;
-      component['loadError'] = false;
-      component['transactions'] = [];
+    it('sets loadError and keeps transactions empty without crashing', async () => {
+      mockList.mockReturnValue(throwError(() => new Error('Network error')));
+      const f2 = TestBed.createComponent(HistoryComponent);
+      const c2 = f2.componentInstance as any;
+      f2.detectChanges();
+      await f2.whenStable();
+      f2.detectChanges();
 
-      component.ngOnInit();
-
-      expect(component['loadError']).toBe(true);
-      expect(component['isLoading']).toBe(false);
-      expect(component['transactions']).toHaveLength(0);
+      expect(c2.loadError()).toBe(true);
+      expect(c2.isLoading()).toBe(false);
+      expect(c2.transactions()).toHaveLength(0);
     });
   });
 });

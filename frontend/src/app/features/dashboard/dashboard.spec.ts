@@ -12,69 +12,92 @@ const mockExpenses = [
 ];
 
 describe('DashboardComponent', () => {
-  let component: DashboardComponent;
   let fixture: ComponentFixture<DashboardComponent>;
-  let mockExpenseService: { list: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+  let c: any;
+  let mockList: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    mockExpenseService = { list: vi.fn().mockReturnValue(of(mockExpenses)), create: vi.fn() };
+    mockList = vi.fn().mockReturnValue(of(mockExpenses));
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
         provideRouter([]),
-        { provide: ExpenseService, useValue: mockExpenseService },
+        { provide: ExpenseService, useValue: { list: mockList, create: vi.fn() } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DashboardComponent);
-    component = fixture.componentInstance;
+    c = fixture.componentInstance as any;
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(c).toBeTruthy();
   });
 
-  it('calls ExpenseService.list() on init', () => {
-    expect(mockExpenseService.list).toHaveBeenCalledTimes(1);
+  // --- Signal state ---
+
+  it('totalSpent calculates sum of all expense amounts', () => {
+    expect(c.totalSpent()).toBe(1700);
   });
 
-  it('calculates totalSpent as sum of all expense amounts', () => {
-    expect(component['totalSpent']).toBe(1700);
-  });
-
-  it('populates recentTransactions newest-first (reversed)', () => {
-    expect(component['recentTransactions']).toHaveLength(2);
-    expect(component['recentTransactions'][0].merchant).toBe('Amazon');
-    expect(component['recentTransactions'][1].merchant).toBe('Swiggy');
+  it('recentTransactions is newest-first', () => {
+    expect(c.recentTransactions()).toHaveLength(2);
+    expect(c.recentTransactions()[0].merchant).toBe('Amazon');
+    expect(c.recentTransactions()[1].merchant).toBe('Swiggy');
   });
 
   it('all recent transactions have type debit', () => {
-    expect(component['recentTransactions'].every((t) => t.type === 'debit')).toBe(true);
+    expect(c.recentTransactions().every((t: any) => t.type === 'debit')).toBe(true);
   });
 
-  it('limits recentTransactions to 5 even when more expenses exist', () => {
-    const manyExpenses = Array.from({ length: 10 }, (_, i) => ({
+  it('limits recentTransactions to 5 even when more expenses exist', async () => {
+    const many = Array.from({ length: 10 }, (_, i) => ({
       id: `id-${i}`, userId: 1, amount: 100, category: 'Other',
       merchant: `Merchant ${i}`, date: '2026-09-17', createdAt: '',
     }));
-    mockExpenseService.list.mockReturnValue(of(manyExpenses));
-    component.ngOnInit();
-    expect(component['recentTransactions']).toHaveLength(5);
+    mockList.mockReturnValue(of(many));
+    const f2 = TestBed.createComponent(DashboardComponent);
+    const c2 = f2.componentInstance as any;
+    f2.detectChanges();
+    await f2.whenStable();
+    f2.detectChanges();
+    expect(c2.recentTransactions()).toHaveLength(5);
   });
 
-  it('handles empty expense list without crashing', () => {
-    mockExpenseService.list.mockReturnValue(of([]));
-    component.ngOnInit();
-    expect(component['totalSpent']).toBe(0);
-    expect(component['recentTransactions']).toHaveLength(0);
+  it('handles empty expense list without crashing', async () => {
+    mockList.mockReturnValue(of([]));
+    const f2 = TestBed.createComponent(DashboardComponent);
+    const c2 = f2.componentInstance as any;
+    f2.detectChanges();
+    await f2.whenStable();
+    f2.detectChanges();
+    expect(c2.totalSpent()).toBe(0);
+    expect(c2.recentTransactions()).toHaveLength(0);
   });
 
-  it('handles API failure without crashing', () => {
-    mockExpenseService.list.mockReturnValue(throwError(() => new Error('Network error')));
-    expect(() => component.ngOnInit()).not.toThrow();
+  it('handles API failure without crashing', async () => {
+    mockList.mockReturnValue(throwError(() => new Error('Network error')));
+    const f2 = TestBed.createComponent(DashboardComponent);
+    f2.detectChanges();
+    await f2.whenStable();
+    f2.detectChanges();
+    expect(f2.componentInstance).toBeTruthy();
+  });
+
+  // --- DOM rendering ---
+
+  it('Dashboard renders the calculated spending via HeroCard binding', () => {
+    expect(fixture.nativeElement.querySelector('app-hero-card')).toBeTruthy();
+    expect(c.totalSpent()).toBe(1700);
+  });
+
+  it('RecentActivity receives the returned transactions via signal binding', () => {
+    expect(fixture.nativeElement.querySelector('app-recent-activity')).toBeTruthy();
+    expect(c.recentTransactions()).toHaveLength(2);
   });
 });

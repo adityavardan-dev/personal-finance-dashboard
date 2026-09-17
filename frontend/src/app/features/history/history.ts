@@ -1,6 +1,8 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { catchError, of } from 'rxjs';
 import { AppLayout } from '../../shared/app-layout/app-layout';
 import { CategoryIcon } from '../../shared/category-icon/category-icon';
 import { ExpenseService } from '../expenses/expense.service';
@@ -18,51 +20,59 @@ interface Transaction {
   imports: [AppLayout, DecimalPipe, RouterLink, CategoryIcon],
   templateUrl: './history.html',
 })
-export class HistoryComponent implements OnInit {
+export class HistoryComponent {
   private readonly expenseService = inject(ExpenseService);
 
-  protected transactions: Transaction[] = [];
-  protected isLoading = true;
-  protected loadError = false;
-  protected filter: 'all' | 'expenses' | 'income' = 'all';
+  protected readonly loadError = signal(false);
 
-  ngOnInit(): void {
-    this.expenseService.list().subscribe({
-      next: (expenses) => {
-        this.transactions = [...expenses].reverse().map((e) => ({
-          merchant: e.merchant,
-          category: e.category,
-          date: new Date(e.date + 'T00:00:00').toLocaleDateString('en-IN', {
-            day: 'numeric',
-            month: 'short',
-          }),
-          amount: e.amount,
-          type: 'debit' as const,
-        }));
-        this.isLoading = false;
-      },
-      error: () => {
-        this.loadError = true;
-        this.isLoading = false;
-      },
-    });
-  }
+  private readonly expenses = toSignal(
+    this.expenseService.list().pipe(
+      catchError(() => {
+        this.loadError.set(true);
+        return of([]);
+      }),
+    ),
+    { initialValue: null },
+  );
 
-  get filteredTransactions(): Transaction[] {
-    if (this.filter === 'expenses') return this.transactions.filter((t) => t.type === 'debit');
-    if (this.filter === 'income') return this.transactions.filter((t) => t.type === 'credit');
-    return this.transactions;
-  }
+  protected readonly isLoading = computed(() => this.expenses() === null);
 
-  get totalExpenses(): number {
-    return this.transactions.filter((t) => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);
-  }
+  protected readonly transactions = computed<Transaction[]>(() =>
+    [...(this.expenses() ?? [])].reverse().map((e) => ({
+      merchant: e.merchant,
+      category: e.category,
+      date: new Date(e.date + 'T00:00:00').toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+      }),
+      amount: e.amount,
+      type: 'debit' as const,
+    })),
+  );
 
-  get totalIncome(): number {
-    return this.transactions.filter((t) => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0);
-  }
+  protected readonly filter = signal<'all' | 'expenses' | 'income'>('all');
 
-  protected setFilter(filter: 'all' | 'expenses' | 'income'): void {
-    this.filter = filter;
+  protected readonly filteredTransactions = computed(() => {
+    const f = this.filter();
+    const t = this.transactions();
+    if (f === 'expenses') return t.filter((tx) => tx.type === 'debit');
+    if (f === 'income') return t.filter((tx) => tx.type === 'credit');
+    return t;
+  });
+
+  protected readonly totalExpenses = computed(() =>
+    this.transactions()
+      .filter((t) => t.type === 'debit')
+      .reduce((sum, t) => sum + t.amount, 0),
+  );
+
+  protected readonly totalIncome = computed(() =>
+    this.transactions()
+      .filter((t) => t.type === 'credit')
+      .reduce((sum, t) => sum + t.amount, 0),
+  );
+
+  protected setFilter(f: 'all' | 'expenses' | 'income'): void {
+    this.filter.set(f);
   }
 }
