@@ -10,6 +10,14 @@ export interface CreateExpensePayload {
   note?: string;
 }
 
+export interface UpdateExpensePayload {
+  amount?: number;
+  category?: string;
+  merchant?: string;
+  date?: string;
+  note?: string;
+}
+
 export interface Expense {
   id: string;
   userId: number;
@@ -32,5 +40,17 @@ export class ExpenseService {
 
   list() {
     return this.http.get<Expense[]>(this.url);
+  }
+
+  getById(id: string) {
+    return this.http.get<Expense>(`${this.url}/${id}`);
+  }
+
+  update(id: string, payload: UpdateExpensePayload) {
+    return this.http.patch<Expense>(`${this.url}/${id}`, payload);
+  }
+
+  delete(id: string) {
+    return this.http.delete<Expense>(`${this.url}/${id}`);
   }
 }

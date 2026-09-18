@@ -6,6 +6,8 @@ import { vi } from 'vitest';
 import { HistoryComponent } from './history';
 import { ExpenseService } from '../expenses/expense.service';
 
+
+
 const mockExpenses = [
   { id: 'a', userId: 1, amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-16', createdAt: '2026-09-16T10:00:00.000Z' },
   { id: 'b', userId: 1, amount: 1200, category: 'Shopping', merchant: 'Amazon', date: '2026-09-17', createdAt: '2026-09-17T11:00:00.000Z' },
@@ -15,15 +17,17 @@ describe('HistoryComponent', () => {
   let fixture: ComponentFixture<HistoryComponent>;
   let c: any;
   let mockList: ReturnType<typeof vi.fn>;
+  let mockDelete: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     mockList = vi.fn().mockReturnValue(of(mockExpenses));
+    mockDelete = vi.fn();
 
     await TestBed.configureTestingModule({
       imports: [HistoryComponent],
       providers: [
         provideRouter([]),
-        { provide: ExpenseService, useValue: { list: mockList, create: vi.fn() } },
+        { provide: ExpenseService, useValue: { list: mockList, create: vi.fn(), delete: mockDelete } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -126,6 +130,57 @@ describe('HistoryComponent', () => {
       expect(c2.loadError()).toBe(true);
       expect(c2.isLoading()).toBe(false);
       expect(c2.transactions()).toHaveLength(0);
+    });
+  });
+
+  // --- Edit action ---
+
+  describe('edit action', () => {
+    it('transactions carry the expense id from the API response', () => {
+      expect(c.transactions()[0].id).toBe('b');
+      expect(c.transactions()[1].id).toBe('a');
+    });
+  });
+
+  // --- Delete action ---
+
+  describe('delete action', () => {
+    it('does not call the API when the user cancels confirmation', () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(false);
+      mockDelete.mockReturnValue(of(mockExpenses[0]));
+
+      c.deleteExpense('a');
+
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+
+    it('removes the transaction from the list after successful delete', () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      mockDelete.mockReturnValue(of(mockExpenses[0]));
+
+      expect(c.transactions()).toHaveLength(2);
+      c.deleteExpense('a');
+      expect(c.transactions()).toHaveLength(1);
+      expect(c.transactions()[0].id).toBe('b');
+    });
+
+    it('calls DELETE API with the correct expense id', () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      mockDelete.mockReturnValue(of(mockExpenses[1]));
+
+      c.deleteExpense('b');
+
+      expect(mockDelete).toHaveBeenCalledWith('b');
+    });
+
+    it('sets deleteError and keeps the transaction when delete fails', () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      mockDelete.mockReturnValue(throwError(() => new Error('Network error')));
+
+      c.deleteExpense('a');
+
+      expect(c.deleteError()).toBe(true);
+      expect(c.transactions()).toHaveLength(2);
     });
   });
 });

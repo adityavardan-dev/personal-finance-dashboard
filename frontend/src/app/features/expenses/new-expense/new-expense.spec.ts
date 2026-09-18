@@ -1,6 +1,6 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { ExpenseService } from '../expense.service';
@@ -8,7 +8,7 @@ import { NewExpenseComponent } from './new-expense';
 
 describe('NewExpenseComponent', () => {
   let component: NewExpenseComponent;
-  let mockExpenseService: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn> };
+  let mockExpenseService: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
   let router: Router;
 
   const validExpenseResponse = {
@@ -22,13 +22,14 @@ describe('NewExpenseComponent', () => {
   };
 
   beforeEach(async () => {
-    mockExpenseService = { create: vi.fn(), list: vi.fn() };
+    mockExpenseService = { create: vi.fn(), list: vi.fn(), getById: vi.fn(), update: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [NewExpenseComponent],
       providers: [
         provideRouter([]),
         { provide: ExpenseService, useValue: mockExpenseService },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(null) } } } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -170,5 +171,137 @@ describe('NewExpenseComponent', () => {
 
       expect(component['isSubmitting']).toBe(false);
     });
+  });
+});
+
+describe('NewExpenseComponent — edit mode', () => {
+  const existingExpense = {
+    id: 'uuid-edit-1',
+    userId: 1,
+    amount: 750,
+    category: 'Transport',
+    merchant: 'Ola',
+    date: '2026-09-15',
+    note: 'Quick ride',
+    createdAt: '2026-09-15T10:00:00.000Z',
+  };
+
+  let component: NewExpenseComponent;
+  let mockExpenseService: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+  let router: Router;
+
+  async function setupEditMode(id: string, updateMock?: ReturnType<typeof vi.fn>) {
+    mockExpenseService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn().mockReturnValue(of(existingExpense)),
+      update: updateMock ?? vi.fn(),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [NewExpenseComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ExpenseService, useValue: mockExpenseService },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(id) } } } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NewExpenseComponent);
+    component = fixture.componentInstance;
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('sets isEditMode to true when id param is present', async () => {
+    await setupEditMode('uuid-edit-1');
+    expect(component['isEditMode']).toBe(true);
+    expect(component['expenseId']).toBe('uuid-edit-1');
+  });
+
+  it('populates form fields from the loaded expense', async () => {
+    await setupEditMode('uuid-edit-1');
+    expect(component['amount']).toBe('750');
+    expect(component['merchant']).toBe('Ola');
+    expect(component['category']).toBe('Transport');
+    expect(component['date']).toBe('2026-09-15');
+    expect(component['note']).toBe('Quick ride');
+  });
+
+  it('calls getById with the correct id', async () => {
+    await setupEditMode('uuid-edit-1');
+    expect(mockExpenseService.getById).toHaveBeenCalledWith('uuid-edit-1');
+  });
+
+  it('calls update (not create) on submit', async () => {
+    const updateMock = vi.fn().mockReturnValue(of(existingExpense));
+    await setupEditMode('uuid-edit-1', updateMock);
+
+    component['saveExpense']();
+
+    expect(updateMock).toHaveBeenCalledWith(
+      'uuid-edit-1',
+      expect.objectContaining({ amount: 750, merchant: 'Ola' }),
+    );
+    expect(mockExpenseService.create).not.toHaveBeenCalled();
+  });
+
+  it('navigates to /history after successful update', async () => {
+    await setupEditMode('uuid-edit-1', vi.fn().mockReturnValue(of(existingExpense)));
+
+    component['saveExpense']();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/history']);
+  });
+
+  it('sets errorMessage when update fails', async () => {
+    await setupEditMode('uuid-edit-1', vi.fn().mockReturnValue(throwError(() => new Error('Server error'))));
+
+    component['saveExpense']();
+
+    expect(component['errorMessage']).toBeTruthy();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('resets isSubmitting to false after update failure', async () => {
+    await setupEditMode('uuid-edit-1', vi.fn().mockReturnValue(throwError(() => new Error('Server error'))));
+
+    component['saveExpense']();
+
+    expect(component['isSubmitting']).toBe(false);
+  });
+
+  it('sets errorMessage when getById fails', async () => {
+    mockExpenseService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn().mockReturnValue(throwError(() => new Error('Not found'))),
+      update: vi.fn(),
+    };
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [NewExpenseComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ExpenseService, useValue: mockExpenseService },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue('bad-id') } } } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NewExpenseComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['errorMessage']).toBeTruthy();
+    expect(fixture.componentInstance['isLoading']).toBe(false);
   });
 });

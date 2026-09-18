@@ -1,5 +1,6 @@
 jest.mock('fs');
 
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as fs from 'fs';
 import { ExpensesService } from './expenses.service';
@@ -122,6 +123,92 @@ describe('ExpensesService', () => {
       const results = service.findByUser(USER_A);
 
       expect(results).toHaveLength(0);
+    });
+  });
+
+  describe('findOne', () => {
+    it('returns the correct expense for the owning user', () => {
+      const result = service.findOne(USER_A, 'uuid-a1');
+
+      expect(result.id).toBe('uuid-a1');
+      expect(result.userId).toBe(USER_A);
+      expect(result.merchant).toBe('Swiggy');
+    });
+
+    it('throws NotFoundException for a missing ID', () => {
+      expect(() => service.findOne(USER_A, 'not-exist')).toThrow(NotFoundException);
+    });
+
+    it('throws NotFoundException when ID belongs to another user', () => {
+      expect(() => service.findOne(USER_A, 'uuid-b1')).toThrow(NotFoundException);
+    });
+  });
+
+  describe('update', () => {
+    it('updates editable fields and returns the updated expense', () => {
+      const result = service.update(USER_A, 'uuid-a1', { amount: 999, merchant: 'NewMerchant' });
+
+      expect(result.amount).toBe(999);
+      expect(result.merchant).toBe('NewMerchant');
+    });
+
+    it('supports partial updates — only supplied fields change', () => {
+      const result = service.update(USER_A, 'uuid-a1', { amount: 600 });
+
+      expect(result.amount).toBe(600);
+      expect(result.merchant).toBe('Swiggy');
+      expect(result.category).toBe('Food & Dining');
+    });
+
+    it('preserves id, userId, and createdAt', () => {
+      const result = service.update(USER_A, 'uuid-a1', { amount: 600 });
+
+      expect(result.id).toBe('uuid-a1');
+      expect(result.userId).toBe(USER_A);
+      expect(result.createdAt).toBe('2026-09-17T10:00:00.000Z');
+    });
+
+    it('persists updated data to the JSON file', () => {
+      service.update(USER_A, 'uuid-a1', { amount: 777 });
+
+      expect(mockedFs.writeFileSync).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws NotFoundException when ID belongs to another user', () => {
+      expect(() => service.update(USER_A, 'uuid-b1', { amount: 999 })).toThrow(NotFoundException);
+    });
+
+    it('throws NotFoundException for a missing expense', () => {
+      expect(() => service.update(USER_A, 'not-exist', { amount: 999 })).toThrow(NotFoundException);
+    });
+  });
+
+  describe('remove', () => {
+    it('removes the requested expense and returns it', () => {
+      const result = service.remove(USER_A, 'uuid-a1');
+
+      expect(result.id).toBe('uuid-a1');
+      expect(result.userId).toBe(USER_A);
+    });
+
+    it('persists the remaining collection without the deleted expense', () => {
+      const written: any[] = [];
+      mockedFs.writeFileSync.mockImplementation((_path, data) => {
+        written.push(JSON.parse(data as string));
+      });
+
+      service.remove(USER_A, 'uuid-a1');
+
+      expect(written[0]).toHaveLength(1);
+      expect(written[0][0].id).toBe('uuid-b1');
+    });
+
+    it('throws NotFoundException when ID belongs to another user', () => {
+      expect(() => service.remove(USER_A, 'uuid-b1')).toThrow(NotFoundException);
+    });
+
+    it('throws NotFoundException for a missing expense', () => {
+      expect(() => service.remove(USER_A, 'not-exist')).toThrow(NotFoundException);
     });
   });
 });

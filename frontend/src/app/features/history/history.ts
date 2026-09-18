@@ -8,6 +8,7 @@ import { CategoryIcon } from '../../shared/category-icon/category-icon';
 import { ExpenseService } from '../expenses/expense.service';
 
 interface Transaction {
+  id: string;
   merchant: string;
   category: string;
   date: string;
@@ -22,8 +23,9 @@ interface Transaction {
 })
 export class HistoryComponent {
   private readonly expenseService = inject(ExpenseService);
-
   protected readonly loadError = signal(false);
+  protected readonly deleteError = signal(false);
+  protected readonly deletedIds = signal<Set<string>>(new Set());
 
   private readonly expenses = toSignal(
     this.expenseService.list().pipe(
@@ -37,18 +39,23 @@ export class HistoryComponent {
 
   protected readonly isLoading = computed(() => this.expenses() === null);
 
-  protected readonly transactions = computed<Transaction[]>(() =>
-    [...(this.expenses() ?? [])].reverse().map((e) => ({
-      merchant: e.merchant,
-      category: e.category,
-      date: new Date(e.date + 'T00:00:00').toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'short',
-      }),
-      amount: e.amount,
-      type: 'debit' as const,
-    })),
-  );
+  protected readonly transactions = computed<Transaction[]>(() => {
+    const deleted = this.deletedIds();
+    return [...(this.expenses() ?? [])]
+      .filter((e) => !deleted.has(e.id))
+      .reverse()
+      .map((e) => ({
+        id: e.id,
+        merchant: e.merchant,
+        category: e.category,
+        date: new Date(e.date + 'T00:00:00').toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+        }),
+        amount: e.amount,
+        type: 'debit' as const,
+      }));
+  });
 
   protected readonly filter = signal<'all' | 'expenses' | 'income'>('all');
 
@@ -74,5 +81,19 @@ export class HistoryComponent {
 
   protected setFilter(f: 'all' | 'expenses' | 'income'): void {
     this.filter.set(f);
+  }
+
+  protected deleteExpense(id: string): void {
+    if (!window.confirm('Delete this expense? This cannot be undone.')) return;
+
+    this.deleteError.set(false);
+    this.expenseService.delete(id).subscribe({
+      next: () => {
+        this.deletedIds.update((ids) => new Set([...ids, id]));
+      },
+      error: () => {
+        this.deleteError.set(true);
+      },
+    });
   }
 }

@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { CreateExpenseDto } from './dto/create-expense.dto';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
 
 export interface Expense {
   id: string;
@@ -56,5 +57,42 @@ export class ExpensesService {
 
   findByUser(userId: number): Expense[] {
     return this.readAll().filter((e) => e.userId === userId);
+  }
+
+  findOne(userId: number, id: string): Expense {
+    const expense = this.readAll().find((e) => e.id === id && e.userId === userId);
+    if (!expense) throw new NotFoundException(`Expense ${id} not found`);
+    return expense;
+  }
+
+  update(userId: number, id: string, dto: UpdateExpenseDto): Expense {
+    const expenses = this.readAll();
+    const index = expenses.findIndex((e) => e.id === id && e.userId === userId);
+    if (index === -1) throw new NotFoundException(`Expense ${id} not found`);
+
+    const existing = expenses[index];
+    const updated: Expense = {
+      id: existing.id,
+      userId: existing.userId,
+      createdAt: existing.createdAt,
+      amount: dto.amount ?? existing.amount,
+      category: dto.category ?? existing.category,
+      merchant: dto.merchant ?? existing.merchant,
+      date: dto.date ?? existing.date,
+      note: dto.note !== undefined ? dto.note : existing.note,
+    };
+    expenses[index] = updated;
+    this.writeAll(expenses);
+    return updated;
+  }
+
+  remove(userId: number, id: string): Expense {
+    const expenses = this.readAll();
+    const index = expenses.findIndex((e) => e.id === id && e.userId === userId);
+    if (index === -1) throw new NotFoundException(`Expense ${id} not found`);
+
+    const [removed] = expenses.splice(index, 1);
+    this.writeAll(expenses);
+    return removed;
   }
 }

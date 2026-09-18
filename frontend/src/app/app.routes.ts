@@ -43,6 +43,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'expenses/:id/edit',
+    component: NewExpenseComponent,
+    canActivate: [authGuard],
+  },
+  {
     path: 'history',
     component: HistoryComponent,
     canActivate: [authGuard],
