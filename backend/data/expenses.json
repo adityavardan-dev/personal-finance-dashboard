@@ -1,0 +1,228 @@
+[
+  {
+    "id": "92a053c4-a8c0-40b5-9a08-b7f0556ff6fc",
+    "userId": 1,
+    "amount": 2000,
+    "category": "Food & Dining",
+    "merchant": "Swiggy",
+    "date": "2026-09-17",
+    "note": "Modak",
+    "createdAt": "2026-09-17T12:02:40.538Z"
+  },
+  {
+    "id": "cd7881d7-356b-40c4-bb40-9e05d5e82829",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789648083609",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T12:28:03.678Z"
+  },
+  {
+    "id": "6c52de31-af1f-4897-97b2-4e0eb27410e3",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789648095922",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T12:28:16.053Z"
+  },
+  {
+    "id": "767ef792-8d18-4e7d-ab68-a73350402c13",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789648117171",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T12:28:37.227Z"
+  },
+  {
+    "id": "5dd15374-4ddc-4c6c-8f08-29126e39da93",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789648129392",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T12:28:49.524Z"
+  },
+  {
+    "id": "07326f84-5e73-443f-9605-bbda702932e6",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789648762321",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T12:39:22.390Z"
+  },
+  {
+    "id": "d37bd0bb-412d-4ccc-b56c-1b341d0fffa6",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789648780258",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T12:39:40.382Z"
+  },
+  {
+    "id": "7cebcfb1-b704-4944-8988-87f65995f6f5",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789648974448",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T12:42:54.515Z"
+  },
+  {
+    "id": "7a94b180-f0d5-400c-990a-662c4ac876c3",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789648991895",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T12:43:11.983Z"
+  },
+  {
+    "id": "10c54fed-613e-47f4-aff9-a01024f3211b",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789650586767",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T13:09:46.827Z"
+  },
+  {
+    "id": "0691e076-7c01-4f14-b60c-87365a283a49",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789650604169",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T13:10:04.245Z"
+  },
+  {
+    "id": "6e66b093-2765-4a11-ab45-be018bfbec06",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789650925562",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T13:15:25.614Z"
+  },
+  {
+    "id": "5b109fbd-34ed-4be5-bfa9-5cddd433a747",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789650942908",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T13:15:42.982Z"
+  },
+  {
+    "id": "dd38322f-639e-4efd-b877-c500c7a6d55c",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789651058467",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T13:17:38.518Z"
+  },
+  {
+    "id": "5c02d435-d5b6-4753-8325-284a446fdb71",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789651075811",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T13:17:55.886Z"
+  },
+  {
+    "id": "2ae014e1-6f57-4c40-8ffc-85beb1f4d85f",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789652889367",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T13:48:09.421Z"
+  },
+  {
+    "id": "8397a36c-0425-4ed4-9377-96501727bfd2",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789652906746",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T13:48:26.822Z"
+  },
+  {
+    "id": "54f3b059-7b8f-4e1a-b3d7-85357578a3fc",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789653361325",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T13:56:01.391Z"
+  },
+  {
+    "id": "d0bfe53e-32f5-447a-a2f5-b0e9b93f0449",
+    "userId": 1,
+    "amount": 5000,
+    "category": "Shopping",
+    "merchant": "H&M",
+    "date": "2026-09-17",
+    "createdAt": "2026-09-17T14:03:21.494Z"
+  },
+  {
+    "id": "4ad40e9f-7d17-4bdd-8c63-292ed8545310",
+    "userId": 1,
+    "createdAt": "2026-09-18T14:18:58.546Z",
+    "amount": 500,
+    "category": "Food & Dining",
+    "merchant": "CRUD-1789741138480-EDITED",
+    "date": "2026-09-18"
+  },
+  {
+    "id": "8dadaa5f-7e24-4cc7-9f3f-70cc8badc3e9",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789741139064",
+    "date": "2026-09-18",
+    "createdAt": "2026-09-18T14:18:59.132Z"
+  },
+  {
+    "id": "e1b2fcd4-a319-4f6c-8667-2c458d9e0000",
+    "userId": 1,
+    "createdAt": "2026-09-18T14:19:10.929Z",
+    "amount": 500,
+    "category": "Food & Dining",
+    "merchant": "CRUD-1789741150849-EDITED",
+    "date": "2026-09-18"
+  },
+  {
+    "id": "0cb3929c-0f06-47f9-82ac-eb9856df3967",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789741234353",
+    "date": "2026-09-18",
+    "createdAt": "2026-09-18T14:20:34.418Z"
+  },
+  {
+    "id": "f13ee5e4-1695-4ee4-8991-88da47bc2d6c",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789988946629",
+    "date": "2026-09-21",
+    "createdAt": "2026-09-21T11:09:06.698Z"
+  },
+  {
+    "id": "e35f5e66-1567-4fe6-ad7f-57ca2e920925",
+    "userId": 1,
+    "amount": 999,
+    "category": "Food & Dining",
+    "merchant": "E2E-1789989335255",
+    "date": "2026-09-21",
+    "createdAt": "2026-09-21T11:15:35.326Z"
+  }
+]
