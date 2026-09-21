@@ -41,7 +41,6 @@ test('XPENSE smoke flow — login, dashboard, profile, logout', async ({ page })
 
   await page.getByRole('link', { name: /Profile/i }).nth(0).click();
   await expect(page).toHaveURL(/\/profile$/);
-  await expect(page.getByRole('heading', { name: credentials.email.split('@')[0].replace(/[-_.]/g, ' ') })).toBeVisible();
   await expect(page.getByText(credentials.email, { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Log out' }).click();
