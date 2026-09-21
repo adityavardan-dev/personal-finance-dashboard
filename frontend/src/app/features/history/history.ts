@@ -1,10 +1,14 @@
 import { DecimalPipe } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { catchError, of } from 'rxjs';
 import { AppLayout } from '../../shared/app-layout/app-layout';
 import { CategoryIcon } from '../../shared/category-icon/category-icon';
+import { ExpenseService } from '../expenses/expense.service';
 
 interface Transaction {
+  id: string;
   merchant: string;
   category: string;
   date: string;
@@ -18,33 +22,78 @@ interface Transaction {
   templateUrl: './history.html',
 })
 export class HistoryComponent {
-  readonly transactions: Transaction[] = [
-    { merchant: 'Brew & Co.', category: 'Coffee', date: 'Today · Aug 4', amount: 720, type: 'debit' },
-    { merchant: 'Moda Street', category: 'Shopping', date: 'Yesterday · Aug 3', amount: 2480, type: 'debit' },
-    { merchant: 'Parcel Hub', category: 'Delivery', date: 'Aug 2', amount: 1150, type: 'debit' },
-    { merchant: 'Energy Co.', category: 'Utilities', date: 'Aug 1', amount: 3620, type: 'debit' },
-    { merchant: 'Payroll', category: 'Income', date: 'Jul 31', amount: 52200, type: 'credit' },
-    { merchant: 'City Transit', category: 'Transport', date: 'Jul 30', amount: 680, type: 'debit' },
-    { merchant: 'Streambox', category: 'Entertainment', date: 'Jul 29', amount: 799, type: 'debit' },
-  ];
+  private readonly expenseService = inject(ExpenseService);
+  protected readonly loadError = signal(false);
+  protected readonly deleteError = signal(false);
+  protected readonly deletedIds = signal<Set<string>>(new Set());
 
-  protected filter: 'all' | 'expenses' | 'income' = 'all';
+  private readonly expenses = toSignal(
+    this.expenseService.list().pipe(
+      catchError(() => {
+        this.loadError.set(true);
+        return of([]);
+      }),
+    ),
+    { initialValue: null },
+  );
 
-  get filteredTransactions(): Transaction[] {
-    if (this.filter === 'expenses') return this.transactions.filter((item) => item.type === 'debit');
-    if (this.filter === 'income') return this.transactions.filter((item) => item.type === 'credit');
-    return this.transactions;
+  protected readonly isLoading = computed(() => this.expenses() === null);
+
+  protected readonly transactions = computed<Transaction[]>(() => {
+    const deleted = this.deletedIds();
+    return [...(this.expenses() ?? [])]
+      .filter((e) => !deleted.has(e.id))
+      .reverse()
+      .map((e) => ({
+        id: e.id,
+        merchant: e.merchant,
+        category: e.category,
+        date: new Date(e.date + 'T00:00:00').toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+        }),
+        amount: e.amount,
+        type: 'debit' as const,
+      }));
+  });
+
+  protected readonly filter = signal<'all' | 'expenses' | 'income'>('all');
+
+  protected readonly filteredTransactions = computed(() => {
+    const f = this.filter();
+    const t = this.transactions();
+    if (f === 'expenses') return t.filter((tx) => tx.type === 'debit');
+    if (f === 'income') return t.filter((tx) => tx.type === 'credit');
+    return t;
+  });
+
+  protected readonly totalExpenses = computed(() =>
+    this.transactions()
+      .filter((t) => t.type === 'debit')
+      .reduce((sum, t) => sum + t.amount, 0),
+  );
+
+  protected readonly totalIncome = computed(() =>
+    this.transactions()
+      .filter((t) => t.type === 'credit')
+      .reduce((sum, t) => sum + t.amount, 0),
+  );
+
+  protected setFilter(f: 'all' | 'expenses' | 'income'): void {
+    this.filter.set(f);
   }
 
-  get totalExpenses(): number {
-    return this.transactions.filter((item) => item.type === 'debit').reduce((sum, item) => sum + item.amount, 0);
-  }
+  protected deleteExpense(id: string): void {
+    if (!window.confirm('Delete this expense? This cannot be undone.')) return;
 
-  get totalIncome(): number {
-    return this.transactions.filter((item) => item.type === 'credit').reduce((sum, item) => sum + item.amount, 0);
-  }
-
-  protected setFilter(filter: 'all' | 'expenses' | 'income'): void {
-    this.filter = filter;
+    this.deleteError.set(false);
+    this.expenseService.delete(id).subscribe({
+      next: () => {
+        this.deletedIds.update((ids) => new Set([...ids, id]));
+      },
+      error: () => {
+        this.deleteError.set(true);
+      },
+    });
   }
 }

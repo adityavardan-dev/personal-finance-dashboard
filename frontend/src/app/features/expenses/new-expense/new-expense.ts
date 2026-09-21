@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppLayout } from '../../../shared/app-layout/app-layout';
+import { ExpenseService } from '../expense.service';
 
 interface CategoryOption {
   name: string;
@@ -12,13 +13,22 @@ interface CategoryOption {
   imports: [AppLayout, FormsModule, RouterLink],
   templateUrl: './new-expense.html',
 })
-export class NewExpenseComponent {
+export class NewExpenseComponent implements OnInit {
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly expenseService = inject(ExpenseService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
   protected amount = '';
   protected category = 'Food & Dining';
   protected merchant = '';
-  protected date = '2026-09-11';
+  protected date = new Date().toISOString().split('T')[0];
   protected note = '';
-  protected saved = false;
+  protected isSubmitting = false;
+  protected isLoading = false;
+  protected errorMessage = '';
+  protected isEditMode = false;
+  protected expenseId: string | null = null;
 
   readonly categories: CategoryOption[] = [
     { name: 'Food & Dining' },
@@ -29,15 +39,61 @@ export class NewExpenseComponent {
     { name: 'Other' },
   ];
 
-  protected saveExpense(): void {
-    if (!this.amount || Number(this.amount) <= 0 || !this.merchant.trim()) return;
-    this.saved = true;
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) return;
+
+    this.isEditMode = true;
+    this.expenseId = id;
+    this.isLoading = true;
+
+    this.expenseService.getById(id).subscribe({
+      next: (expense) => {
+        this.amount = String(expense.amount);
+        this.category = expense.category;
+        this.merchant = expense.merchant;
+        this.date = expense.date;
+        this.note = expense.note ?? '';
+        this.isLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.errorMessage = "We couldn't load this expense. Please try again.";
+        this.cdr.markForCheck();
+      },
+    });
   }
 
-  protected resetForm(): void {
-    this.amount = '';
-    this.merchant = '';
-    this.note = '';
-    this.saved = false;
+  protected saveExpense(): void {
+    if (!this.amount || Number(this.amount) <= 0 || !this.merchant.trim()) return;
+
+    this.isSubmitting = true;
+    this.errorMessage = '';
+
+    const payload = {
+      amount: Number(this.amount),
+      category: this.category,
+      merchant: this.merchant.trim(),
+      date: this.date,
+      note: this.note.trim() || undefined,
+    };
+
+    const request$ = this.isEditMode && this.expenseId
+      ? this.expenseService.update(this.expenseId, payload)
+      : this.expenseService.create(payload);
+
+    request$.subscribe({
+      next: () => {
+        this.isSubmitting = false;
+        void this.router.navigate(['/history']);
+      },
+      error: () => {
+        this.isSubmitting = false;
+        this.errorMessage = this.isEditMode
+          ? "We couldn't update your expense. Please try again."
+          : "We couldn't save your expense. Please try again.";
+      },
+    });
   }
 }
