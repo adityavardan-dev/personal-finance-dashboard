@@ -53,14 +53,17 @@ export class SignupComponent {
 
     this.isSubmitting = true;
     const { name, email, password } = this.signupForm.getRawValue();
+    this.signupForm.disable({ emitEvent: false });
 
     this.authService.signup(name, email, password).subscribe({
       next: () => {
+        this.signupForm.enable({ emitEvent: false });
         this.isSubmitting = false;
         this.successMessage = 'Your account is ready. Redirecting you to sign in…';
         setTimeout(() => void this.router.navigate(['/login']), 900);
       },
       error: (error: { error?: { message?: string | string[] } }) => {
+        this.signupForm.enable({ emitEvent: false });
         this.isSubmitting = false;
         const message = error.error?.message;
         this.errorMessage = Array.isArray(message)

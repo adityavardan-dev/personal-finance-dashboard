@@ -1,25 +1,39 @@
 import { expect, Page, test } from '@playwright/test';
 
-async function login(page: Page) {
+async function register(page: Page, username = `E2E User ${Date.now()}`) {
+  const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+  const password = 'password123';
+
+  await page.goto('/signup');
+  await page.locator('#name').fill(username);
+  await page.locator('#email').fill(email);
+  await page.locator('#password').fill(password);
+  await page.locator('#confirm-password').fill(password);
+  await page.getByRole('button', { name: 'Create account' }).click();
+
+  await expect(page.getByRole('status')).toContainText('Your account is ready');
+  await expect(page).toHaveURL(/\/login$/, { timeout: 5000 });
+
+  return { email, password, username };
+}
+
+async function login(page: Page, email: string, password: string) {
   await page.goto('/login');
-  await page.locator('#email').fill('admin@test.com');
-  await page.locator('#password').fill('password123');
+  await page.locator('#email').fill(email);
+  await page.locator('#password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
+async function signupAndLogin(page: Page) {
+  const credentials = await register(page);
+  await login(page, credentials.email, credentials.password);
+  return credentials;
+}
+
 test('XPENSE smoke flow — login, dashboard, profile, logout', async ({ page }) => {
-  await page.goto('/login');
+  const credentials = await signupAndLogin(page);
 
-  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
-  await expect(page.locator('#email')).toBeVisible();
-  await expect(page.locator('#password')).toBeVisible();
-
-  await page.locator('#email').fill('admin@test.com');
-  await page.locator('#password').fill('password123');
-  await page.getByRole('button', { name: 'Sign in' }).click();
-
-  await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole('heading', { name: /Good (Morning|Afternoon|Evening)/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: /Recent transactions/i })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
@@ -27,6 +41,7 @@ test('XPENSE smoke flow — login, dashboard, profile, logout', async ({ page })
 
   await page.getByRole('link', { name: /Profile/i }).nth(0).click();
   await expect(page).toHaveURL(/\/profile$/);
+  await expect(page.getByText(credentials.email, { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Log out' }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -34,48 +49,31 @@ test('XPENSE smoke flow — login, dashboard, profile, logout', async ({ page })
 });
 
 test('V1 expense journey — add expense persists to history and dashboard', async ({ page }) => {
-  // Login via form (client-side navigation to /dashboard after success)
-  await page.goto('/login');
-  await page.locator('#email').fill('admin@test.com');
-  await page.locator('#password').fill('password123');
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await signupAndLogin(page);
 
-  // Navigate to Add Expense via sidebar (client-side routing — avoids SSR sessionStorage issue)
   await page.getByRole('link', { name: 'Add Expense' }).first().click();
   await expect(page).toHaveURL(/\/expenses\/new$/);
   await expect(page.getByRole('heading', { name: 'Add an expense' })).toBeVisible();
 
-  // Fill in a uniquely identifiable expense
   const merchant = `E2E-${Date.now()}`;
   await page.locator('input[name="amount"]').fill('999');
   await page.locator('input[name="merchant"]').fill(merchant);
-  // category and date have sensible defaults
-
-  // Submit — saveExpense calls POST /expenses then navigates client-side to /history
   await page.getByRole('button', { name: 'Save expense' }).click();
 
-  // Verify navigation to /history, then wait for GET /expenses to settle
   await expect(page).toHaveURL(/\/history$/, { timeout: 10000 });
   await page.waitForLoadState('networkidle');
-
-  // Verify the newly created expense appears in history
   await expect(page.getByText(merchant)).toBeVisible({ timeout: 15000 });
 
-  // Navigate to dashboard via sidebar and verify recent activity
   await page.getByRole('link', { name: 'Dashboard' }).first().click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.waitForLoadState('networkidle');
   await expect(page.getByRole('heading', { name: /Recent transactions/i })).toBeVisible();
-
-  // The newly added expense must appear in recent activity (last 5)
   await expect(page.getByText(merchant)).toBeVisible({ timeout: 15000 });
 });
 
 test('V1 expense CRUD — create, edit, delete full lifecycle', async ({ page }) => {
-  await login(page);
+  await signupAndLogin(page);
 
-  // --- CREATE ---
   await page.getByRole('link', { name: 'Add Expense' }).first().click();
   await expect(page).toHaveURL(/\/expenses\/new$/);
   await expect(page.getByRole('heading', { name: 'Add an expense' })).toBeVisible();
@@ -89,7 +87,6 @@ test('V1 expense CRUD — create, edit, delete full lifecycle', async ({ page })
   await page.waitForLoadState('networkidle');
   await expect(page.getByText(merchant, { exact: true })).toBeVisible({ timeout: 15000 });
 
-  // --- EDIT ---
   const row = page.locator('article').filter({ hasText: merchant });
   await row.getByRole('link', { name: 'Edit' }).click();
   await expect(page).toHaveURL(/\/expenses\/.+\/edit$/, { timeout: 10000 });
@@ -105,10 +102,42 @@ test('V1 expense CRUD — create, edit, delete full lifecycle', async ({ page })
   await expect(page.getByText(updatedMerchant, { exact: true })).toBeVisible({ timeout: 15000 });
   await expect(page.getByText(merchant, { exact: true })).not.toBeVisible();
 
-  // --- DELETE ---
   page.on('dialog', (dialog) => dialog.accept());
 
   const updatedRow = page.locator('article').filter({ hasText: updatedMerchant });
   await updatedRow.getByRole('button', { name: 'Delete' }).click();
   await expect(page.getByText(updatedMerchant, { exact: true })).not.toBeVisible({ timeout: 10000 });
+});
+
+test('V1 signup persistence — signup, login, profile, logout and protected route', async ({ page }) => {
+  const credentials = await register(page, `Signup E2E ${Date.now()}`);
+
+  await expect(page).toHaveURL(/\/login$/);
+  await login(page, credentials.email, credentials.password);
+
+  await expect(page.getByRole('heading', { name: /Good (Morning|Afternoon|Evening)/i })).toBeVisible();
+
+  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page.getByText(credentials.email, { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+
+  await page.goto('/dashboard');
+  await expect(page).toHaveURL(/\/login$/);
+});
+
+test('V1 signup persistence — duplicate email is rejected', async ({ page }) => {
+  const credentials = await register(page, `Duplicate E2E ${Date.now()}`);
+
+  await page.goto('/signup');
+  await page.locator('#name').fill(`Duplicate Again ${Date.now()}`);
+  await page.locator('#email').fill(credentials.email);
+  await page.locator('#password').fill(credentials.password);
+  await page.locator('#confirm-password').fill(credentials.password);
+  await page.getByRole('button', { name: 'Create account' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('An account with this email already exists');
+  await expect(page).toHaveURL(/\/signup$/);
 });
