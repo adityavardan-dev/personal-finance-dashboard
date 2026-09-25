@@ -1,4 +1,5 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
 import { API_CONFIG } from '../../core/config/api.config';
@@ -17,13 +18,14 @@ export class AuthService {
   private readonly TOKEN_KEY = 'accessToken';
   private readonly API_URL = `${API_CONFIG.baseUrl}/auth`;
   private readonly http = inject(HttpClient);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   login(email: string, password: string) {
     return this.http
       .post<AuthResponse>(`${this.API_URL}/login`, { email, password })
       .pipe(
         tap((response) => {
-          if (response.accessToken) {
+          if (this.isBrowser && response.accessToken) {
             sessionStorage.setItem(this.TOKEN_KEY, response.accessToken);
           }
         }),
@@ -39,10 +41,12 @@ export class AuthService {
   }
 
   getAccessToken(): string | null {
-    return sessionStorage.getItem(this.TOKEN_KEY);
+    return this.isBrowser ? sessionStorage.getItem(this.TOKEN_KEY) : null;
   }
 
   clearSession(): void {
-    sessionStorage.removeItem(this.TOKEN_KEY);
+    if (this.isBrowser) {
+      sessionStorage.removeItem(this.TOKEN_KEY);
+    }
   }
 }

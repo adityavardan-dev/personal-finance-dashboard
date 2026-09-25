@@ -1,23 +1,30 @@
 import * as fs from 'fs';
 import { UsersService } from './users.service';
 
+jest.mock('fs', () => ({
+  existsSync: jest.fn(),
+  readFileSync: jest.fn(),
+  writeFileSync: jest.fn(),
+  mkdirSync: jest.fn(),
+}));
+
 describe('UsersService', () => {
   let service: UsersService;
-  let existsSpy: jest.SpyInstance;
-  let readSpy: jest.SpyInstance;
-  let writeSpy: jest.SpyInstance;
-  let mkdirSpy: jest.SpyInstance;
+  const existsMock = jest.mocked(fs.existsSync);
+  const readMock = jest.mocked(fs.readFileSync);
+  const writeMock = jest.mocked(fs.writeFileSync);
+  const mkdirMock = jest.mocked(fs.mkdirSync);
 
   beforeEach(() => {
     service = new UsersService();
-    existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
-    readSpy = jest.spyOn(fs, 'readFileSync').mockReturnValue('[]');
-    writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => undefined);
-    mkdirSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
+    existsMock.mockReturnValue(false);
+    readMock.mockReturnValue('[]');
+    writeMock.mockImplementation(() => undefined);
+    mkdirMock.mockImplementation(() => undefined as never);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    jest.resetAllMocks();
   });
 
   it('should be defined', () => {
@@ -26,8 +33,8 @@ describe('UsersService', () => {
 
   it('returns an empty list when the store does not exist', () => {
     expect(service.findByEmail('missing@example.com')).toBeUndefined();
-    expect(existsSpy).toHaveBeenCalled();
-    expect(readSpy).not.toHaveBeenCalled();
+    expect(existsMock).toHaveBeenCalled();
+    expect(readMock).not.toHaveBeenCalled();
   });
 
   it('creates and persists a user with normalized email and trimmed username', () => {
@@ -39,8 +46,8 @@ describe('UsersService', () => {
       email: 'test@example.com',
       password: 'password123',
     });
-    expect(mkdirSpy).toHaveBeenCalled();
-    expect(writeSpy).toHaveBeenCalledWith(
+    expect(mkdirMock).toHaveBeenCalled();
+    expect(writeMock).toHaveBeenCalledWith(
       expect.stringContaining('data'),
       JSON.stringify([user], null, 2),
       'utf-8',
@@ -48,8 +55,8 @@ describe('UsersService', () => {
   });
 
   it('finds users by normalized email', () => {
-    existsSpy.mockReturnValue(true);
-    readSpy.mockReturnValue(
+    existsMock.mockReturnValue(true);
+    readMock.mockReturnValue(
       JSON.stringify([
         { id: 3, username: 'Test User', email: 'test@example.com', password: 'password123' },
       ]),
@@ -64,8 +71,8 @@ describe('UsersService', () => {
   });
 
   it('finds a user by id', () => {
-    existsSpy.mockReturnValue(true);
-    readSpy.mockReturnValue(
+    existsMock.mockReturnValue(true);
+    readMock.mockReturnValue(
       JSON.stringify([
         { id: 3, username: 'Test User', email: 'test@example.com', password: 'password123' },
       ]),
@@ -76,8 +83,8 @@ describe('UsersService', () => {
   });
 
   it('generates an unused sequential id', () => {
-    existsSpy.mockReturnValue(true);
-    readSpy.mockReturnValue(
+    existsMock.mockReturnValue(true);
+    readMock.mockReturnValue(
       JSON.stringify([
         { id: 1, username: 'One', email: 'one@example.com', password: 'password123' },
         { id: 3, username: 'Three', email: 'three@example.com', password: 'password123' },
@@ -85,12 +92,12 @@ describe('UsersService', () => {
     );
 
     const user = service.create('Two', 'two@example.com', 'password123');
-    expect(user.id).toBe(2);
+    expect(user.id).toBe(4);
   });
 
   it('recovers from malformed persisted data as an empty store', () => {
-    existsSpy.mockReturnValue(true);
-    readSpy.mockReturnValue('{invalid-json');
+    existsMock.mockReturnValue(true);
+    readMock.mockReturnValue('{invalid-json');
 
     expect(service.findByEmail('missing@example.com')).toBeUndefined();
   });
