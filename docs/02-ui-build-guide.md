@@ -2,11 +2,7 @@
 
 Every component generated must follow the Design System.
 
-Read
-
-docs/01-design-system.md
-
-before generating code.
+Read the [XPENSE Design System](./01-design-system.md) before generating code.
 
 ---
 
