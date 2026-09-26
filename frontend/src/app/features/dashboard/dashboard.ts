@@ -23,7 +23,9 @@ export class DashboardComponent {
   );
 
   protected readonly totalSpent = computed(() =>
-    this.expenses().reduce((sum, e) => sum + e.amount, 0),
+    this.expenses()
+      .filter((expense) => expense.type === 'expense')
+      .reduce((sum, expense) => sum + expense.amount, 0),
   );
 
   protected readonly recentTransactions = computed<ActivityTransaction[]>(() =>
@@ -31,6 +33,7 @@ export class DashboardComponent {
       .reverse()
       .slice(0, 5)
       .map((e) => ({
+        id: e.id,
         merchant: e.merchant,
         category: e.category,
         date: new Date(e.date + 'T00:00:00').toLocaleDateString('en-IN', {
@@ -38,7 +41,7 @@ export class DashboardComponent {
           month: 'short',
         }),
         amount: e.amount,
-        type: 'debit' as const,
+        type: e.type,
       })),
   );
 }

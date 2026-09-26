@@ -7,23 +7,110 @@
           <h2 class="text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">Transaction history</h2>
           <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Every expense and income, kept in one clear timeline.</p>
         </div>
-        <a routerLink="/expenses/new" class="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950">Add expense</a>
+        <a routerLink="/expenses/new" class="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950">Add transaction</a>
       </div>
     </header>
 
-    <section class="grid gap-4 sm:grid-cols-3" aria-label="Transaction summary">
-      <article class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"><p class="text-sm text-zinc-500 dark:text-zinc-400">All activity</p><p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">{{ transactions().length }}</p><p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Recent transactions</p></article>
+    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Transaction summary">
+      <article class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"><p class="text-sm text-zinc-500 dark:text-zinc-400">All activity</p><p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">{{ transactions().length }}</p><p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Transactions</p></article>
       <article class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"><p class="text-sm text-zinc-500 dark:text-zinc-400">Expenses</p><p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">₹{{ totalExpenses() | number }}</p><p class="mt-1 text-xs text-red-600 dark:text-red-400">Money out</p></article>
       <article class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"><p class="text-sm text-zinc-500 dark:text-zinc-400">Income</p><p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">₹{{ totalIncome() | number }}</p><p class="mt-1 text-xs text-blue-600 dark:text-blue-400">Money in</p></article>
+      <article class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"><p class="text-sm text-zinc-500 dark:text-zinc-400">Net activity</p><p class="mt-2 text-3xl font-bold tracking-tight" [class.text-emerald-600]="netActivity() >= 0" [class.dark:text-emerald-400]="netActivity() >= 0" [class.text-red-600]="netActivity() < 0" [class.dark:text-red-400]="netActivity() < 0">{{ netActivity() >= 0 ? '+' : '-' }}₹{{ (netActivity() < 0 ? -netActivity() : netActivity()) | number }}</p><p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Income minus expenses</p></article>
     </section>
+
+    @if (!isLoading() && !loadError() && transactions().length > 0) {
+      <section class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900" aria-labelledby="filters-title">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Refine activity</p>
+            <h3 id="filters-title" class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white">Filter transactions</h3>
+          </div>
+          @if (hasActiveFilters()) {
+            <button type="button" (click)="clearFilters()" class="min-h-11 rounded-full px-4 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/40">Clear filters</button>
+          }
+        </div>
+
+        <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-[auto_1fr_1fr_1fr] xl:items-end">
+          <div>
+            <p class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200">Type</p>
+            <div class="flex rounded-2xl bg-zinc-100 p-1 dark:bg-zinc-950" role="group" aria-label="Filter by transaction type">
+              @for (option of [{key: 'all', label: 'All'}, {key: 'expense', label: 'Expenses'}, {key: 'income', label: 'Income'}]; track option.key) {
+                <button type="button" (click)="setFilter($any(option.key))" [attr.aria-pressed]="filter() === option.key" class="min-h-11 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" [class.bg-white]="filter() === option.key" [class.text-zinc-950]="filter() === option.key" [class.shadow-sm]="filter() === option.key" [class.dark:bg-zinc-800]="filter() === option.key" [class.dark:text-white]="filter() === option.key" [class.text-zinc-500]="filter() !== option.key" [class.dark:text-zinc-400]="filter() !== option.key">{{ option.label }}</button>
+              }
+            </div>
+          </div>
+          <div>
+            <label for="history-category" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200">Category</label>
+            <select id="history-category" [ngModel]="categoryFilter()" (ngModelChange)="setCategoryFilter($event)" class="min-h-11 w-full rounded-2xl border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
+              <option value="">All categories</option>
+              @for (category of categoryOptions(); track category) {
+                <option [value]="category">{{ category }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label for="history-from" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200">From</label>
+            <input id="history-from" type="date" [ngModel]="fromDate()" (ngModelChange)="setFromDate($event)" class="min-h-11 w-full rounded-2xl border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" />
+          </div>
+          <div>
+            <label for="history-to" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200">To</label>
+            <input id="history-to" type="date" [ngModel]="toDate()" (ngModelChange)="setToDate($event)" class="min-h-11 w-full rounded-2xl border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" />
+          </div>
+        </div>
+
+        @if (filterError()) {
+          <p class="mt-4 text-sm font-medium text-red-600 dark:text-red-400" role="alert">{{ filterError() }}</p>
+        }
+      </section>
+    }
 
     <section class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900" aria-labelledby="transactions-title">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Activity</p><h3 id="transactions-title" class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white">Recent transactions</h3></div><div class="flex rounded-2xl bg-zinc-100 p-1 dark:bg-zinc-950" role="group" aria-label="Filter transactions">@for (option of [{key: 'all', label: 'All'}, {key: 'expenses', label: 'Expenses'}, {key: 'income', label: 'Income'}]; track option.key) {<button type="button" (click)="setFilter($any(option.key))" [attr.aria-pressed]="filter() === option.key" class="min-h-10 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" [class.bg-white]="filter() === option.key" [class.text-zinc-950]="filter() === option.key" [class.shadow-sm]="filter() === option.key" [class.dark:bg-zinc-800]="filter() === option.key" [class.dark:text-white]="filter() === option.key" [class.text-zinc-500]="filter() !== option.key" [class.dark:text-zinc-400]="filter() !== option.key">{{ option.label }}</button>}</div></div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Activity</p>
+        <h3 id="transactions-title" class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white">Recent transactions</h3>
+      </div>
 
-      <div class="mt-5 divide-y divide-zinc-100 dark:divide-zinc-800">@for (item of filteredTransactions(); track item.id) {<article class="flex min-h-16 items-center gap-3 py-3 first:pt-0 last:pb-0 sm:gap-4"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-300"><app-category-icon [category]="item.category" /></span><div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-zinc-900 dark:text-white">{{ item.merchant }}</p><p class="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ item.category }} · {{ item.date }}</p></div><div class="shrink-0 text-right"><p class="text-sm font-semibold" [class.text-red-600]="item.type === 'debit'" [class.dark:text-red-400]="item.type === 'debit'" [class.text-blue-600]="item.type === 'credit'" [class.dark:text-blue-400]="item.type === 'credit'">{{ item.type === 'credit' ? '+' : '-' }}₹{{ item.amount | number }}</p><p class="mt-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-zinc-400">{{ item.type === 'credit' ? 'Income' : 'Expense' }}</p></div><div class="ml-2 flex shrink-0 items-center gap-2"><a [routerLink]="['/expenses', item.id, 'edit']" class="rounded-lg px-2 py-1 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/30" [attr.aria-label]="'Edit ' + item.merchant">Edit</a><button type="button" (click)="deleteExpense(item.id)" class="rounded-lg px-2 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 dark:text-red-400 dark:hover:bg-red-950/30" [attr.aria-label]="'Delete ' + item.merchant">Delete</button></div></article>}</div>
+      @if (isLoading()) {
+        <div class="py-10 text-center" aria-busy="true"><p class="text-sm text-zinc-500 dark:text-zinc-400">Loading transactions…</p></div>
+      } @else if (loadError()) {
+        <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-900/70 dark:bg-red-950/30" role="alert"><p class="text-sm font-medium text-red-700 dark:text-red-400">Unable to load transactions. Please refresh to try again.</p></div>
+      } @else if (transactions().length === 0) {
+        <div class="py-10 text-center">
+          <h4 class="text-lg font-semibold text-zinc-950 dark:text-white">Start tracking your first transaction.</h4>
+          <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Your monthly journey starts here.</p>
+          <a routerLink="/expenses/new" class="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">Add transaction</a>
+        </div>
+      } @else if (filteredTransactions().length === 0) {
+        <div class="py-10 text-center">
+          <h4 class="text-lg font-semibold text-zinc-950 dark:text-white">No transactions match these filters.</h4>
+          <button type="button" (click)="clearFilters()" class="mt-5 min-h-11 rounded-full px-5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/40">Clear filters</button>
+        </div>
+      } @else {
+        <div class="mt-5 divide-y divide-zinc-100 dark:divide-zinc-800">
+          @for (item of filteredTransactions(); track item.id) {
+            <article class="flex min-h-16 flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0 sm:flex-nowrap sm:gap-4">
+              <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-300"><app-category-icon [category]="item.category" /></span>
+              <div class="min-w-0 flex-1">
+                <a [routerLink]="['/history', item.id]" class="truncate text-sm font-semibold text-zinc-900 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-white dark:hover:text-emerald-400">{{ item.merchant }}</a>
+                <p class="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ item.category }} · {{ item.displayDate }}</p>
+              </div>
+              <div class="shrink-0 text-right">
+                <p class="text-sm font-semibold" [class.text-blue-600]="item.type === 'income'" [class.dark:text-blue-400]="item.type === 'income'" [class.text-red-600]="item.type === 'expense'" [class.dark:text-red-400]="item.type === 'expense'">{{ item.type === 'income' ? '+' : '-' }}₹{{ item.amount | number }}</p>
+                <p class="mt-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-zinc-400">{{ item.type === 'income' ? 'Income' : 'Expense' }}</p>
+              </div>
+              <div class="ml-auto flex shrink-0 items-center gap-2 sm:ml-2">
+                <a [routerLink]="['/history', item.id]" class="inline-flex min-h-11 items-center rounded-xl px-3 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-zinc-300 dark:hover:bg-zinc-800" [attr.aria-label]="'View ' + item.merchant">View</a>
+                <a [routerLink]="['/expenses', item.id, 'edit']" class="inline-flex min-h-11 items-center rounded-xl px-3 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/30" [attr.aria-label]="'Edit ' + item.merchant">Edit</a>
+                <button type="button" (click)="deleteExpense(item.id)" class="min-h-11 rounded-xl px-3 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 dark:text-red-400 dark:hover:bg-red-950/30" [attr.aria-label]="'Delete ' + item.merchant">Delete</button>
+              </div>
+            </article>
+          }
+        </div>
+      }
     </section>
 
-    @if (loadError()) { <section class="rounded-3xl border border-red-200 bg-red-50 p-5 dark:border-red-900/70 dark:bg-red-950/30" role="alert"><p class="text-sm font-medium text-red-700 dark:text-red-400">Unable to load transactions. Please refresh to try again.</p></section> }
-    @if (deleteError()) { <section class="rounded-3xl border border-red-200 bg-red-50 p-5 dark:border-red-900/70 dark:bg-red-950/30" role="alert"><p class="text-sm font-medium text-red-700 dark:text-red-400">Unable to delete the expense. Please try again.</p></section> }
+    @if (deleteError()) {
+      <section class="rounded-3xl border border-red-200 bg-red-50 p-5 dark:border-red-900/70 dark:bg-red-950/30" role="alert"><p class="text-sm font-medium text-red-700 dark:text-red-400">Unable to delete the transaction. Please try again.</p></section>
+    }
   </div>
 </app-app-layout>

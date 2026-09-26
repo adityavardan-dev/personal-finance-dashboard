@@ -12,6 +12,7 @@ describe('ExpensesController', () => {
   const mockExpense = {
     id: 'uuid-1',
     userId: 1,
+    type: 'expense',
     amount: 500,
     category: 'Food & Dining',
     merchant: 'Swiggy',
@@ -45,7 +46,7 @@ describe('ExpensesController', () => {
 
   describe('POST /expenses', () => {
     it('creates an expense for the authenticated user', () => {
-      const dto = { amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-17' };
+      const dto = { type: 'expense', amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-17' };
 
       const result = controller.create(mockRequest as any, dto as any);
 
@@ -54,7 +55,7 @@ describe('ExpensesController', () => {
     });
 
     it('passes the userId from the JWT token — not from the request body', () => {
-      const dto = { amount: 200, category: 'Transport', merchant: 'Uber', date: '2026-09-17' };
+      const dto = { type: 'expense', amount: 200, category: 'Transport', merchant: 'Uber', date: '2026-09-17' };
       const reqWithDifferentUser = { user: { userId: 42, email: 'other@test.com' } };
 
       controller.create(reqWithDifferentUser as any, dto as any);

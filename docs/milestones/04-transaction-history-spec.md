@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Authoritative implementation specification |
+| Status | Implemented and verified |
 | Target branch | `feature/v1-transaction-history` |
 | Base branch | Latest `develop` after Milestone 3 |
 | Depends on | Priority 1 UI, Milestone 2 Expense CRUD, Milestone 3 Signup Persistence |
@@ -293,16 +293,16 @@ When filters return no matches, show a separate `No transactions match these fil
 
 ## 6. Acceptance criteria
 
-- [ ] Every newly persisted record includes valid `type`.
-- [ ] Legacy records without `type` are returned as expenses without crashing.
-- [ ] Expense and income totals are derived from actual record types.
-- [ ] History never labels every API record as debit unconditionally.
-- [ ] Type, category, and inclusive date filtering work together.
-- [ ] A read-only detail route is protected and ownership-safe.
-- [ ] Create, edit, detail, and delete retain authenticated isolation.
-- [ ] Existing expense CRUD behavior remains compatible.
-- [ ] Empty account and no-filter-match states follow the design system.
-- [ ] No database, ORM, AI, or external UI library is introduced.
+- [x] Every newly persisted record includes valid `type`.
+- [x] Legacy records without `type` are returned as expenses without crashing.
+- [x] Expense and income totals are derived from actual record types.
+- [x] History never labels every API record as debit unconditionally.
+- [x] Type, category, and inclusive date filtering work together.
+- [x] A read-only detail route is protected and ownership-safe.
+- [x] Create, edit, detail, and delete retain authenticated isolation.
+- [x] Existing expense CRUD behavior remains compatible.
+- [x] Empty account and no-filter-match states follow the design system.
+- [x] No database, ORM, AI, or external UI library is introduced.
 
 ## 7. Verification plan
 

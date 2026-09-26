@@ -2,13 +2,15 @@ import { DecimalPipe } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CategoryIcon } from '../../../../shared/category-icon/category-icon';
+import { TransactionType } from '../../../expenses/expense.service';
 
 export interface ActivityTransaction {
+  id: string;
   merchant: string;
   category: string;
   date: string;
   amount: number;
-  type: 'debit' | 'credit';
+  type: TransactionType;
 }
 
 @Component({

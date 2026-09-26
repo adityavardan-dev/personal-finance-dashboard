@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppLayout } from '../../../shared/app-layout/app-layout';
-import { ExpenseService } from '../expense.service';
+import { ExpenseService, TransactionType } from '../expense.service';
 
 interface CategoryOption {
   name: string;
@@ -19,6 +19,7 @@ export class NewExpenseComponent implements OnInit {
   private readonly expenseService = inject(ExpenseService);
   private readonly cdr = inject(ChangeDetectorRef);
 
+  protected type: TransactionType = 'expense';
   protected amount = '';
   protected category = 'Food & Dining';
   protected merchant = '';
@@ -30,7 +31,7 @@ export class NewExpenseComponent implements OnInit {
   protected isEditMode = false;
   protected expenseId: string | null = null;
 
-  readonly categories: CategoryOption[] = [
+  readonly expenseCategories: CategoryOption[] = [
     { name: 'Food & Dining' },
     { name: 'Shopping' },
     { name: 'Transport' },
@@ -38,6 +39,23 @@ export class NewExpenseComponent implements OnInit {
     { name: 'Entertainment' },
     { name: 'Other' },
   ];
+  readonly incomeCategories: CategoryOption[] = [
+    { name: 'Salary' },
+    { name: 'Freelance' },
+    { name: 'Refund' },
+    { name: 'Other' },
+  ];
+
+  protected get categories(): CategoryOption[] {
+    return this.type === 'income' ? this.incomeCategories : this.expenseCategories;
+  }
+
+  protected onTypeChange(type: TransactionType): void {
+    this.type = type;
+    if (!this.categories.some((option) => option.name === this.category)) {
+      this.category = this.categories[0].name;
+    }
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -49,6 +67,7 @@ export class NewExpenseComponent implements OnInit {
 
     this.expenseService.getById(id).subscribe({
       next: (expense) => {
+        this.type = expense.type;
         this.amount = String(expense.amount);
         this.category = expense.category;
         this.merchant = expense.merchant;
@@ -72,6 +91,7 @@ export class NewExpenseComponent implements OnInit {
     this.errorMessage = '';
 
     const payload = {
+      type: this.type,
       amount: Number(this.amount),
       category: this.category,
       merchant: this.merchant.trim(),

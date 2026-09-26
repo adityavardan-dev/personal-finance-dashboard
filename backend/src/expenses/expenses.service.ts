@@ -4,10 +4,12 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
+import { TransactionType } from './transaction-type';
 
 export interface Expense {
   id: string;
   userId: number;
+  type: TransactionType;
   amount: number;
   category: string;
   merchant: string;
@@ -24,7 +26,11 @@ export class ExpensesService {
     try {
       if (!fs.existsSync(DATA_FILE)) return [];
       const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      return JSON.parse(raw) as Expense[];
+      const expenses = JSON.parse(raw) as Array<Omit<Expense, 'type'> & { type?: TransactionType }>;
+      return expenses.map((expense) => ({
+        ...expense,
+        type: expense.type ?? TransactionType.Expense,
+      }));
     } catch {
       return [];
     }
@@ -43,6 +49,7 @@ export class ExpensesService {
     const expense: Expense = {
       id: randomUUID(),
       userId,
+      type: dto.type,
       amount: dto.amount,
       category: dto.category,
       merchant: dto.merchant,
@@ -75,6 +82,7 @@ export class ExpensesService {
       id: existing.id,
       userId: existing.userId,
       createdAt: existing.createdAt,
+      type: dto.type ?? existing.type,
       amount: dto.amount ?? existing.amount,
       category: dto.category ?? existing.category,
       merchant: dto.merchant ?? existing.merchant,

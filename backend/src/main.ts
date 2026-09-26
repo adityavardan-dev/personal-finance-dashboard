@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { isAllowedOrigin } from './cors-origin';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,7 +12,7 @@ async function bootstrap() {
     transform: true, // automatically transforms payloads to be objects typed according to their DTO classes
   })); 
   app.enableCors({
-    origin: 'http://127.0.0.1:4200',
+    origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
   });
   await app.listen(process.env.PORT ?? 3000);
 

@@ -141,3 +141,66 @@ test('V1 signup persistence — duplicate email is rejected', async ({ page }) =
   await expect(page.getByRole('alert')).toContainText('An account with this email already exists');
   await expect(page).toHaveURL(/\/signup$/);
 });
+
+test('V1 transaction history — expense and income remain truthful and isolated', async ({ page }) => {
+  await signupAndLogin(page);
+
+  const expenseMerchant = `Expense-${Date.now()}`;
+  await page.getByRole('link', { name: 'Add Expense' }).first().click();
+  await expect(page).toHaveURL(/\/expenses\/new$/);
+  await page.locator('input[name="amount"]').fill('750');
+  await page.locator('input[name="merchant"]').fill(expenseMerchant);
+  await page.locator('#date').fill('2026-09-20');
+  await page.getByRole('button', { name: 'Save expense' }).click();
+  await expect(page).toHaveURL(/\/history$/);
+
+  const incomeSource = `Employer-${Date.now()}`;
+  await page.getByRole('link', { name: 'Add transaction' }).first().click();
+  await expect(page).toHaveURL(/\/expenses\/new$/);
+  await page.locator('#transaction-type').selectOption('income');
+  await page.locator('input[name="amount"]').fill('50000');
+  await page.locator('input[name="merchant"]').fill(incomeSource);
+  await page.locator('#date').fill('2026-09-21');
+  await page.locator('#category').selectOption('Salary');
+  await page.getByRole('button', { name: 'Save income' }).click();
+  await expect(page).toHaveURL(/\/history$/);
+
+  const summary = page.locator('section[aria-label="Transaction summary"]');
+  await expect(summary.locator('article').filter({ has: page.getByText('Expenses', { exact: true }) })).toContainText('750');
+  await expect(summary.locator('article').filter({ has: page.getByText('Income', { exact: true }) })).toContainText('50,000');
+
+  await page.getByRole('button', { name: 'Income', exact: true }).click();
+  await expect(page.getByText(incomeSource, { exact: true })).toBeVisible();
+  await expect(page.getByText(expenseMerchant, { exact: true })).not.toBeVisible();
+
+  await page.locator('#history-category').selectOption('Salary');
+  await page.locator('#history-from').fill('2026-09-21');
+  await page.locator('#history-to').fill('2026-09-21');
+  await expect(page.getByText(incomeSource, { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Clear filters' }).first().click();
+  const expenseRow = page.locator('article').filter({ hasText: expenseMerchant });
+  await expenseRow.getByRole('link', { name: `View ${expenseMerchant}` }).click();
+  await expect(page).toHaveURL(/\/history\/.+$/);
+  await expect(page.getByRole('heading', { name: 'Review transaction' })).toBeVisible();
+  await expect(page.getByText(expenseMerchant, { exact: true })).toBeVisible();
+  await expect(page.getByText('Food & Dining', { exact: true })).toBeVisible();
+  const firstUserDetailUrl = page.url();
+
+  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await signupAndLogin(page);
+
+  const firstUserDetailPath = new URL(firstUserDetailUrl).pathname;
+  await page.evaluate((path) => {
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, firstUserDetailPath);
+  await expect(page).toHaveURL(firstUserDetailUrl);
+  await expect(page.getByRole('heading', { name: 'Transaction not found' })).toBeVisible();
+
+  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await page.goto(firstUserDetailUrl);
+  await expect(page).toHaveURL(/\/login$/);
+});

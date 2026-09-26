@@ -1,6 +1,11 @@
-import { IsDateString, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { TransactionType } from '../transaction-type';
 
 export class UpdateExpenseDto {
+  @IsOptional()
+  @IsEnum(TransactionType)
+  type?: TransactionType;
+
   @IsOptional()
   @IsNumber()
   @Min(0.01)
