@@ -6,6 +6,6 @@
     <section class="min-w-0" aria-label="Monthly spending overview"><app-hero-card [spent]="totalSpent()" [budget]="budgetStore.monthlyLimit()" [currencySymbol]="currencySymbol()" (budgetSetupRequested)="scrollToBudget()" /></section>
     <app-budget-editor class="block" />
     <app-insight-banner class="block" [insight]="primaryInsight()" />
-    <div class="grid min-w-0 gap-6 lg:grid-cols-[1.2fr_0.95fr] lg:items-stretch"><div class="min-w-0"><app-spending-trend [points]="trend()" /></div><div class="min-w-0"><app-recent-activity [transactions]="recentTransactions()" /></div></div>
+    <div class="grid min-w-0 gap-6 lg:grid-cols-[1.2fr_0.95fr] lg:items-stretch"><div class="min-w-0"><app-spending-trend [points]="trend()" [currencySymbol]="currencySymbol()" /></div><div class="min-w-0"><app-recent-activity [transactions]="recentTransactions()" [currencySymbol]="currencySymbol()" /></div></div>
   </div>
 </app-app-layout>

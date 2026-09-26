@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
-import { UsersService, User } from './users.service';
+import { UsersService, User } from '../users/users.service';
 
 const existingUser: User = {
   id: 7,

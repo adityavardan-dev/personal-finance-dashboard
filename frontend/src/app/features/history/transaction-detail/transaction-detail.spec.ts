@@ -1,4 +1,6 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { BudgetStore } from '../../../core/budget/budget.store';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
@@ -28,6 +30,7 @@ describe('TransactionDetailComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ExpenseService, useValue: { getById } },
+        { provide: BudgetStore, useValue: { currency: signal('INR'), load: vi.fn() } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'income-1' } } } },
       ],
     }).compileComponents();

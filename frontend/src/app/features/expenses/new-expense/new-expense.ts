@@ -1,4 +1,6 @@
-import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, inject, OnInit } from '@angular/core';
+import { BudgetStore } from '../../../core/budget/budget.store';
+import { CURRENCY_SYMBOLS } from '../../../core/budget/budget.models';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppLayout } from '../../../shared/app-layout/app-layout';
@@ -19,6 +21,8 @@ export class NewExpenseComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly expenseService = inject(ExpenseService);
   private readonly metricsStore = inject(FinanceMetricsStore);
+  protected readonly budgetStore = inject(BudgetStore);
+  protected readonly currencySymbol = computed(() => CURRENCY_SYMBOLS[this.budgetStore.currency()]);
   private readonly cdr = inject(ChangeDetectorRef);
 
   protected type: TransactionType = 'expense';
@@ -60,6 +64,7 @@ export class NewExpenseComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.budgetStore.load();
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
 

@@ -1,4 +1,6 @@
+import { NotFoundException } from '@nestjs/common';
 import * as fs from 'fs';
+import { CurrencyCode } from '../budgets/currency-code';
 import { UsersService } from './users.service';
 
 jest.mock('fs', () => ({
@@ -14,9 +16,15 @@ describe('UsersService', () => {
   const readMock = jest.mocked(fs.readFileSync);
   const writeMock = jest.mocked(fs.writeFileSync);
   const mkdirMock = jest.mocked(fs.mkdirSync);
+  const budgetsService = {
+    getMine: jest.fn(),
+    upsert: jest.fn(),
+  };
 
   beforeEach(() => {
-    service = new UsersService();
+    budgetsService.getMine.mockReturnValue({ monthlyLimit: 30000, categoryLimits: [{ category: 'Food', limit: 5000 }], currency: CurrencyCode.INR, createdAt: 'a', updatedAt: 'a' });
+    budgetsService.upsert.mockReset();
+    service = new UsersService(budgetsService as any);
     existsMock.mockReturnValue(false);
     readMock.mockReturnValue('[]');
     writeMock.mockImplementation(() => undefined);
@@ -100,5 +108,27 @@ describe('UsersService', () => {
     readMock.mockReturnValue('{invalid-json');
 
     expect(service.findByEmail('missing@example.com')).toBeUndefined();
+  });
+
+  it('returns a password-safe public profile with canonical preferences', () => {
+    existsMock.mockReturnValue(true);
+    readMock.mockReturnValue(JSON.stringify([{ id: 3, username: 'River Stone', email: 'river@example.com', password: 'password123' }]));
+
+    const profile = service.getPublicProfile(3);
+
+    expect(profile).toEqual({ id: 3, username: 'River Stone', email: 'river@example.com', preferences: { currency: CurrencyCode.INR, theme: 'system' } });
+    expect(profile).not.toHaveProperty('password');
+  });
+
+  it('updates currency while preserving existing budget limits', () => {
+    existsMock.mockReturnValue(true);
+    readMock.mockReturnValue(JSON.stringify([{ id: 3, username: 'River Stone', email: 'river@example.com', password: 'password123' }]));
+
+    expect(service.updatePreferences(3, CurrencyCode.USD)).toEqual({ preferences: { currency: CurrencyCode.USD, theme: 'system' } });
+    expect(budgetsService.upsert).toHaveBeenCalledWith(3, { monthlyLimit: 30000, categoryLimits: [{ category: 'Food', limit: 5000 }], currency: CurrencyCode.USD });
+  });
+
+  it('rejects a missing current user', () => {
+    expect(() => service.getPublicProfile(99)).toThrow(NotFoundException);
   });
 });

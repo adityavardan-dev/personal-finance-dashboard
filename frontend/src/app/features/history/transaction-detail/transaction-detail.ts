@@ -1,5 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { BudgetStore } from '../../../core/budget/budget.store';
+import { CURRENCY_SYMBOLS } from '../../../core/budget/budget.models';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AppLayout } from '../../../shared/app-layout/app-layout';
 import { CategoryIcon } from '../../../shared/category-icon/category-icon';
@@ -13,6 +15,8 @@ import { Expense, ExpenseService } from '../../expenses/expense.service';
 export class TransactionDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly expenseService = inject(ExpenseService);
+  protected readonly budgetStore = inject(BudgetStore);
+  protected readonly currencySymbol = computed(() => CURRENCY_SYMBOLS[this.budgetStore.currency()]);
 
   protected readonly transaction = signal<Expense | null>(null);
   protected readonly isLoading = signal(true);
@@ -20,6 +24,7 @@ export class TransactionDetailComponent implements OnInit {
   protected readonly errorMessage = signal('');
 
   ngOnInit(): void {
+    this.budgetStore.load();
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       this.isLoading.set(false);

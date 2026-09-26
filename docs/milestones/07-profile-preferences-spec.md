@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Authoritative implementation specification |
+| Status | Implemented and verified |
 | Target branch | `feature/v1-profile-settings` |
 | Base branch | Latest `develop` after Milestone 6 is merged |
 | Depends on | Milestone 3 persisted users; Milestone 5 budget/currency persistence |
@@ -282,20 +282,51 @@ Dashboard, History, transaction forms, and Insights must consume the shared sele
 
 Use Angular formatting or a shared formatter with explicit currency code; do not add a formatting library.
 
+## 5.1 Implemented architecture and verification evidence
+
+The contracts above remain authoritative. Verified implementation as of 2026-09-27:
+
+### Backend
+
+- `backend/src/users/users.module.ts` owns and exports `UsersService`; `AuthModule` imports it.
+- `backend/src/users/users.controller.ts` exposes guarded `GET /users/me` and `PUT /users/me/preferences` using JWT `userId` only.
+- `backend/src/users/users.service.ts` explicitly maps password-safe public profiles and composes the canonical budget currency.
+- Currency updates delegate to `BudgetsService` while preserving monthly/category limits.
+- DTO, controller, service, missing-user, password-exclusion, and ownership behavior are covered under `backend/src/users/**/*.spec.ts`.
+
+### Frontend
+
+- `frontend/src/app/core/profile/` contains public profile models, HTTP service, Signal store, initials utility, and tests.
+- `/profile` displays exact persisted username/email, username-derived initials, system appearance, and persistent INR/USD/EUR selection.
+- JWT decoding is removed from profile presentation.
+- Currency changes refresh canonical budget state and propagate shared symbols through Dashboard, Insights, expense entry, History, transaction detail, trend, and recent activity.
+- Logout clears profile, finance metrics, budget, and token state before navigation.
+- The demo-profile disclaimer is removed.
+
+### Verification evidence
+
+- Backend Jest: 13 suites, 90 tests passed.
+- Backend NestJS build: passed.
+- Frontend Vitest: 23 files, 114 tests passed.
+- Frontend production/SSR build: passed; 4 public routes prerendered.
+- Playwright: 9 journeys passed, including exact persisted username differing from email prefix, initials, currency update, symbol propagation, relogin persistence, and second-user default isolation.
+- Runtime user/budget/expense JSON is excluded from the feature source diff.
+- Non-blocking frontend bundle warning: 518.50 kB, 18.50 kB above the configured warning threshold.
+
 ## 6. Acceptance criteria
 
-- [ ] `GET /users/me` returns persisted username and normalized email for JWT user.
-- [ ] Password is absent from every current-user response and test snapshot.
-- [ ] Signup username differing from email prefix displays correctly.
-- [ ] Initials derive from username, not email.
-- [ ] Currency selection persists across reload and login.
-- [ ] Theme remains system-controlled with no manual toggle.
-- [ ] Existing budget limits survive a currency preference update.
-- [ ] Components no longer decode JWT payload for display identity.
-- [ ] Hardcoded currency symbols are replaced by shared formatting where financial values are displayed.
-- [ ] Demo-profile disclaimer is removed.
-- [ ] Logout clears profile, budget, and metrics stores before navigation.
-- [ ] No database, ORM, Docker, password redesign, AI, or external UI library is introduced.
+- [x] `GET /users/me` returns persisted username and normalized email for JWT user.
+- [x] Password is absent from every current-user response and test snapshot.
+- [x] Signup username differing from email prefix displays correctly.
+- [x] Initials derive from username, not email.
+- [x] Currency selection persists across reload and login.
+- [x] Theme remains system-controlled with no manual toggle.
+- [x] Existing budget limits survive a currency preference update.
+- [x] Components no longer decode JWT payload for display identity.
+- [x] Hardcoded currency symbols are replaced by shared formatting where financial values are displayed.
+- [x] Demo-profile disclaimer is removed.
+- [x] Logout clears profile, budget, and metrics stores before navigation.
+- [x] No database, ORM, Docker, password redesign, AI, or external UI library is introduced.
 
 ## 7. Verification plan
 

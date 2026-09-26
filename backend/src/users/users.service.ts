@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { BudgetsService } from '../budgets/budgets.service';
+import { CurrencyCode } from '../budgets/currency-code';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -11,8 +13,17 @@ export interface User {
 
 const DATA_FILE = path.join(process.cwd(), 'data', 'users.json');
 
+export interface UserPublicProfile {
+  id: number;
+  username: string;
+  email: string;
+  preferences: { currency: CurrencyCode; theme: 'system' };
+}
+
 @Injectable()
 export class UsersService {
+  constructor(private readonly budgetsService: BudgetsService) {}
+
   private readAll(): User[] {
     try {
       if (!fs.existsSync(DATA_FILE)) return [];
@@ -54,6 +65,21 @@ export class UsersService {
     users.push(user);
     this.writeAll(users);
     return user;
+  }
+
+  getPublicProfile(id: number): UserPublicProfile {
+    const user = this.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+    const budget = this.budgetsService.getMine(id);
+    return { id: user.id, username: user.username, email: user.email, preferences: { currency: budget.currency, theme: 'system' } };
+  }
+
+  updatePreferences(id: number, currency: CurrencyCode) {
+    const user = this.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+    const budget = this.budgetsService.getMine(id);
+    this.budgetsService.upsert(id, { monthlyLimit: budget.monthlyLimit, categoryLimits: budget.categoryLimits, currency });
+    return { preferences: { currency, theme: 'system' as const } };
   }
 
   normalizeEmail(email: string): string {
