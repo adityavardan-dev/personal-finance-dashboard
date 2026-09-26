@@ -40,10 +40,10 @@
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">How much?</p>
                 <h3 id="amount-title" class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white">{{ type === 'income' ? 'Income' : 'Expense' }} amount</h3>
               </div>
-              <span class="text-sm font-medium text-zinc-400">INR</span>
+              <span class="text-sm font-medium text-zinc-400">{{ budgetStore.currency() }}</span>
             </div>
             <div class="mt-4 flex items-center rounded-3xl border border-zinc-200 bg-zinc-50 px-4 transition focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950">
-              <span class="text-2xl font-semibold text-zinc-400" aria-hidden="true">₹</span>
+              <span class="text-2xl font-semibold text-zinc-400" aria-hidden="true">{{ currencySymbol() }}</span>
               <input name="amount" [(ngModel)]="amount" required min="1" inputmode="decimal" type="number" placeholder="0" [attr.aria-label]="(type === 'income' ? 'Income' : 'Expense') + ' amount'" class="min-h-20 min-w-0 flex-1 bg-transparent px-3 text-4xl font-bold tracking-tight text-zinc-950 outline-none placeholder:text-zinc-300 dark:text-white dark:placeholder:text-zinc-700" />
             </div>
           </section>

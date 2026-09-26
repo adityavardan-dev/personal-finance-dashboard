@@ -195,6 +195,33 @@ test('V1 budget persistence — setup, edit, thresholds, relogin and isolation',
   await expect(page.getByText('Set your monthly budget to begin.').first()).toBeVisible();
 });
 
+test('V1 profile preferences — persisted username, initials, currency and isolation', async ({ page }) => {
+  const username = `River Stone ${Date.now()}`;
+  const credentials = await register(page, username);
+  await login(page, credentials.email, credentials.password);
+
+  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await expect(page.getByRole('heading', { name: username })).toBeVisible();
+  await expect(page.getByText('RS', { exact: true })).toBeVisible();
+  await expect(page.getByText(credentials.email, { exact: true })).toBeVisible();
+  await page.locator('#profile-currency').selectOption('USD');
+  await page.getByRole('button', { name: 'Save preferences' }).click();
+  await expect(page.getByRole('status')).toContainText('Preferences saved');
+
+  await page.getByRole('link', { name: /Dashboard/i }).nth(0).click();
+  await expect(page.getByRole('heading', { name: '$0' })).toBeVisible();
+  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await login(page, credentials.email, credentials.password);
+  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await expect(page.locator('#profile-currency')).toHaveValue('USD');
+
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await signupAndLogin(page);
+  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await expect(page.locator('#profile-currency')).toHaveValue('INR');
+});
+
 test('V1 dynamic insights — dashboard and insights derive metrics from user data', async ({ page }) => {
   await signupAndLogin(page);
   const now = new Date();

@@ -3,6 +3,7 @@ import { Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CategoryIcon } from '../../../../shared/category-icon/category-icon';
 import { TransactionType } from '../../../expenses/expense.service';
+import { CURRENCY_SYMBOLS } from '../../../../core/budget/budget.models';
 
 export interface ActivityTransaction {
   id: string;
@@ -20,4 +21,5 @@ export interface ActivityTransaction {
 })
 export class RecentActivity {
   @Input() transactions: ActivityTransaction[] = [];
+  @Input() currencySymbol = CURRENCY_SYMBOLS.INR;
 }

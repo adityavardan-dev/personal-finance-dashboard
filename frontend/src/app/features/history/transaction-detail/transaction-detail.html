@@ -34,7 +34,7 @@
               <h3 class="mt-1 truncate text-2xl font-bold text-zinc-950 dark:text-white">{{ item.merchant }}</h3>
             </div>
           </div>
-          <p class="text-3xl font-bold" [class.text-blue-600]="item.type === 'income'" [class.dark:text-blue-400]="item.type === 'income'" [class.text-red-600]="item.type === 'expense'" [class.dark:text-red-400]="item.type === 'expense'">{{ item.type === 'income' ? '+' : '-' }}₹{{ item.amount | number }}</p>
+          <p class="text-3xl font-bold" [class.text-blue-600]="item.type === 'income'" [class.dark:text-blue-400]="item.type === 'income'" [class.text-red-600]="item.type === 'expense'" [class.dark:text-red-400]="item.type === 'expense'">{{ item.type === 'income' ? '+' : '-' }}{{ currencySymbol() }}{{ item.amount | number }}</p>
         </div>
 
         <dl class="mt-6 grid gap-5 sm:grid-cols-2">

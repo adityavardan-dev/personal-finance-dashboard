@@ -1,4 +1,5 @@
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { BudgetStore } from '../../core/budget/budget.store';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
@@ -30,6 +31,7 @@ describe('HistoryComponent', () => {
         provideRouter([]),
         { provide: ExpenseService, useValue: { list: mockList, create: vi.fn(), delete: mockDelete } },
         { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
+        { provide: BudgetStore, useValue: { currency: signal('INR'), load: vi.fn() } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();

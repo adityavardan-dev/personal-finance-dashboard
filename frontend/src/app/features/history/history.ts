@@ -1,5 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { BudgetStore } from '../../core/budget/budget.store';
+import { CURRENCY_SYMBOLS } from '../../core/budget/budget.models';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -27,6 +29,10 @@ interface Transaction {
 export class HistoryComponent {
   private readonly expenseService = inject(ExpenseService);
   private readonly metricsStore = inject(FinanceMetricsStore);
+  protected readonly budgetStore = inject(BudgetStore);
+  protected readonly currencySymbol = computed(() => CURRENCY_SYMBOLS[this.budgetStore.currency()]);
+
+  constructor() { this.budgetStore.load(); }
   protected readonly loadError = signal(false);
   protected readonly deleteError = signal(false);
   protected readonly deletedIds = signal<Set<string>>(new Set());

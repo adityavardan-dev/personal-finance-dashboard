@@ -1,4 +1,5 @@
 import { DecimalPipe } from '@angular/common';
+import { CURRENCY_SYMBOLS } from '../../../../core/budget/budget.models';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
@@ -10,7 +11,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 export class HeroCard {
   @Input() spent = 0;
   @Input() budget: number | null = null;
-  @Input() currencySymbol = '₹';
+  @Input() currencySymbol = CURRENCY_SYMBOLS.INR;
   @Output() budgetSetupRequested = new EventEmitter<void>();
   readonly radius = 38;
   readonly circumference = 2 * Math.PI * this.radius;
