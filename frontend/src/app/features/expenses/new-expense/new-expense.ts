@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppLayout } from '../../../shared/app-layout/app-layout';
 import { ExpenseService, TransactionType } from '../expense.service';
+import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store';
 
 interface CategoryOption {
   name: string;
@@ -17,6 +18,7 @@ export class NewExpenseComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly expenseService = inject(ExpenseService);
+  private readonly metricsStore = inject(FinanceMetricsStore);
   private readonly cdr = inject(ChangeDetectorRef);
 
   protected type: TransactionType = 'expense';
@@ -106,6 +108,7 @@ export class NewExpenseComponent implements OnInit {
     request$.subscribe({
       next: () => {
         this.isSubmitting = false;
+        this.metricsStore.refresh();
         void this.router.navigate(['/history']);
       },
       error: () => {

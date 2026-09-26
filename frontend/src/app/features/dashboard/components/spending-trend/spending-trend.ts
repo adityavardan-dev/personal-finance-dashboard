@@ -1,5 +1,6 @@
 import { DecimalPipe } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
+import { TrendPoint } from '../../../../core/finance/finance-models';
 
 @Component({
   selector: 'app-spending-trend',
@@ -8,22 +9,25 @@ import { Component } from '@angular/core';
   styleUrl: './spending-trend.css',
 })
 export class SpendingTrend {
-  categories = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  values = [28600, 31200, 29800, 32500, 34100, 36700];
+  @Input() points: TrendPoint[] = [];
+
+  get categories() { return this.points.map((point) => point.label); }
+  get values() { return this.points.map((point) => point.amount); }
 
   get total() {
     return this.values.reduce((sum, value) => sum + value, 0);
   }
 
   get average() {
-    return Math.round(this.total / this.values.length);
+    return this.values.length ? Math.round(this.total / this.values.length) : 0;
   }
 
   get maxValue() {
-    return Math.max(...this.values);
+    return Math.max(...this.values, 1);
   }
 
   get topMonth() {
+    if (!this.values.length) return 'No spending yet';
     const maxValue = this.maxValue;
     const index = this.values.indexOf(maxValue);
     return `${this.categories[index]} · ₹${maxValue.toLocaleString('en-IN')}`;

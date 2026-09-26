@@ -4,6 +4,7 @@ import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { ExpenseService } from '../expense.service';
+import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store';
 import { NewExpenseComponent } from './new-expense';
 
 describe('NewExpenseComponent', () => {
@@ -31,6 +32,7 @@ describe('NewExpenseComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ExpenseService, useValue: mockExpenseService },
+        { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(null) } } } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
@@ -240,6 +242,7 @@ describe('NewExpenseComponent — edit mode', () => {
       providers: [
         provideRouter([]),
         { provide: ExpenseService, useValue: mockExpenseService },
+        { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(id) } } } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
@@ -330,6 +333,7 @@ describe('NewExpenseComponent — edit mode', () => {
       providers: [
         provideRouter([]),
         { provide: ExpenseService, useValue: mockExpenseService },
+        { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue('bad-id') } } } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
