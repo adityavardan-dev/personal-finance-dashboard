@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Authoritative implementation specification |
+| Status | Implemented and verified |
 | Target branch | `feature/v1-budget-persistence` |
 | Base branch | Latest `develop` after Milestone 4 is merged |
 | Depends on | Milestone 3 authenticated identity; Milestone 4 transaction semantics |
@@ -289,22 +289,72 @@ Hero and Insights must consume `BudgetStore`:
 - Limit present and spending at or above 80%: amber warning treatment.
 - Spending greater than limit: red over-budget treatment and explicit amount over limit.
 - Progress visual uses `min((spent / monthlyLimit) * 100, 100)` while text retains the true percentage.
+- Milestone 5 persists category limits and verifies that they survive edits, reloads, and login sessions. Calculating current-month category spending, category warning thresholds, and category overruns belongs to the shared aggregation/rule layer in Milestone 6.
 
 No component may contain a fallback fixed budget constant.
 
+## 6.5 Implemented architecture and verification evidence
+
+This section records the implementation that satisfies the contracts above. The contracts in Sections 3–6 remain authoritative; this inventory must be updated if implementation paths or behavior change.
+
+### Backend implementation
+
+| Contract | Implementation |
+|---|---|
+| Module registration | `backend/src/budgets/budgets.module.ts`, imported by `backend/src/app.module.ts` |
+| Authenticated API | `backend/src/budgets/budgets.controller.ts` exposes `GET /budgets/me` and `PUT /budgets/me` under `JwtAuthGuard` |
+| JSON persistence and ownership | `backend/src/budgets/budgets.service.ts` |
+| Currency contract | `backend/src/budgets/currency-code.ts` |
+| DTO validation | `backend/src/budgets/dto/upsert-budget.dto.ts` and `category-budget-limit.dto.ts` |
+| Service tests | `backend/src/budgets/budgets.service.spec.ts` |
+| Controller/ownership tests | `backend/src/budgets/budgets.controller.spec.ts` |
+| DTO tests | `backend/src/budgets/dto/upsert-budget.dto.spec.ts` |
+
+Verified backend behavior includes canonical empty response, first-write file creation, service-instance restart persistence, per-user isolation, preserved `createdAt`, refreshed `updatedAt`, malformed-store recovery, positive numeric validation, supported currencies, trimmed non-empty category names, duplicate-category rejection, and rejection of category limits when the monthly budget is cleared.
+
+### Frontend implementation
+
+| Contract | Implementation |
+|---|---|
+| Shared interfaces and currency symbols | `frontend/src/app/core/budget/budget.models.ts` |
+| Authenticated HTTP client | `frontend/src/app/core/budget/budget.service.ts` |
+| Shared Signal store | `frontend/src/app/core/budget/budget.store.ts` |
+| Setup/edit UI | `frontend/src/app/features/budgets/budget-editor/` |
+| Dashboard composition | `frontend/src/app/features/dashboard/dashboard.ts` and `dashboard.html` |
+| Hero no-budget/progress/warning/over-budget UI | `frontend/src/app/features/dashboard/components/hero-card/` |
+| Insights budget consumption | `frontend/src/app/features/insights/insights.ts` and `insights.html` |
+| Logout state clearing | `frontend/src/app/features/profile/profile.ts` |
+| SSR/session-compatible authenticated routes | `frontend/src/app/app.routes.server.ts` |
+
+The `Set budget` control emits an in-page setup event and never navigates. Authenticated routes use client rendering so refresh/direct navigation can read the browser `sessionStorage` token. Dashboard spacing treats the budget editor as a block-level card. Hero and Insights provide explicit amber alerts at 80–100% usage and red exceeded-budget alerts above 100%, with text and ARIA semantics in addition to color.
+
+### Verification evidence — 2026-09-26
+
+- Backend Jest: 11 suites, 80 tests passed, including whitespace-only category rejection and service-instance restart persistence.
+- Frontend Vitest: 18 files, 93 tests passed, including Hero warning, exceeded, and non-navigation setup behavior.
+- Backend NestJS build: passed.
+- Frontend production/SSR build: passed; authenticated routes are client-rendered and 4 public routes are prerendered.
+- Playwright: 7 journeys passed, including budget setup, edit, category persistence, 85% warning, over-budget state, same-user relogin persistence, and second-user isolation.
+- Browser-preview regression: existing Gmail-style account login followed by `Set budget` remains on `/dashboard`, retains the token, and exposes the budget form.
+- Runtime `budgets.json` remains ignored local data; `expenses.json` runtime changes are not part of the feature diff.
+
+### Explicit Milestone 6 boundary
+
+Milestone 5 persists category limits and verifies their validation and persistence. It does not calculate category spending usage. Current-month category aggregation, category warning thresholds, category overruns, dynamic spending trends, and deterministic insight rules remain governed by `06-dynamic-dashboard-insights-spec.md`.
+
 ## 7. Acceptance criteria
 
-- [ ] `budgets.json` is created on first successful save and survives service/process restarts.
-- [ ] Each authenticated user has at most one independent budget record.
-- [ ] GET returns canonical empty state when no record exists.
-- [ ] PUT validates positive limits and supported currency.
-- [ ] Cross-user reads or writes are impossible through the API contract.
-- [ ] Hero and Insights no longer hardcode ₹30,000.
-- [ ] Budget setup/edit state is accessible and responsive.
-- [ ] No-budget, warning, and over-budget states are intentional and visible.
-- [ ] Budget state is cleared or reloaded when the authenticated user changes.
-- [ ] Existing auth and transaction journeys do not regress.
-- [ ] No database, ORM, Docker, AI, password architecture, or external UI library is introduced.
+- [x] `budgets.json` is created on first successful save and survives service/process restarts.
+- [x] Each authenticated user has at most one independent budget record.
+- [x] GET returns canonical empty state when no record exists.
+- [x] PUT validates positive limits and supported currency.
+- [x] Cross-user reads or writes are impossible through the API contract.
+- [x] Hero and Insights no longer hardcode ₹30,000.
+- [x] Budget setup/edit state is accessible and responsive.
+- [x] No-budget, warning, and over-budget states are intentional and visible.
+- [x] Budget state is cleared or reloaded when the authenticated user changes.
+- [x] Existing auth and transaction journeys do not regress.
+- [x] No database, ORM, Docker, AI, password architecture, or external UI library is introduced.
 
 ## 8. Verification plan
 
@@ -335,13 +385,15 @@ No component may contain a fallback fixed budget constant.
 
 ### 8.3 Playwright journeys
 
-1. Signup/login as user A.
-2. Verify no-budget empty state.
-3. Set monthly and category limits.
-4. Reload and verify persisted values.
-5. Edit the budget and verify new progress values.
-6. Create spending that crosses warning and over-budget thresholds.
-7. Signup/login as user B and verify user A's budget is absent.
+1. Signup/login as user A and verify the no-budget empty state.
+2. Set a monthly limit, currency, and category limit.
+3. Navigate away and back; verify persisted budget and currency values.
+4. Edit the monthly limit and verify the category limit remains unchanged.
+5. Create spending at 85% of the monthly limit and verify amber warning treatment.
+6. Edit the limit below current spending and verify red over-budget treatment and uncapped percentage text.
+7. Logout/login as user A; verify monthly/category limits and currency persist.
+8. Signup/login as user B and verify user A's budget is absent.
+9. Category spending threshold/overrun calculations are verified in Milestone 6, while Milestone 5 verifies category-limit persistence only.
 
 ### 8.4 Required commands
 

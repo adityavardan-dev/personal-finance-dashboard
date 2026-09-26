@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AppLayout } from '../../shared/app-layout/app-layout';
 import { AuthService } from '../auth/auth';
+import { BudgetStore } from '../../core/budget/budget.store';
 
 @Component({
   selector: 'app-profile',
@@ -11,6 +12,7 @@ import { AuthService } from '../auth/auth';
 export class ProfileComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly budgetStore = inject(BudgetStore);
 
   readonly user = this.resolveUser();
   readonly preferences = [
@@ -19,6 +21,7 @@ export class ProfileComponent {
   ];
 
   protected logout(): void {
+    this.budgetStore.clear();
     this.authService.clearSession();
     void this.router.navigate(['/login']);
   }

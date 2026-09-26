@@ -1,10 +1,11 @@
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { DashboardComponent } from './dashboard';
 import { ExpenseService } from '../expenses/expense.service';
+import { BudgetStore } from '../../core/budget/budget.store';
 
 const mockExpenses = [
   { id: 'a', userId: 1, type: 'expense' as const, amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-16', createdAt: '2026-09-16T10:00:00.000Z' },
@@ -24,6 +25,7 @@ describe('DashboardComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ExpenseService, useValue: { list: mockList, create: vi.fn() } },
+        { provide: BudgetStore, useValue: { budget: signal(null), status: signal('loaded'), hasBudget: signal(false), monthlyLimit: signal(null), currency: signal('INR'), load: vi.fn(), save: vi.fn() } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
