@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Authoritative implementation specification |
+| Status | Implemented and verified |
 | Target branch | `feature/v1-dynamic-insights` |
 | Base branch | Latest `develop` after Milestone 5 is merged |
 | Depends on | Milestone 4 explicit transaction type; Milestone 5 persisted budget |
@@ -26,7 +26,7 @@ All calculations are local application logic. V1 has zero LLM, AI provider, conv
 - Six-month expense trend grouped by calendar month.
 - Current-month category totals, shares, and highest category.
 - Current-month average daily spending.
-- Current-week daily spending.
+- Current-week daily spending and Monday–Sunday pagination across every week intersecting the current month.
 - Budget used, remaining, and projected pace.
 - Deterministic budget, category, pace, and unusual-transaction alerts.
 - Shared pure calculation utilities under `frontend/src/app/core/finance/`.
@@ -130,6 +130,13 @@ export interface DailyMetric {
   amount: number;
 }
 
+export interface WeekMetric {
+  startDate: string;
+  endDate: string;
+  label: string;
+  days: DailyMetric[];
+}
+
 export type InsightSeverity = 'positive' | 'info' | 'warning' | 'critical';
 
 export type InsightCode =
@@ -168,6 +175,7 @@ export interface DashboardMetrics {
   projectedMonthSpend: number;
   sixMonthTrend: TrendPoint[];
   currentWeek: DailyMetric[];
+  monthWeeks: WeekMetric[];
   categories: CategoryMetric[];
   highestCategory: CategoryMetric | null;
   insights: DeterministicInsight[];
@@ -261,13 +269,17 @@ averageDailySpend = currentMonthSpend / daysElapsed
 - Never divide by a fixed day count.
 - On the first day, divisor is `1`.
 
-### 5.6 Current-week daily spending
+### 5.6 Weekly daily spending and month pagination
 
-- Week runs Monday through Sunday.
-- Return exactly seven chronological points.
+- Every week runs Monday through Sunday and contains exactly seven chronological points.
+- `currentWeek` identifies the week containing the reference date.
+- `monthWeeks` returns every Monday–Sunday week that intersects the reference month, in chronological order.
+- Days outside the reference month remain visible at month edges but have amount `0`; only spending within the selected month contributes.
 - Zero-fill days without expenses.
 - Include only expense transactions.
 - Handle week boundaries crossing month or year.
+- Insights provides Previous/Next controls, current position, selected date range, and selected-week total.
+- Chart containers use a definite height so percentage-height bars remain visible.
 
 ### 5.7 Budget metrics and projection
 
@@ -330,31 +342,72 @@ Messages must state observed facts and formulas in user language. They must not 
 
 - Summary cards: current spend, budget remaining, average daily.
 - Month comparison: dynamic and zero-safe.
-- Weekly chart: dynamic seven-day points.
+- Weekly chart: dynamic seven-day points with Previous/Next pagination across the current month.
 - Category breakdown: dynamic sorted values and accessible percentages.
 - New account: useful empty state with add-transaction and set-budget CTAs.
 
 ### Accessibility
 
 - Every chart has a concise overall `aria-label`.
-- Every focusable bar announces label and formatted amount.
+- Every focusable bar announces weekday, calendar date, and formatted amount.
+- Hover and keyboard focus reveal a `role="tooltip"` containing the weekday/date and `Spent <currency><amount>`; the bar references it through `aria-describedby`.
 - Progress bars expose actual percentages through `aria-valuenow`; values over 100 use `aria-valuetext` while `aria-valuemax` remains 100.
 - Color is never the only warning indicator.
 - Reduced-motion implementation is finalized in Milestone 8.
 
+## 7.1 Implemented architecture and verification evidence
+
+The contracts above remain authoritative. The following inventory records the verified implementation as of 2026-09-26.
+
+### Shared calculation layer
+
+| Contract | Implementation |
+|---|---|
+| Finance input/output models | `frontend/src/app/core/finance/finance-models.ts` |
+| Pure deterministic calculations | `frontend/src/app/core/finance/finance-calculations.ts` |
+| Calculation edge-case tests | `frontend/src/app/core/finance/finance-calculations.spec.ts` |
+| Shared Signal metrics facade | `frontend/src/app/core/finance/finance-metrics.store.ts` |
+| Store load/error/clear tests | `frontend/src/app/core/finance/finance-metrics.store.spec.ts` |
+
+The calculation suite directly verifies current/previous month boundaries, income exclusion, zero previous month, up/down/unchanged comparisons, six-month year rollover and zero filling, category shares and limits, elapsed-day averages, projections, Monday–Sunday weekly data, month-week pagination, edge zero filling, budget exceeded, budget warning, spending pace, category exceeded/warning, unusual transaction detection, no-budget, within-budget, empty state, and input immutability.
+
+### UI integration
+
+| Surface | Implementation |
+|---|---|
+| Dashboard shared metrics consumption | `frontend/src/app/features/dashboard/dashboard.ts` and `dashboard.html` |
+| Dynamic six-month trend | `frontend/src/app/features/dashboard/components/spending-trend/` |
+| Deterministic Intelligence banner | `frontend/src/app/features/dashboard/components/insight-banner/` |
+| Dynamic Insights summary/week/categories | `frontend/src/app/features/insights/insights.ts` and `insights.html` |
+| Mutation-driven refresh | `frontend/src/app/features/expenses/new-expense/new-expense.ts` and `frontend/src/app/features/history/history.ts` |
+| Logout state clearing | `frontend/src/app/features/profile/profile.ts` |
+
+No hardcoded demonstration spend, previous-month, weekly, trend, category, or insight values remain. No AI/LLM provider, generated recommendation, backend analytics endpoint, chart library, database, or ORM was introduced.
+
+### Verification evidence
+
+- Backend Jest: 11 suites, 80 tests passed.
+- Backend NestJS build: passed.
+- Frontend Vitest: Insights coverage includes month-week grouping, week navigation, and weekday/date/spend tooltip content; the final full-suite count is recorded by the latest verification run.
+- Frontend production/SSR build: passed; 4 public routes prerendered.
+- Playwright: 8 journeys passed; the dynamic journey verifies previous-month/current-month values, income exclusion, six-month trend, category breakdown, deterministic insight, visible yesterday/today daily bars, week navigation, and new-account empty state.
+- Static-value scan: no prior demonstration constants or AI-promissory banner copy remain under `frontend/src/app`.
+- Runtime `expenses.json` changes generated by tests were removed from the feature diff.
+- Non-blocking build warning: initial frontend bundle is 517.41 kB, 17.41 kB above the configured 500 kB warning threshold.
+
 ## 8. Acceptance criteria
 
-- [ ] No hardcoded monthly spend, prior spend, trend, weekly, category, or insight values remain.
-- [ ] No fixed ₹30,000 fallback remains.
-- [ ] Current-month totals exclude prior months and income.
-- [ ] Previous-month comparison never displays NaN or Infinity.
-- [ ] Trend returns six chronological zero-filled months.
-- [ ] Category shares and top category come from actual records.
-- [ ] Average daily spend uses actual elapsed days.
-- [ ] Alert rules match this specification exactly.
-- [ ] Dashboard and Insights consume one shared metrics layer.
-- [ ] Empty, no-budget, insufficient-data, and API-error states are explicit.
-- [ ] No LLM, AI service, external chart library, database, ORM, Docker, or auth redesign is introduced.
+- [x] No hardcoded monthly spend, prior spend, trend, weekly, category, or insight values remain.
+- [x] No fixed ₹30,000 fallback remains.
+- [x] Current-month totals exclude prior months and income.
+- [x] Previous-month comparison never displays NaN or Infinity.
+- [x] Trend returns six chronological zero-filled months.
+- [x] Category shares and top category come from actual records.
+- [x] Average daily spend uses actual elapsed days.
+- [x] Alert rules match this specification exactly.
+- [x] Dashboard and Insights consume one shared metrics layer.
+- [x] Empty, no-budget, insufficient-data, and API-error states are explicit.
+- [x] No LLM, AI service, external chart library, database, ORM, Docker, or auth redesign is introduced.
 
 ## 9. Verification plan
 
@@ -390,7 +443,9 @@ Messages must state observed facts and formulas in user language. They must not 
 4. Verify trend and category values update from records.
 5. Verify zero-previous-month language.
 6. Trigger warning and over-budget states.
-7. Verify a new account sees deterministic empty states.
+7. Verify yesterday/today expenses render visible daily bars in the selected current week.
+8. Page to a previous week and back using accessible Previous/Next controls.
+9. Verify a new account sees deterministic empty states.
 
 ### 9.4 Required commands
 

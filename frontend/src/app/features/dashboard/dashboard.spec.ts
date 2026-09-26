@@ -1,105 +1,67 @@
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
-import { DashboardComponent } from './dashboard';
-import { ExpenseService } from '../expenses/expense.service';
 import { BudgetStore } from '../../core/budget/budget.store';
+import { FinanceMetricsStore } from '../../core/finance/finance-metrics.store';
+import { DashboardComponent } from './dashboard';
 
-const mockExpenses = [
-  { id: 'a', userId: 1, type: 'expense' as const, amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-16', createdAt: '2026-09-16T10:00:00.000Z' },
-  { id: 'b', userId: 1, type: 'income' as const, amount: 1200, category: 'Salary', merchant: 'Employer', date: '2026-09-17', createdAt: '2026-09-17T11:00:00.000Z' },
+const transactions = [
+  { id: 'a', type: 'expense' as const, amount: 500, category: 'Food', merchant: 'Cafe', date: '2026-09-16' },
+  { id: 'b', type: 'income' as const, amount: 1200, category: 'Salary', merchant: 'Employer', date: '2026-09-17' },
 ];
+const metrics = {
+  currentMonthSpend: 500,
+  sixMonthTrend: [{ year: 2026, month: 9, label: 'Sept', amount: 500 }],
+  insights: [{ code: 'WITHIN_BUDGET', severity: 'positive', title: 'Budget is on track', message: 'Within limits.' }],
+};
 
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
-  let c: any;
-  let mockList: ReturnType<typeof vi.fn>;
+  let component: any;
+  const metricsSignal = signal<any>(metrics);
+  const transactionSignal = signal<any>(transactions);
+  const metricsStore = { metrics: metricsSignal, transactions: transactionSignal, status: signal('loaded'), errorMessage: signal(null), load: vi.fn(), refresh: vi.fn() };
+  const budgetStore = { budget: signal(null), status: signal('loaded'), hasBudget: signal(false), monthlyLimit: signal(1000), currency: signal('INR'), load: vi.fn(), save: vi.fn() };
 
   beforeEach(async () => {
-    mockList = vi.fn().mockReturnValue(of(mockExpenses));
-
+    metricsSignal.set(metrics);
+    transactionSignal.set(transactions);
+    metricsStore.load.mockClear();
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
-      providers: [
-        provideRouter([]),
-        { provide: ExpenseService, useValue: { list: mockList, create: vi.fn() } },
-        { provide: BudgetStore, useValue: { budget: signal(null), status: signal('loaded'), hasBudget: signal(false), monthlyLimit: signal(null), currency: signal('INR'), load: vi.fn(), save: vi.fn() } },
-      ],
+      providers: [provideRouter([]), { provide: FinanceMetricsStore, useValue: metricsStore }, { provide: BudgetStore, useValue: budgetStore }],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
-
     fixture = TestBed.createComponent(DashboardComponent);
-    c = fixture.componentInstance as any;
-    fixture.detectChanges();
-    await fixture.whenStable();
+    component = fixture.componentInstance as any;
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(c).toBeTruthy();
+  it('loads the shared metrics source', () => {
+    expect(metricsStore.load).toHaveBeenCalledTimes(1);
   });
 
-  // --- Signal state ---
-
-  it('totalSpent includes expenses and excludes income', () => {
-    expect(c.totalSpent()).toBe(500);
-  });
-
-  it('recentTransactions is newest-first', () => {
-    expect(c.recentTransactions()).toHaveLength(2);
-    expect(c.recentTransactions()[0].merchant).toBe('Employer');
-    expect(c.recentTransactions()[1].merchant).toBe('Swiggy');
-  });
-
-  it('recent transactions preserve expense and income types', () => {
-    expect(c.recentTransactions().map((transaction: any) => transaction.type)).toEqual(['income', 'expense']);
-  });
-
-  it('limits recentTransactions to 5 even when more expenses exist', async () => {
-    const many = Array.from({ length: 10 }, (_, i) => ({
-      id: `id-${i}`, userId: 1, type: 'expense' as const, amount: 100, category: 'Other',
-      merchant: `Merchant ${i}`, date: '2026-09-17', createdAt: '',
-    }));
-    mockList.mockReturnValue(of(many));
-    const f2 = TestBed.createComponent(DashboardComponent);
-    const c2 = f2.componentInstance as any;
-    f2.detectChanges();
-    await f2.whenStable();
-    f2.detectChanges();
-    expect(c2.recentTransactions()).toHaveLength(5);
-  });
-
-  it('handles empty expense list without crashing', async () => {
-    mockList.mockReturnValue(of([]));
-    const f2 = TestBed.createComponent(DashboardComponent);
-    const c2 = f2.componentInstance as any;
-    f2.detectChanges();
-    await f2.whenStable();
-    f2.detectChanges();
-    expect(c2.totalSpent()).toBe(0);
-    expect(c2.recentTransactions()).toHaveLength(0);
-  });
-
-  it('handles API failure without crashing', async () => {
-    mockList.mockReturnValue(throwError(() => new Error('Network error')));
-    const f2 = TestBed.createComponent(DashboardComponent);
-    f2.detectChanges();
-    await f2.whenStable();
-    f2.detectChanges();
-    expect(f2.componentInstance).toBeTruthy();
-  });
-
-  // --- DOM rendering ---
-
-  it('Dashboard renders the calculated spending via HeroCard binding', () => {
+  it('renders current-month spend from shared metrics', () => {
+    expect(component.totalSpent()).toBe(500);
     expect(fixture.nativeElement.querySelector('app-hero-card')).toBeTruthy();
-    expect(c.totalSpent()).toBe(500);
   });
 
-  it('RecentActivity receives the returned transactions via signal binding', () => {
-    expect(fixture.nativeElement.querySelector('app-recent-activity')).toBeTruthy();
-    expect(c.recentTransactions()).toHaveLength(2);
+  it('provides dynamic trend points and deterministic insight', () => {
+    expect(component.trend()).toEqual(metrics.sixMonthTrend);
+    expect(component.primaryInsight()?.code).toBe('WITHIN_BUDGET');
+  });
+
+  it('preserves newest-first expense and income activity', () => {
+    expect(component.recentTransactions().map((item: any) => item.type)).toEqual(['income', 'expense']);
+    expect(component.recentTransactions()[0].merchant).toBe('Employer');
+  });
+
+  it('handles empty metrics and transactions', () => {
+    metricsSignal.set(null);
+    transactionSignal.set([]);
+    expect(component.totalSpent()).toBe(0);
+    expect(component.trend()).toEqual([]);
+    expect(component.recentTransactions()).toEqual([]);
   });
 });

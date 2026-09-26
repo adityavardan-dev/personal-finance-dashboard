@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AppLayout } from '../../shared/app-layout/app-layout';
 import { AuthService } from '../auth/auth';
 import { BudgetStore } from '../../core/budget/budget.store';
+import { FinanceMetricsStore } from '../../core/finance/finance-metrics.store';
 
 @Component({
   selector: 'app-profile',
@@ -13,6 +14,7 @@ export class ProfileComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly budgetStore = inject(BudgetStore);
+  private readonly metricsStore = inject(FinanceMetricsStore);
 
   readonly user = this.resolveUser();
   readonly preferences = [
@@ -21,6 +23,7 @@ export class ProfileComponent {
   ];
 
   protected logout(): void {
+    this.metricsStore.clear();
     this.budgetStore.clear();
     this.authService.clearSession();
     void this.router.navigate(['/login']);

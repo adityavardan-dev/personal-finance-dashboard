@@ -7,6 +7,7 @@ import { catchError, of } from 'rxjs';
 import { AppLayout } from '../../shared/app-layout/app-layout';
 import { CategoryIcon } from '../../shared/category-icon/category-icon';
 import { ExpenseService, TransactionType } from '../expenses/expense.service';
+import { FinanceMetricsStore } from '../../core/finance/finance-metrics.store';
 
 interface Transaction {
   id: string;
@@ -25,6 +26,7 @@ interface Transaction {
 })
 export class HistoryComponent {
   private readonly expenseService = inject(ExpenseService);
+  private readonly metricsStore = inject(FinanceMetricsStore);
   protected readonly loadError = signal(false);
   protected readonly deleteError = signal(false);
   protected readonly deletedIds = signal<Set<string>>(new Set());
@@ -136,6 +138,7 @@ export class HistoryComponent {
     this.expenseService.delete(id).subscribe({
       next: () => {
         this.deletedIds.update((ids) => new Set([...ids, id]));
+        this.metricsStore.refresh();
       },
       error: () => {
         this.deleteError.set(true);

@@ -5,6 +5,7 @@ import { Subject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { HistoryComponent } from './history';
 import { ExpenseService } from '../expenses/expense.service';
+import { FinanceMetricsStore } from '../../core/finance/finance-metrics.store';
 
 
 
@@ -28,6 +29,7 @@ describe('HistoryComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ExpenseService, useValue: { list: mockList, create: vi.fn(), delete: mockDelete } },
+        { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
