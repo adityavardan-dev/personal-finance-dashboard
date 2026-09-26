@@ -3,36 +3,32 @@
   <div class="relative grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center lg:gap-8">
     <div class="min-w-0">
       <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-100/75">Current month</p>
-      <h2 id="hero-title" class="mt-2 text-4xl font-bold leading-none tracking-tight sm:text-5xl">₹{{ spent | number }}</h2>
+      <h2 id="hero-title" class="mt-2 text-4xl font-bold leading-none tracking-tight sm:text-5xl">{{ currencySymbol }}{{ spent | number }}</h2>
       <p class="mt-2 text-sm text-emerald-100/75">Amount spent</p>
 
-      <div class="mt-6 max-w-xl">
-        <div class="flex items-center justify-between gap-3 text-sm">
-          <span class="text-emerald-50/75">Budget</span>
-          <span class="font-semibold text-white">₹{{ budget | number }}</span>
+      @if (budget === null) {
+        <div class="mt-6 max-w-xl rounded-2xl bg-white/10 p-4">
+          <p class="font-semibold">Set your monthly budget to begin.</p>
+          <p class="mt-1 text-sm text-emerald-100/75">Add a limit to see remaining budget and progress.</p>
+          <button type="button" (click)="budgetSetupRequested.emit()" class="mt-3 inline-flex min-h-11 items-center rounded-full bg-white px-4 text-sm font-semibold text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">Set budget</button>
         </div>
-        <div class="mt-2 h-2 overflow-hidden rounded-full bg-white/15" role="progressbar" [attr.aria-valuenow]="percentage" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="'Monthly budget: ' + (percentage | number:'1.0-0') + '% spent'">
-          <div class="h-full rounded-full bg-emerald-300 transition-[width] duration-500" [style.width.%]="percentage"></div>
+      } @else {
+        <div class="mt-6 max-w-xl">
+          <div class="flex items-center justify-between gap-3 text-sm"><span class="text-emerald-50/75">Budget</span><span class="font-semibold text-white">{{ currencySymbol }}{{ budget | number }}</span></div>
+          <div class="mt-2 h-2 overflow-hidden rounded-full bg-white/15" role="progressbar" [attr.aria-valuenow]="percentage" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="'Monthly budget: ' + (percentage | number:'1.0-0') + '% spent'"><div class="h-full rounded-full transition-[width] duration-500" [class.bg-emerald-300]="percentage < 80" [class.bg-amber-300]="percentage >= 80 && percentage <= 100" [class.bg-red-300]="percentage > 100" [style.width.%]="visualPercentage"></div></div>
+          <div class="mt-4 flex items-end justify-between gap-4"><div><p class="text-[0.65rem] font-medium uppercase tracking-[0.18em] text-emerald-100/60">{{ remaining !== null && remaining < 0 ? 'Over budget' : 'Remaining' }}</p><p class="mt-1 text-base font-semibold">{{ currencySymbol }}{{ (remaining !== null && remaining < 0 ? -remaining : remaining) | number }}</p></div><p class="text-right text-sm text-emerald-100/70"><span class="font-semibold text-white">{{ daysLeft }}</span> days left</p></div>
+          @if (percentage >= 80) {
+            <div class="mt-4 rounded-2xl border px-4 py-3 text-sm" [class.border-amber-200]="percentage <= 100" [class.bg-amber-300]="percentage <= 100" [class.text-amber-950]="percentage <= 100" [class.border-red-200]="percentage > 100" [class.bg-red-300]="percentage > 100" [class.text-red-950]="percentage > 100" role="alert" aria-live="polite">
+              <p class="font-semibold">{{ percentage > 100 ? 'Monthly budget exceeded' : 'Monthly budget warning' }}</p>
+              <p class="mt-0.5">{{ percentage > 100 ? 'You are over budget by ' + currencySymbol + ((remaining ?? 0) < 0 ? -(remaining ?? 0) : 0).toLocaleString() + '.' : 'You have used ' + (percentage | number:'1.0-0') + '% of your monthly budget.' }}</p>
+            </div>
+          }
         </div>
-        <div class="mt-4 flex items-end justify-between gap-4">
-          <div>
-            <p class="text-[0.65rem] font-medium uppercase tracking-[0.18em] text-emerald-100/60">Remaining</p>
-            <p class="mt-1 text-base font-semibold">₹{{ budget - spent | number }}</p>
-          </div>
-          <p class="text-right text-sm text-emerald-100/70"><span class="font-semibold text-white">{{ daysLeft }}</span> days left</p>
-        </div>
-      </div>
+      }
     </div>
 
-    <div class="relative mx-auto flex h-28 w-28 shrink-0 items-center justify-center sm:mx-0 sm:h-32 sm:w-32 lg:h-36 lg:w-36" aria-hidden="true">
-      <svg class="h-full w-full -rotate-90" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="39" stroke="rgba(255,255,255,0.12)" stroke-width="5" fill="none" />
-        <circle cx="50" cy="50" r="39" stroke="rgba(255,255,255,0.8)" stroke-width="5" fill="none" stroke-linecap="round" [attr.stroke-dasharray]="circumference" [attr.stroke-dashoffset]="progressOffset" />
-      </svg>
-      <div class="absolute text-center">
-        <p class="text-xl font-bold">{{ percentage | number:'1.0-0' }}%</p>
-        <p class="mt-0.5 text-[0.65rem] uppercase tracking-[0.16em] text-emerald-100/70">used</p>
-      </div>
-    </div>
+    @if (budget !== null) {
+      <div class="relative mx-auto flex h-28 w-28 shrink-0 items-center justify-center sm:mx-0 sm:h-32 sm:w-32 lg:h-36 lg:w-36" aria-hidden="true"><svg class="h-full w-full -rotate-90" viewBox="0 0 100 100"><circle cx="50" cy="50" r="39" stroke="rgba(255,255,255,0.12)" stroke-width="5" fill="none" /><circle cx="50" cy="50" r="39" stroke="rgba(255,255,255,0.8)" stroke-width="5" fill="none" stroke-linecap="round" [attr.stroke-dasharray]="circumference" [attr.stroke-dashoffset]="progressOffset" /></svg><div class="absolute text-center"><p class="text-xl font-bold">{{ percentage | number:'1.0-0' }}%</p><p class="mt-0.5 text-[0.65rem] uppercase tracking-[0.16em] text-emerald-100/70">used</p></div></div>
+    }
   </div>
 </section>

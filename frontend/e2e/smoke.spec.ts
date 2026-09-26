@@ -142,6 +142,59 @@ test('V1 signup persistence — duplicate email is rejected', async ({ page }) =
   await expect(page).toHaveURL(/\/signup$/);
 });
 
+test('V1 budget persistence — setup, edit, thresholds, relogin and isolation', async ({ page }) => {
+  const credentials = await signupAndLogin(page);
+
+  await expect(page.getByText('Set your monthly budget to begin.').first()).toBeVisible();
+  await page.locator('#monthly-budget').fill('30000');
+  await page.locator('#budget-currency').selectOption('USD');
+  await page.getByRole('button', { name: 'Add category' }).click();
+  await page.getByPlaceholder('Limit').fill('8000');
+  await page.getByRole('button', { name: 'Save budget' }).click();
+  await expect(page.getByRole('status')).toContainText('Budget saved');
+  await expect(page.getByText('$30,000', { exact: true }).first()).toBeVisible();
+
+  await page.getByRole('link', { name: /Insights/i }).nth(0).click();
+  await expect(page).toHaveURL(/\/insights$/);
+  await expect(page.locator('section[aria-label="Spending summary"]').getByText('$11,460', { exact: true })).toBeVisible();
+  await page.getByRole('link', { name: /Dashboard/i }).nth(0).click();
+
+  await page.getByRole('button', { name: 'Edit budget' }).click();
+  await expect(page.getByPlaceholder('Limit')).toHaveValue('8000');
+  await page.locator('#monthly-budget').fill('1000');
+  await page.getByRole('button', { name: 'Save budget' }).click();
+  await expect(page.getByText('$1,000', { exact: true }).first()).toBeVisible();
+
+  await page.getByRole('link', { name: 'Add Expense' }).first().click();
+  await page.locator('input[name="amount"]').fill('850');
+  await page.locator('input[name="merchant"]').fill(`Budget-${Date.now()}`);
+  await page.getByRole('button', { name: 'Save expense' }).click();
+  await page.getByRole('link', { name: 'Dashboard' }).first().click();
+  const progress = page.getByRole('progressbar', { name: /Monthly budget/ });
+  await expect(progress).toHaveAttribute('aria-valuenow', '85');
+  await expect(progress.locator('div')).toHaveClass(/bg-amber-300/);
+  await expect(page.getByRole('alert').filter({ hasText: 'Monthly budget warning' })).toContainText('used 85%');
+
+  await page.getByRole('button', { name: 'Edit budget' }).click();
+  await page.locator('#monthly-budget').fill('800');
+  await page.getByRole('button', { name: 'Save budget' }).click();
+  await expect(page.getByText('Over budget', { exact: true })).toBeVisible();
+  await expect(progress).toHaveAttribute('aria-valuenow', '106.25');
+  await expect(page.getByRole('alert').filter({ hasText: 'Monthly budget exceeded' })).toContainText('over budget by $50');
+
+  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await login(page, credentials.email, credentials.password);
+  await expect(page.getByText('$800', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Edit budget' }).click();
+  await expect(page.getByPlaceholder('Limit')).toHaveValue('8000');
+
+  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await signupAndLogin(page);
+  await expect(page.getByText('Set your monthly budget to begin.').first()).toBeVisible();
+});
+
 test('V1 transaction history — expense and income remain truthful and isolated', async ({ page }) => {
   await signupAndLogin(page);
 
