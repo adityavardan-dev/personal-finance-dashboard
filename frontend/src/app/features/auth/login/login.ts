@@ -32,13 +32,16 @@ export class LoginComponent {
 
     this.isSubmitting = true;
     const { email, password } = this.loginForm.getRawValue();
+    this.loginForm.disable({ emitEvent: false });
 
     this.authService.login(email, password).subscribe({
       next: () => {
+        this.loginForm.enable({ emitEvent: false });
         this.isSubmitting = false;
         void this.router.navigate(['/dashboard']);
       },
       error: () => {
+        this.loginForm.enable({ emitEvent: false });
         this.isSubmitting = false;
         this.errorMessage = 'We couldn’t sign you in. Check your email and password and try again.';
       },

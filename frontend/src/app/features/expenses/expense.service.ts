@@ -2,7 +2,10 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { API_CONFIG } from '../../core/config/api.config';
 
+export type TransactionType = 'expense' | 'income';
+
 export interface CreateExpensePayload {
+  type: TransactionType;
   amount: number;
   category: string;
   merchant: string;
@@ -11,6 +14,7 @@ export interface CreateExpensePayload {
 }
 
 export interface UpdateExpensePayload {
+  type?: TransactionType;
   amount?: number;
   category?: string;
   merchant?: string;
@@ -21,6 +25,7 @@ export interface UpdateExpensePayload {
 export interface Expense {
   id: string;
   userId: number;
+  type: TransactionType;
   amount: number;
   category: string;
   merchant: string;

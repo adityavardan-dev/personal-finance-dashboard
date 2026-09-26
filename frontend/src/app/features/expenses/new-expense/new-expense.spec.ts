@@ -1,5 +1,5 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
@@ -8,12 +8,14 @@ import { NewExpenseComponent } from './new-expense';
 
 describe('NewExpenseComponent', () => {
   let component: NewExpenseComponent;
+  let fixture: ComponentFixture<NewExpenseComponent>;
   let mockExpenseService: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
   let router: Router;
 
   const validExpenseResponse = {
     id: 'uuid-1',
     userId: 1,
+    type: 'expense' as const,
     amount: 500,
     category: 'Food & Dining',
     merchant: 'Swiggy',
@@ -34,10 +36,25 @@ describe('NewExpenseComponent', () => {
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
-    const fixture = TestBed.createComponent(NewExpenseComponent);
+    fixture = TestBed.createComponent(NewExpenseComponent);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
     vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    fixture.detectChanges();
+  });
+
+  it('lets the user select income and resets to an income category', () => {
+    const typeSelect = fixture.nativeElement.querySelector('#transaction-type') as HTMLSelectElement;
+
+    expect(typeSelect.value).toBe('expense');
+    typeSelect.value = 'income';
+    typeSelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(component['type']).toBe('income');
+    expect(component['category']).toBe('Salary');
+    const categorySelect = fixture.nativeElement.querySelector('#category') as HTMLSelectElement;
+    expect([...categorySelect.options].map((option) => option.value)).toContain('Salary');
   });
 
   describe('invalid form — no API call', () => {
@@ -75,6 +92,7 @@ describe('NewExpenseComponent', () => {
       component['saveExpense']();
 
       expect(mockExpenseService.create).toHaveBeenCalledWith({
+        type: 'expense',
         amount: 750,
         category: 'Transport',
         merchant: 'Ola',
@@ -93,6 +111,24 @@ describe('NewExpenseComponent', () => {
 
       expect(mockExpenseService.create).toHaveBeenCalledWith(
         expect.objectContaining({ note: 'Weekly groceries' }),
+      );
+    });
+
+    it('sends an explicit income type and category', () => {
+      mockExpenseService.create.mockReturnValue(of({
+        ...validExpenseResponse,
+        type: 'income',
+        category: 'Salary',
+      }));
+      component['type'] = 'income';
+      component['category'] = 'Salary';
+      component['amount'] = '50000';
+      component['merchant'] = 'Employer';
+
+      component['saveExpense']();
+
+      expect(mockExpenseService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'income', category: 'Salary' }),
       );
     });
 
@@ -178,6 +214,7 @@ describe('NewExpenseComponent — edit mode', () => {
   const existingExpense = {
     id: 'uuid-edit-1',
     userId: 1,
+    type: 'expense' as const,
     amount: 750,
     category: 'Transport',
     merchant: 'Ola',
@@ -228,6 +265,7 @@ describe('NewExpenseComponent — edit mode', () => {
 
   it('populates form fields from the loaded expense', async () => {
     await setupEditMode('uuid-edit-1');
+    expect(component['type']).toBe('expense');
     expect(component['amount']).toBe('750');
     expect(component['merchant']).toBe('Ola');
     expect(component['category']).toBe('Transport');

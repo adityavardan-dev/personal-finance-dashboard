@@ -52,7 +52,7 @@ describe('ExpensesService', () => {
   describe('create', () => {
     it('persists a new expense and returns it with an id', () => {
       (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
-      const dto = { amount: 750, category: 'Transport', merchant: 'Ola', date: '2026-09-17' };
+      const dto = { type: 'expense', amount: 750, category: 'Transport', merchant: 'Ola', date: '2026-09-17' };
 
       const result = service.create(USER_A, dto as any);
 
@@ -69,7 +69,7 @@ describe('ExpensesService', () => {
       mockedFs.writeFileSync.mockImplementation((_path, data) => {
         written.push(JSON.parse(data as string));
       });
-      const dto = { amount: 200, category: 'Utilities', merchant: 'BESCOM', date: '2026-09-17' };
+      const dto = { type: 'expense', amount: 200, category: 'Utilities', merchant: 'BESCOM', date: '2026-09-17' };
 
       service.create(USER_A, dto as any);
 
@@ -78,11 +78,25 @@ describe('ExpensesService', () => {
 
     it('stores optional note when provided', () => {
       (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
-      const dto = { amount: 300, category: 'Other', merchant: 'DMart', date: '2026-09-17', note: 'Weekly groceries' };
+      const dto = { type: 'expense', amount: 300, category: 'Other', merchant: 'DMart', date: '2026-09-17', note: 'Weekly groceries' };
 
       const result = service.create(USER_A, dto as any);
 
       expect(result.note).toBe('Weekly groceries');
+    });
+
+    it('persists the explicit transaction type', () => {
+      (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
+
+      const result = service.create(USER_A, {
+        type: 'income',
+        amount: 50000,
+        category: 'Salary',
+        merchant: 'Employer',
+        date: '2026-09-01',
+      } as any);
+
+      expect(result.type).toBe('income');
     });
   });
 
@@ -92,6 +106,12 @@ describe('ExpensesService', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0].userId).toBe(USER_A);
+    });
+
+    it('normalizes legacy records without a type to expense', () => {
+      const [result] = service.findByUser(USER_A);
+
+      expect(result.type).toBe('expense');
     });
 
     it('enforces user isolation — user A cannot see user B expenses', () => {
@@ -160,6 +180,12 @@ describe('ExpensesService', () => {
       expect(result.category).toBe('Food & Dining');
     });
 
+    it('updates the transaction type', () => {
+      const result = service.update(USER_A, 'uuid-a1', { type: 'income' } as any);
+
+      expect(result.type).toBe('income');
+    });
+
     it('preserves id, userId, and createdAt', () => {
       const result = service.update(USER_A, 'uuid-a1', { amount: 600 });
 
@@ -172,6 +198,17 @@ describe('ExpensesService', () => {
       service.update(USER_A, 'uuid-a1', { amount: 777 });
 
       expect(mockedFs.writeFileSync).toHaveBeenCalledTimes(1);
+    });
+
+    it('persists normalized types for legacy records on the next write', () => {
+      let written: any[] = [];
+      mockedFs.writeFileSync.mockImplementation((_path, data) => {
+        written = JSON.parse(data as string);
+      });
+
+      service.update(USER_A, 'uuid-a1', { amount: 777 });
+
+      expect(written.every((expense) => expense.type === 'expense')).toBe(true);
     });
 
     it('throws NotFoundException when ID belongs to another user', () => {

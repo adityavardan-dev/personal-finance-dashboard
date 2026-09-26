@@ -1,0 +1,55 @@
+<app-app-layout>
+  <div class="mx-auto w-full max-w-3xl space-y-6">
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">Transaction detail</p>
+        <h2 class="mt-1.5 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">Review transaction</h2>
+        <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">View the complete saved record without changing it.</p>
+      </div>
+      <a routerLink="/history" class="inline-flex min-h-11 items-center justify-center rounded-full px-4 text-sm font-semibold text-zinc-600 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-zinc-300 dark:hover:bg-zinc-800">Back to history</a>
+    </header>
+
+    @if (isLoading()) {
+      <section class="rounded-3xl border border-zinc-200 bg-white p-10 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900" aria-busy="true">
+        <p class="text-sm text-zinc-500 dark:text-zinc-400">Loading transaction…</p>
+      </section>
+    } @else if (notFound()) {
+      <section class="rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900" role="alert">
+        <h3 class="text-xl font-semibold text-zinc-950 dark:text-white">Transaction not found</h3>
+        <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">This record does not exist or is not available to your account.</p>
+        <a routerLink="/history" class="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">Return to history</a>
+      </section>
+    } @else if (errorMessage()) {
+      <section class="rounded-3xl border border-red-200 bg-red-50 p-6 shadow-sm dark:border-red-900/70 dark:bg-red-950/30" role="alert">
+        <p class="text-sm font-medium text-red-700 dark:text-red-400">{{ errorMessage() }}</p>
+        <a routerLink="/history" class="mt-4 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-red-300 dark:hover:bg-red-950/50">Return to history</a>
+      </section>
+    } @else if (transaction(); as item) {
+      <article class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+        <div class="flex flex-col gap-5 border-b border-zinc-100 pb-6 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
+          <div class="flex min-w-0 items-center gap-4">
+            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"><app-category-icon [category]="item.category" /></span>
+            <div class="min-w-0">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em]" [class.text-blue-600]="item.type === 'income'" [class.dark:text-blue-400]="item.type === 'income'" [class.text-red-600]="item.type === 'expense'" [class.dark:text-red-400]="item.type === 'expense'">{{ item.type === 'income' ? 'Income' : 'Expense' }}</p>
+              <h3 class="mt-1 truncate text-2xl font-bold text-zinc-950 dark:text-white">{{ item.merchant }}</h3>
+            </div>
+          </div>
+          <p class="text-3xl font-bold" [class.text-blue-600]="item.type === 'income'" [class.dark:text-blue-400]="item.type === 'income'" [class.text-red-600]="item.type === 'expense'" [class.dark:text-red-400]="item.type === 'expense'">{{ item.type === 'income' ? '+' : '-' }}₹{{ item.amount | number }}</p>
+        </div>
+
+        <dl class="mt-6 grid gap-5 sm:grid-cols-2">
+          <div><dt class="text-xs font-semibold uppercase tracking-wide text-zinc-400">Type</dt><dd class="mt-1 text-sm font-medium text-zinc-900 dark:text-white">{{ item.type === 'income' ? 'Income' : 'Expense' }}</dd></div>
+          <div><dt class="text-xs font-semibold uppercase tracking-wide text-zinc-400">Category</dt><dd class="mt-1 text-sm font-medium text-zinc-900 dark:text-white">{{ item.category }}</dd></div>
+          <div><dt class="text-xs font-semibold uppercase tracking-wide text-zinc-400">Transaction date</dt><dd class="mt-1 text-sm font-medium text-zinc-900 dark:text-white">{{ item.date + 'T00:00:00' | date:'d MMM y' }}</dd></div>
+          <div><dt class="text-xs font-semibold uppercase tracking-wide text-zinc-400">Created</dt><dd class="mt-1 text-sm font-medium text-zinc-900 dark:text-white">{{ item.createdAt | date:'medium' }}</dd></div>
+          <div class="sm:col-span-2"><dt class="text-xs font-semibold uppercase tracking-wide text-zinc-400">Note</dt><dd class="mt-1 text-sm leading-6 text-zinc-700 dark:text-zinc-300">{{ item.note || 'No note added.' }}</dd></div>
+        </dl>
+
+        <div class="mt-7 flex flex-col-reverse gap-3 border-t border-zinc-100 pt-6 sm:flex-row sm:justify-end dark:border-zinc-800">
+          <a routerLink="/history" class="inline-flex min-h-11 items-center justify-center rounded-full px-5 text-sm font-semibold text-zinc-600 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-zinc-300 dark:hover:bg-zinc-800">Back</a>
+          <a [routerLink]="['/expenses', item.id, 'edit']" class="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">Edit transaction</a>
+        </div>
+      </article>
+    }
+  </div>
+</app-app-layout>

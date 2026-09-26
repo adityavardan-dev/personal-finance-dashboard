@@ -3,6 +3,7 @@ import { DashboardComponent } from './features/dashboard/dashboard';
 import { InsightsComponent } from './features/insights/insights';
 import { NewExpenseComponent } from './features/expenses/new-expense/new-expense';
 import { HistoryComponent } from './features/history/history';
+import { TransactionDetailComponent } from './features/history/transaction-detail/transaction-detail';
 import { ProfileComponent } from './features/profile/profile';
 import { LoginComponent } from './features/auth/login/login';
 import { SignupComponent } from './features/auth/signup/signup';
@@ -45,6 +46,11 @@ export const routes: Routes = [
   {
     path: 'expenses/:id/edit',
     component: NewExpenseComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'history/:id',
+    component: TransactionDetailComponent,
     canActivate: [authGuard],
   },
   {

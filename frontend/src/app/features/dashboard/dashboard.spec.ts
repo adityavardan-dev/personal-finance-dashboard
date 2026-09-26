@@ -7,8 +7,8 @@ import { DashboardComponent } from './dashboard';
 import { ExpenseService } from '../expenses/expense.service';
 
 const mockExpenses = [
-  { id: 'a', userId: 1, amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-16', createdAt: '2026-09-16T10:00:00.000Z' },
-  { id: 'b', userId: 1, amount: 1200, category: 'Shopping', merchant: 'Amazon', date: '2026-09-17', createdAt: '2026-09-17T11:00:00.000Z' },
+  { id: 'a', userId: 1, type: 'expense' as const, amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-16', createdAt: '2026-09-16T10:00:00.000Z' },
+  { id: 'b', userId: 1, type: 'income' as const, amount: 1200, category: 'Salary', merchant: 'Employer', date: '2026-09-17', createdAt: '2026-09-17T11:00:00.000Z' },
 ];
 
 describe('DashboardComponent', () => {
@@ -41,23 +41,23 @@ describe('DashboardComponent', () => {
 
   // --- Signal state ---
 
-  it('totalSpent calculates sum of all expense amounts', () => {
-    expect(c.totalSpent()).toBe(1700);
+  it('totalSpent includes expenses and excludes income', () => {
+    expect(c.totalSpent()).toBe(500);
   });
 
   it('recentTransactions is newest-first', () => {
     expect(c.recentTransactions()).toHaveLength(2);
-    expect(c.recentTransactions()[0].merchant).toBe('Amazon');
+    expect(c.recentTransactions()[0].merchant).toBe('Employer');
     expect(c.recentTransactions()[1].merchant).toBe('Swiggy');
   });
 
-  it('all recent transactions have type debit', () => {
-    expect(c.recentTransactions().every((t: any) => t.type === 'debit')).toBe(true);
+  it('recent transactions preserve expense and income types', () => {
+    expect(c.recentTransactions().map((transaction: any) => transaction.type)).toEqual(['income', 'expense']);
   });
 
   it('limits recentTransactions to 5 even when more expenses exist', async () => {
     const many = Array.from({ length: 10 }, (_, i) => ({
-      id: `id-${i}`, userId: 1, amount: 100, category: 'Other',
+      id: `id-${i}`, userId: 1, type: 'expense' as const, amount: 100, category: 'Other',
       merchant: `Merchant ${i}`, date: '2026-09-17', createdAt: '',
     }));
     mockList.mockReturnValue(of(many));
@@ -93,7 +93,7 @@ describe('DashboardComponent', () => {
 
   it('Dashboard renders the calculated spending via HeroCard binding', () => {
     expect(fixture.nativeElement.querySelector('app-hero-card')).toBeTruthy();
-    expect(c.totalSpent()).toBe(1700);
+    expect(c.totalSpent()).toBe(500);
   });
 
   it('RecentActivity receives the returned transactions via signal binding', () => {
