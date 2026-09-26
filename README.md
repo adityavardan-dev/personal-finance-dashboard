@@ -16,9 +16,9 @@ Local JSON persistence and plaintext development passwords are intentionally sco
 
 ## Authoritative documentation
 
-- [Business requirements](docs/00-business-requirements.md)
-- [Design system](docs/01-design-system.md)
-- [UI build guide](docs/02-ui-build-guide.md)
+- [Business requirements](docs/milestones/00-business-requirements.md)
+- [Design system](docs/milestones/01-design-system.md)
+- [UI build guide](docs/milestones/02-ui-build-guide.md)
 
 ### Remaining V1 milestone specifications
 
