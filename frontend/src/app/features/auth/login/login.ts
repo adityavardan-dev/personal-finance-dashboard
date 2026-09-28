@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
+import { safeInternalReturnUrl } from '../../../core/auth/session-expiry.service';
 import { AuthService } from '../auth';
 
 @Component({
@@ -11,6 +12,7 @@ import { AuthService } from '../auth';
 })
 export class LoginComponent {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
 
   readonly loginForm = new FormGroup({
@@ -18,6 +20,10 @@ export class LoginComponent {
     password: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(8)] }),
   });
 
+  readonly sessionMessage = this.route.snapshot.queryParamMap.get('reason') === 'session-expired'
+    ? 'Your session expired. Sign in again to continue.'
+    : '';
+  private readonly returnUrl = safeInternalReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
   showPassword = false;
   isSubmitting = false;
   errorMessage = '';
@@ -27,6 +33,7 @@ export class LoginComponent {
 
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
+      queueMicrotask(() => document.querySelector<HTMLElement>('#email[aria-invalid="true"], #password[aria-invalid="true"]')?.focus());
       return;
     }
 
@@ -38,7 +45,7 @@ export class LoginComponent {
       next: () => {
         this.loginForm.enable({ emitEvent: false });
         this.isSubmitting = false;
-        void this.router.navigate(['/dashboard']);
+        void this.router.navigateByUrl(this.returnUrl);
       },
       error: () => {
         this.loginForm.enable({ emitEvent: false });

@@ -7,6 +7,7 @@ export default defineConfig({
     timeout: 10000,
   },
   fullyParallel: false,
+  workers: 1,
   retries: process.env.CI ? 2 : 1,
   reporter: [
     ['list'],
@@ -26,7 +27,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
   ],
   webServer: [

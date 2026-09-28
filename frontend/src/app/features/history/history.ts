@@ -3,12 +3,10 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { BudgetStore } from '../../core/budget/budget.store';
 import { CURRENCY_SYMBOLS } from '../../core/budget/budget.models';
 import { FormsModule } from '@angular/forms';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { catchError, of } from 'rxjs';
 import { AppLayout } from '../../shared/app-layout/app-layout';
 import { CategoryIcon } from '../../shared/category-icon/category-icon';
-import { ExpenseService, TransactionType } from '../expenses/expense.service';
+import { Expense, ExpenseService, TransactionType } from '../expenses/expense.service';
 import { FinanceMetricsStore } from '../../core/finance/finance-metrics.store';
 
 interface Transaction {
@@ -32,20 +30,26 @@ export class HistoryComponent {
   protected readonly budgetStore = inject(BudgetStore);
   protected readonly currencySymbol = computed(() => CURRENCY_SYMBOLS[this.budgetStore.currency()]);
 
-  constructor() { this.budgetStore.load(); }
+  constructor() {
+    this.budgetStore.load();
+    this.loadTransactions();
+  }
   protected readonly loadError = signal(false);
   protected readonly deleteError = signal(false);
   protected readonly deletedIds = signal<Set<string>>(new Set());
+  private readonly expenses = signal<Expense[] | null>(null);
 
-  private readonly expenses = toSignal(
-    this.expenseService.list().pipe(
-      catchError(() => {
+  protected loadTransactions(): void {
+    this.expenses.set(null);
+    this.loadError.set(false);
+    this.expenseService.list().subscribe({
+      next: (expenses) => this.expenses.set(expenses),
+      error: () => {
+        this.expenses.set([]);
         this.loadError.set(true);
-        return of([]);
-      }),
-    ),
-    { initialValue: null },
-  );
+      },
+    });
+  }
 
   protected readonly isLoading = computed(() => this.expenses() === null);
 

@@ -34,7 +34,7 @@ async function signupAndLogin(page: Page) {
 test('XPENSE smoke flow — login, dashboard, profile, logout', async ({ page }) => {
   const credentials = await signupAndLogin(page);
 
-  await expect(page.getByRole('heading', { name: /Good (Morning|Afternoon|Evening)/i })).toBeVisible();
+  await expect(page.getByText(/Good (Morning|Afternoon|Evening)/i)).toBeVisible();
   await expect(page.getByRole('heading', { name: /Recent transactions/i })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Profile/i }).nth(0)).toBeVisible();
@@ -115,7 +115,7 @@ test('V1 signup persistence — signup, login, profile, logout and protected rou
   await expect(page).toHaveURL(/\/login$/);
   await login(page, credentials.email, credentials.password);
 
-  await expect(page.getByRole('heading', { name: /Good (Morning|Afternoon|Evening)/i })).toBeVisible();
+  await expect(page.getByText(/Good (Morning|Afternoon|Evening)/i)).toBeVisible();
 
   await page.getByRole('link', { name: /Profile/i }).nth(0).click();
   await expect(page).toHaveURL(/\/profile$/);

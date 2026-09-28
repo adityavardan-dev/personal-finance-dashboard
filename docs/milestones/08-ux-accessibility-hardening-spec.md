@@ -259,17 +259,17 @@ Do not silently transform an API failure into an empty successful state.
 
 ## 11. Acceptance criteria
 
-- [ ] All routes pass the six-width viewport matrix with no horizontal overflow.
-- [ ] Every interactive target is at least 44×44 CSS pixels.
-- [ ] History filters and edit/delete actions meet touch standards.
-- [ ] Reduced-motion media behavior is implemented and verified.
-- [ ] Keyboard users can complete signup, login, budget, transaction, history, profile, and logout journeys.
-- [ ] Landmarks, headings, live regions, progress bars, and navigation state satisfy this contract.
-- [ ] Authenticated `401` clears session and redirects once; auth-form `401` remains local.
-- [ ] Loading, empty, and failure states are visible and distinct.
-- [ ] Light/dark contrast is manually verified and documented.
-- [ ] Existing visual hierarchy and design tokens remain intact.
-- [ ] No external UI library, database, ORM, Docker, auth expansion, AI, or V2/V3 work is introduced.
+- [x] All routes pass the six-width viewport matrix with no horizontal overflow.
+- [x] Every interactive target is at least 44×44 CSS pixels.
+- [x] History filters and edit/delete actions meet touch standards.
+- [x] Reduced-motion media behavior is implemented and verified.
+- [x] Keyboard users can complete signup, login, budget, transaction, history, profile, and logout journeys.
+- [x] Landmarks, headings, live regions, progress bars, and navigation state satisfy this contract.
+- [x] Authenticated `401` clears session and redirects once; auth-form `401` remains local.
+- [x] Loading, empty, and failure states are visible and distinct.
+- [x] Light/dark contrast is manually verified and documented.
+- [x] Existing visual hierarchy and design tokens remain intact.
+- [x] No external UI library, database, ORM, Docker, auth expansion, AI, or V2/V3 work is introduced.
 
 ## 12. Verification plan
 
@@ -331,3 +331,33 @@ cd frontend && npx playwright test
 ## 13. Definition of done
 
 Milestone 8 is complete only when the entire dynamic V1 product satisfies the viewport, input, motion, semantics, session-expiry, and state contracts; automated and manual evidence is recorded in the PR; and the branch contains no unrelated feature or visual redesign work.
+
+## 14. Implementation record
+
+### Shared hardening
+
+- `frontend/src/styles.css` supplies global overflow containment, 44px native-control minimums, visible focus treatment, WCAG-AA emerald button contrast, and the required reduced-motion media query.
+- `AppLayout` preserves mobile safe-area clearance and focuses the destination main region after authenticated route transitions.
+- Authenticated pages expose one level-one heading; the shared greeting no longer competes with page headings.
+- Sidebar and bottom navigation expose distinct names, current-page state, and identifiable collapsed links.
+- Weekly chart points remain keyboard focusable, expose tooltips on focus, and use a contained horizontal viewport at narrow widths.
+- History filters and row actions meet the 44×44 target, with at least 8px separation between edit and delete.
+- Dashboard, Insights, History, transaction detail/edit, Profile, and budget setup expose distinct loading, empty, error, and retry states.
+
+### Session expiry
+
+- `SessionExpiryService` centralizes authenticated `401` cleanup for profile, budget, finance metrics, and access-token state.
+- Auth login/signup failures remain local; non-401 failures do not clear the session.
+- Concurrent failures deduplicate navigation, SSR avoids browser APIs, and only safe internal return URLs are accepted.
+- Login announces session expiry and returns the user to the validated internal route after successful authentication.
+
+### Verification evidence
+
+- Frontend Vitest: 24 files, 120 tests passed, including authenticated 401 deduplication and SSR safety.
+- Backend Jest: 13 suites, 90 tests passed.
+- Backend and frontend production builds passed.
+- Playwright: 18 journeys passed with one worker, including six viewport widths across every V1 route without document overflow.
+- Playwright: touch-target, keyboard activation, reduced-motion, dark theme, and authenticated-session expiry journeys passed; workers are serialized for deterministic JSON-store writes.
+- Existing smoke regression journeys passed after updating the shared greeting assertion to its non-heading semantic.
+- Light mode was exercised by the route matrix; dark mode and reduced motion were exercised together. Contrast-critical emerald controls use `#047857` with white text, and zinc/financial state labels retain textual meaning.
+- No backend DTO, persisted schema, external UI library, theme toggle, or unrelated product feature was introduced.

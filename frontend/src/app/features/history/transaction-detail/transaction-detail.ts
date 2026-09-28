@@ -25,6 +25,13 @@ export class TransactionDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.budgetStore.load();
+    this.loadTransaction();
+  }
+
+  protected loadTransaction(): void {
+    this.isLoading.set(true);
+    this.notFound.set(false);
+    this.errorMessage.set('');
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       this.isLoading.set(false);

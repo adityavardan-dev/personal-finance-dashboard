@@ -1,7 +1,9 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../../features/auth/auth';
 import { API_CONFIG } from '../config/api.config';
+import { SessionExpiryService } from './session-expiry.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
@@ -13,11 +15,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
+  const sessionExpiry = inject(SessionExpiryService);
+
   return next(
     req.clone({
       setHeaders: {
         Authorization: `Bearer ${token}`,
       },
+    }),
+  ).pipe(
+    catchError((error: HttpErrorResponse) => {
+      if (error.status === 401) sessionExpiry.handleUnauthorized();
+      return throwError(() => error);
     }),
   );
 };
