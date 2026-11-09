@@ -7,7 +7,8 @@
     "merchant": "Swiggy",
     "date": "2026-09-17",
     "note": "Modak",
-    "createdAt": "2026-09-17T12:02:40.538Z"
+    "createdAt": "2026-09-17T12:02:40.538Z",
+    "type": "expense"
   },
   {
     "id": "cd7881d7-356b-40c4-bb40-9e05d5e82829",
@@ -16,7 +17,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789648083609",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T12:28:03.678Z"
+    "createdAt": "2026-09-17T12:28:03.678Z",
+    "type": "expense"
   },
   {
     "id": "6c52de31-af1f-4897-97b2-4e0eb27410e3",
@@ -25,7 +27,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789648095922",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T12:28:16.053Z"
+    "createdAt": "2026-09-17T12:28:16.053Z",
+    "type": "expense"
   },
   {
     "id": "767ef792-8d18-4e7d-ab68-a73350402c13",
@@ -34,7 +37,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789648117171",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T12:28:37.227Z"
+    "createdAt": "2026-09-17T12:28:37.227Z",
+    "type": "expense"
   },
   {
     "id": "5dd15374-4ddc-4c6c-8f08-29126e39da93",
@@ -43,7 +47,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789648129392",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T12:28:49.524Z"
+    "createdAt": "2026-09-17T12:28:49.524Z",
+    "type": "expense"
   },
   {
     "id": "07326f84-5e73-443f-9605-bbda702932e6",
@@ -52,7 +57,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789648762321",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T12:39:22.390Z"
+    "createdAt": "2026-09-17T12:39:22.390Z",
+    "type": "expense"
   },
   {
     "id": "d37bd0bb-412d-4ccc-b56c-1b341d0fffa6",
@@ -61,7 +67,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789648780258",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T12:39:40.382Z"
+    "createdAt": "2026-09-17T12:39:40.382Z",
+    "type": "expense"
   },
   {
     "id": "7cebcfb1-b704-4944-8988-87f65995f6f5",
@@ -70,7 +77,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789648974448",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T12:42:54.515Z"
+    "createdAt": "2026-09-17T12:42:54.515Z",
+    "type": "expense"
   },
   {
     "id": "7a94b180-f0d5-400c-990a-662c4ac876c3",
@@ -79,7 +87,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789648991895",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T12:43:11.983Z"
+    "createdAt": "2026-09-17T12:43:11.983Z",
+    "type": "expense"
   },
   {
     "id": "10c54fed-613e-47f4-aff9-a01024f3211b",
@@ -88,7 +97,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789650586767",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T13:09:46.827Z"
+    "createdAt": "2026-09-17T13:09:46.827Z",
+    "type": "expense"
   },
   {
     "id": "0691e076-7c01-4f14-b60c-87365a283a49",
@@ -97,7 +107,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789650604169",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T13:10:04.245Z"
+    "createdAt": "2026-09-17T13:10:04.245Z",
+    "type": "expense"
   },
   {
     "id": "6e66b093-2765-4a11-ab45-be018bfbec06",
@@ -106,7 +117,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789650925562",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T13:15:25.614Z"
+    "createdAt": "2026-09-17T13:15:25.614Z",
+    "type": "expense"
   },
   {
     "id": "5b109fbd-34ed-4be5-bfa9-5cddd433a747",
@@ -115,7 +127,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789650942908",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T13:15:42.982Z"
+    "createdAt": "2026-09-17T13:15:42.982Z",
+    "type": "expense"
   },
   {
     "id": "dd38322f-639e-4efd-b877-c500c7a6d55c",
@@ -124,7 +137,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789651058467",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T13:17:38.518Z"
+    "createdAt": "2026-09-17T13:17:38.518Z",
+    "type": "expense"
   },
   {
     "id": "5c02d435-d5b6-4753-8325-284a446fdb71",
@@ -133,7 +147,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789651075811",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T13:17:55.886Z"
+    "createdAt": "2026-09-17T13:17:55.886Z",
+    "type": "expense"
   },
   {
     "id": "2ae014e1-6f57-4c40-8ffc-85beb1f4d85f",
@@ -142,7 +157,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789652889367",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T13:48:09.421Z"
+    "createdAt": "2026-09-17T13:48:09.421Z",
+    "type": "expense"
   },
   {
     "id": "8397a36c-0425-4ed4-9377-96501727bfd2",
@@ -151,7 +167,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789652906746",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T13:48:26.822Z"
+    "createdAt": "2026-09-17T13:48:26.822Z",
+    "type": "expense"
   },
   {
     "id": "54f3b059-7b8f-4e1a-b3d7-85357578a3fc",
@@ -160,7 +177,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789653361325",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T13:56:01.391Z"
+    "createdAt": "2026-09-17T13:56:01.391Z",
+    "type": "expense"
   },
   {
     "id": "d0bfe53e-32f5-447a-a2f5-b0e9b93f0449",
@@ -169,7 +187,8 @@
     "category": "Shopping",
     "merchant": "H&M",
     "date": "2026-09-17",
-    "createdAt": "2026-09-17T14:03:21.494Z"
+    "createdAt": "2026-09-17T14:03:21.494Z",
+    "type": "expense"
   },
   {
     "id": "4ad40e9f-7d17-4bdd-8c63-292ed8545310",
@@ -178,7 +197,8 @@
     "amount": 500,
     "category": "Food & Dining",
     "merchant": "CRUD-1789741138480-EDITED",
-    "date": "2026-09-18"
+    "date": "2026-09-18",
+    "type": "expense"
   },
   {
     "id": "8dadaa5f-7e24-4cc7-9f3f-70cc8badc3e9",
@@ -187,7 +207,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789741139064",
     "date": "2026-09-18",
-    "createdAt": "2026-09-18T14:18:59.132Z"
+    "createdAt": "2026-09-18T14:18:59.132Z",
+    "type": "expense"
   },
   {
     "id": "e1b2fcd4-a319-4f6c-8667-2c458d9e0000",
@@ -196,7 +217,8 @@
     "amount": 500,
     "category": "Food & Dining",
     "merchant": "CRUD-1789741150849-EDITED",
-    "date": "2026-09-18"
+    "date": "2026-09-18",
+    "type": "expense"
   },
   {
     "id": "0cb3929c-0f06-47f9-82ac-eb9856df3967",
@@ -205,7 +227,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789741234353",
     "date": "2026-09-18",
-    "createdAt": "2026-09-18T14:20:34.418Z"
+    "createdAt": "2026-09-18T14:20:34.418Z",
+    "type": "expense"
   },
   {
     "id": "f13ee5e4-1695-4ee4-8991-88da47bc2d6c",
@@ -214,7 +237,8 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789988946629",
     "date": "2026-09-21",
-    "createdAt": "2026-09-21T11:09:06.698Z"
+    "createdAt": "2026-09-21T11:09:06.698Z",
+    "type": "expense"
   },
   {
     "id": "e35f5e66-1567-4fe6-ad7f-57ca2e920925",
@@ -223,6 +247,172 @@
     "category": "Food & Dining",
     "merchant": "E2E-1789989335255",
     "date": "2026-09-21",
-    "createdAt": "2026-09-21T11:15:35.326Z"
+    "createdAt": "2026-09-21T11:15:35.326Z",
+    "type": "expense"
+  },
+  {
+    "id": "8958cb79-9a29-4143-87b9-4027bbb325e0",
+    "userId": 4,
+    "type": "expense",
+    "amount": 5000,
+    "category": "Food & Dining",
+    "merchant": "Roxie's for",
+    "date": "2026-11-10",
+    "note": "Had lunch with Jaswanth and Harsha at Roxie's for 5000",
+    "createdAt": "2026-11-09T19:45:26.772Z"
+  },
+  {
+    "id": "469ae103-e793-420c-9f13-38967b610e39",
+    "userId": 4,
+    "type": "expense",
+    "amount": 3000,
+    "category": "Shopping",
+    "merchant": "H&M",
+    "date": "2026-11-09",
+    "note": "shopping for 3000 yesterday",
+    "createdAt": "2026-11-09T19:46:16.196Z"
+  },
+  {
+    "id": "cf19efa2-7ff9-485c-be0a-a6342d23959b",
+    "userId": 4,
+    "type": "expense",
+    "amount": 2000,
+    "category": "Entertainment",
+    "merchant": "Diwali vendor",
+    "date": "2026-11-05",
+    "note": "spent on diwali crackers 2000 5 days ago",
+    "createdAt": "2026-11-09T19:56:43.188Z"
+  },
+  {
+    "id": "d02455a1-ec28-4900-b083-8c0aa2ce885a",
+    "userId": 4,
+    "type": "expense",
+    "amount": 200,
+    "category": "Utilities",
+    "merchant": "Swiggy",
+    "date": "2026-11-10",
+    "note": "5 min ago spent 200 on swiggy instamart",
+    "createdAt": "2026-11-09T20:07:42.992Z"
+  },
+  {
+    "id": "ecec3ec7-fe26-42f0-b5ed-dab8086f1a5e",
+    "userId": 4,
+    "type": "expense",
+    "amount": 400,
+    "category": "Transport",
+    "merchant": "Shell",
+    "date": "2026-11-10",
+    "note": "I spent 400 on petrol today",
+    "createdAt": "2026-11-09T21:39:20.360Z"
+  },
+  {
+    "id": "19f3f4e0-f6e4-4eb0-8187-36fe69bf99e9",
+    "userId": 4,
+    "type": "expense",
+    "amount": 1000,
+    "category": "Entertainment",
+    "merchant": "Swiggy",
+    "date": "2026-11-07",
+    "note": "spent 1000 on food orders yesterday",
+    "createdAt": "2026-11-09T21:39:20.360Z"
+  },
+  {
+    "id": "fea32318-6a79-4aff-add8-c6919fb687a4",
+    "userId": 4,
+    "type": "expense",
+    "amount": 50,
+    "category": "Food & Dining",
+    "merchant": "fill the merchants",
+    "date": "2026-11-10",
+    "note": "spent 50 on sweets today.",
+    "createdAt": "2026-11-09T21:40:32.594Z"
+  },
+  {
+    "id": "97ba64a2-99dd-47da-a4ed-1546e83f69fd",
+    "userId": 4,
+    "type": "expense",
+    "amount": 350,
+    "category": "Food & Dining",
+    "merchant": "fill the merchants",
+    "date": "2026-11-10",
+    "note": "Spent 350 on food",
+    "createdAt": "2026-11-09T21:40:36.515Z"
+  },
+  {
+    "id": "80a5d63f-7142-4b79-b013-b502b17e19f8",
+    "userId": 4,
+    "type": "expense",
+    "amount": 500,
+    "category": "Transport",
+    "merchant": "fill the merchants",
+    "date": "2026-11-10",
+    "note": "spent 500 on petrol",
+    "createdAt": "2026-11-09T21:40:36.515Z"
+  },
+  {
+    "id": "63373bbe-ed46-4ad7-9ad9-2be329063b21",
+    "userId": 4,
+    "type": "expense",
+    "amount": 350,
+    "category": "Food & Dining",
+    "merchant": "Zomato",
+    "date": "2026-11-10",
+    "note": "Spent 350 on food",
+    "createdAt": "2026-11-09T22:01:08.138Z"
+  },
+  {
+    "id": "164712b5-5af2-496c-9f36-70511df33726",
+    "userId": 4,
+    "type": "expense",
+    "amount": 500,
+    "category": "Transport",
+    "merchant": "Shell",
+    "date": "2026-11-10",
+    "note": "500 on petrol",
+    "createdAt": "2026-11-09T22:01:08.138Z"
+  },
+  {
+    "id": "7f98dbf7-b30f-44f3-8718-aa9afb998e51",
+    "userId": 4,
+    "type": "expense",
+    "amount": 50,
+    "category": "Food & Dining",
+    "merchant": "Zomato",
+    "date": "2026-11-10",
+    "note": "50 on sweets today.",
+    "createdAt": "2026-11-09T22:01:08.138Z"
+  },
+  {
+    "id": "9342444f-a021-418b-9453-c65bceaeedcf",
+    "userId": 4,
+    "type": "expense",
+    "amount": 350,
+    "category": "Food & Dining",
+    "merchant": "Repeat the merchants for yesterday",
+    "date": "2026-11-09",
+    "note": "Spent 350 on food",
+    "createdAt": "2026-11-09T22:01:08.138Z"
+  },
+  {
+    "id": "cfb92c26-6a88-4728-adfc-70048ecc5869",
+    "userId": 4,
+    "type": "expense",
+    "amount": 500,
+    "category": "Transport",
+    "merchant": "Repeat the merchants for yesterday",
+    "date": "2026-11-09",
+    "note": "500 on petrol",
+    "createdAt": "2026-11-09T22:01:08.138Z"
+  },
+  {
+    "id": "c81ea02d-1a13-40bc-83d1-f3d9059797a9",
+    "userId": 4,
+    "type": "expense",
+    "amount": 50,
+    "category": "Food & Dining",
+    "merchant": "Repeat the merchants for yesterday",
+    "date": "2026-11-09",
+    "note": "50 on sweets yesterday.",
+    "createdAt": "2026-11-09T22:01:08.138Z"
   }
 ]
