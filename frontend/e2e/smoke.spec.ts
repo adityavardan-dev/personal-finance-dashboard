@@ -34,12 +34,17 @@ async function signupAndLogin(page: Page) {
 test('XPENSE smoke flow — login, dashboard, profile, logout', async ({ page }) => {
   const credentials = await signupAndLogin(page);
 
-  await expect(page.getByRole('heading', { name: /Good (Morning|Afternoon|Evening)/i })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /Good (Morning|Afternoon|Evening)/i }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: /Recent transactions/i })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Profile/i }).nth(0)).toBeVisible();
 
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await expect(page).toHaveURL(/\/profile$/);
   await expect(page.getByText(credentials.email, { exact: true })).toBeVisible();
 
@@ -106,18 +111,27 @@ test('V1 expense CRUD — create, edit, delete full lifecycle', async ({ page })
 
   const updatedRow = page.locator('article').filter({ hasText: updatedMerchant });
   await updatedRow.getByRole('button', { name: 'Delete' }).click();
-  await expect(page.getByText(updatedMerchant, { exact: true })).not.toBeVisible({ timeout: 10000 });
+  await expect(page.getByText(updatedMerchant, { exact: true })).not.toBeVisible({
+    timeout: 10000,
+  });
 });
 
-test('V1 signup persistence — signup, login, profile, logout and protected route', async ({ page }) => {
+test('V1 signup persistence — signup, login, profile, logout and protected route', async ({
+  page,
+}) => {
   const credentials = await register(page, `Signup E2E ${Date.now()}`);
 
   await expect(page).toHaveURL(/\/login$/);
   await login(page, credentials.email, credentials.password);
 
-  await expect(page.getByRole('heading', { name: /Good (Morning|Afternoon|Evening)/i })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /Good (Morning|Afternoon|Evening)/i }),
+  ).toBeVisible();
 
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await expect(page).toHaveURL(/\/profile$/);
   await expect(page.getByText(credentials.email, { exact: true })).toBeVisible();
 
@@ -154,10 +168,18 @@ test('V1 budget persistence — setup, edit, thresholds, relogin and isolation',
   await expect(page.getByText('Budget saved.', { exact: true })).toBeVisible();
   await expect(page.getByText('$30,000', { exact: true }).first()).toBeVisible();
 
-  await page.getByRole('link', { name: /Insights/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Insights/i })
+    .nth(0)
+    .click();
   await expect(page).toHaveURL(/\/insights$/);
-  await expect(page.locator('section[aria-label="Spending summary"]').getByText('$30,000', { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: /Dashboard/i }).nth(0).click();
+  await expect(
+    page.locator('section[aria-label="Spending summary"]').getByText('$30,000', { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('link', { name: /Dashboard/i })
+    .nth(0)
+    .click();
 
   await page.getByRole('button', { name: 'Edit budget' }).click();
   await expect(page.getByPlaceholder('Limit')).toHaveValue('8000');
@@ -173,34 +195,49 @@ test('V1 budget persistence — setup, edit, thresholds, relogin and isolation',
   const progress = page.getByRole('progressbar', { name: /Monthly budget/ });
   await expect(progress).toHaveAttribute('aria-valuenow', '85');
   await expect(progress.locator('div')).toHaveClass(/bg-amber-300/);
-  await expect(page.locator('section[aria-label="Monthly spending overview"]').getByRole('alert')).toContainText('used 85%');
+  await expect(
+    page.locator('section[aria-label="Monthly spending overview"]').getByRole('alert'),
+  ).toContainText('used 85%');
 
   await page.getByRole('button', { name: 'Edit budget' }).click();
   await page.locator('#monthly-budget').fill('800');
   await page.getByRole('button', { name: 'Save budget' }).click();
   await expect(page.getByText('Over budget', { exact: true })).toBeVisible();
   await expect(progress).toHaveAttribute('aria-valuenow', '106.25');
-  await expect(page.locator('section[aria-label="Monthly spending overview"]').getByRole('alert')).toContainText('over budget by $50');
+  await expect(
+    page.locator('section[aria-label="Monthly spending overview"]').getByRole('alert'),
+  ).toContainText('over budget by $50');
 
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await page.getByRole('button', { name: 'Log out' }).click();
   await login(page, credentials.email, credentials.password);
   await expect(page.getByText('$800', { exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Edit budget' }).click();
   await expect(page.getByPlaceholder('Limit')).toHaveValue('8000');
 
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await page.getByRole('button', { name: 'Log out' }).click();
   await signupAndLogin(page);
   await expect(page.getByText('Set your monthly budget to begin.').first()).toBeVisible();
 });
 
-test('V1 profile preferences — persisted username, initials, currency and isolation', async ({ page }) => {
+test('V1 profile preferences — persisted username, initials, currency and isolation', async ({
+  page,
+}) => {
   const username = `River Stone ${Date.now()}`;
   const credentials = await register(page, username);
   await login(page, credentials.email, credentials.password);
 
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await expect(page.getByRole('heading', { name: username })).toBeVisible();
   await expect(page.getByText('RS', { exact: true })).toBeVisible();
   await expect(page.getByText(credentials.email, { exact: true })).toBeVisible();
@@ -208,24 +245,39 @@ test('V1 profile preferences — persisted username, initials, currency and isol
   await page.getByRole('button', { name: 'Save preferences' }).click();
   await expect(page.getByRole('status')).toContainText('Preferences saved');
 
-  await page.getByRole('link', { name: /Dashboard/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Dashboard/i })
+    .nth(0)
+    .click();
   await expect(page.getByRole('heading', { name: '$0' })).toBeVisible();
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await page.getByRole('button', { name: 'Log out' }).click();
   await login(page, credentials.email, credentials.password);
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await expect(page.locator('#profile-currency')).toHaveValue('USD');
 
   await page.getByRole('button', { name: 'Log out' }).click();
   await signupAndLogin(page);
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await expect(page.locator('#profile-currency')).toHaveValue('INR');
 });
 
-test('V1 dynamic insights — dashboard and insights derive metrics from user data', async ({ page }) => {
+test('V1 dynamic insights — dashboard and insights derive metrics from user data', async ({
+  page,
+}) => {
   await signupAndLogin(page);
   const now = new Date();
-  const toDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const toDateKey = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const currentDate = toDateKey(now);
   const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   const yesterdayDate = toDateKey(yesterday);
@@ -239,14 +291,21 @@ test('V1 dynamic insights — dashboard and insights derive metrics from user da
   await page.locator('#monthly-budget').fill('1000');
   await page.getByRole('button', { name: 'Save budget' }).click();
 
-  async function addTransaction(amount: string, merchant: string, date: string, type: 'expense' | 'income' = 'expense') {
+  async function addTransaction(
+    amount: string,
+    merchant: string,
+    date: string,
+    type: 'expense' | 'income' = 'expense',
+  ) {
     await page.getByRole('link', { name: 'Add Expense' }).first().click();
     if (type === 'income') await page.locator('#transaction-type').selectOption('income');
     await page.locator('input[name="amount"]').fill(amount);
     await page.locator('input[name="merchant"]').fill(merchant);
     await page.locator('#date').fill(date);
     if (type === 'income') await page.locator('#category').selectOption('Salary');
-    await page.getByRole('button', { name: type === 'income' ? 'Save income' : 'Save expense' }).click();
+    await page
+      .getByRole('button', { name: type === 'income' ? 'Save income' : 'Save expense' })
+      .click();
     await page.getByRole('link', { name: 'Dashboard' }).first().click();
     await page.waitForLoadState('networkidle');
   }
@@ -261,7 +320,10 @@ test('V1 dynamic insights — dashboard and insights derive metrics from user da
   await expect(page.getByLabel(`${currentLabel}: ₹200`)).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Budget is on track' })).toBeVisible();
 
-  await page.getByRole('link', { name: /Insights/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Insights/i })
+    .nth(0)
+    .click();
   const summary = page.locator('section[aria-label="Spending summary"]');
   await expect(summary.getByText('₹200', { exact: true })).toBeVisible();
   await expect(summary).toContainText('100% up from last month');
@@ -272,14 +334,22 @@ test('V1 dynamic insights — dashboard and insights derive metrics from user da
   await page.getByRole('button', { name: 'Previous week' }).click();
   await expect(page.getByRole('button', { name: 'Next week' })).toBeEnabled();
 
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await page.getByRole('button', { name: 'Log out' }).click();
   await signupAndLogin(page);
-  await page.getByRole('link', { name: /Insights/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Insights/i })
+    .nth(0)
+    .click();
   await expect(page.getByText('Start tracking your spending')).toBeVisible();
 });
 
-test('V1 transaction history — expense and income remain truthful and isolated', async ({ page }) => {
+test('V1 transaction history — expense and income remain truthful and isolated', async ({
+  page,
+}) => {
   await signupAndLogin(page);
 
   const expenseMerchant = `Expense-${Date.now()}`;
@@ -303,8 +373,12 @@ test('V1 transaction history — expense and income remain truthful and isolated
   await expect(page).toHaveURL(/\/history$/);
 
   const summary = page.locator('section[aria-label="Transaction summary"]');
-  await expect(summary.locator('article').filter({ has: page.getByText('Expenses', { exact: true }) })).toContainText('750');
-  await expect(summary.locator('article').filter({ has: page.getByText('Income', { exact: true }) })).toContainText('50,000');
+  await expect(
+    summary.locator('article').filter({ has: page.getByText('Expenses', { exact: true }) }),
+  ).toContainText('750');
+  await expect(
+    summary.locator('article').filter({ has: page.getByText('Income', { exact: true }) }),
+  ).toContainText('50,000');
 
   await page.getByRole('button', { name: 'Income', exact: true }).click();
   await expect(page.getByText(incomeSource, { exact: true })).toBeVisible();
@@ -324,7 +398,10 @@ test('V1 transaction history — expense and income remain truthful and isolated
   await expect(page.getByText('Food & Dining', { exact: true })).toBeVisible();
   const firstUserDetailUrl = page.url();
 
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await page.getByRole('button', { name: 'Log out' }).click();
   await signupAndLogin(page);
 
@@ -336,8 +413,75 @@ test('V1 transaction history — expense and income remain truthful and isolated
   await expect(page).toHaveURL(firstUserDetailUrl);
   await expect(page.getByRole('heading', { name: 'Transaction not found' })).toBeVisible();
 
-  await page.getByRole('link', { name: /Profile/i }).nth(0).click();
+  await page
+    .getByRole('link', { name: /Profile/i })
+    .nth(0)
+    .click();
   await page.getByRole('button', { name: 'Log out' }).click();
   await page.goto(firstUserDetailUrl);
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test('Milestone 10 conversational intake — clarify and batch-save editable drafts', async ({
+  page,
+}) => {
+  await signupAndLogin(page);
+  const suffix = Date.now();
+  const cafe = `Cafe-${suffix}`;
+  const fuel = `Fuel-${suffix}`;
+  const sweets = `Sweets-${suffix}`;
+
+  await page.getByRole('link', { name: 'Add Expense' }).first().click();
+  await page.getByRole('link', { name: 'Describe it in plain language' }).click();
+  await expect(page.getByRole('heading', { name: 'Describe your transactions' })).toBeVisible();
+  await page
+    .locator('#transaction-message')
+    .fill(
+      `spent 350 at ${cafe} on food, spent 500 at ${fuel} on petrol and spent 50 at ${sweets} on sweets`,
+    );
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.locator('details')).toHaveCount(3);
+  await expect(page.getByText('3 drafts · 0 ready to save')).toBeVisible();
+
+  const token = await page.evaluate(() => sessionStorage.getItem('accessToken'));
+  const beforeConfirm = await page.request.get('http://127.0.0.1:3000/expenses', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(beforeConfirm.ok()).toBeTruthy();
+  const beforeTransactions = await beforeConfirm.json();
+  expect(beforeTransactions).not.toEqual(
+    expect.arrayContaining([expect.objectContaining({ merchant: cafe })]),
+  );
+
+  await page.locator('#transaction-message').fill('use today for all');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.getByText('3 drafts · 3 ready to save')).toBeVisible();
+  await page.getByRole('button', { name: 'Save all ready (3)' }).click();
+  await expect(page.getByText('3 transactions saved successfully.')).toBeVisible();
+
+  await page.getByRole('link', { name: 'History', exact: true }).last().click();
+  await expect(page).toHaveURL(/\/history$/);
+  await expect(page.getByText(cafe, { exact: true })).toBeVisible();
+  await expect(page.getByText(fuel, { exact: true })).toBeVisible();
+  await expect(page.getByText(sweets, { exact: true })).toBeVisible();
+});
+
+test('Milestone 10 conversational intake — responsive workspace stays usable', async ({ page }) => {
+  await signupAndLogin(page);
+  await page.getByRole('link', { name: 'Add Expense' }).first().click();
+  await page.getByRole('link', { name: 'Describe it in plain language' }).click();
+
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 768, height: 1024 },
+    { width: 1024, height: 768 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(page.locator('#transaction-message')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Transaction workspace' })).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
 });

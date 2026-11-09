@@ -44,6 +44,14 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'expenses/intake',
+    loadComponent: () =>
+      import('./features/expenses/context-intake/context-intake').then(
+        (module) => module.ContextIntakeComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'expenses/:id/edit',
     component: NewExpenseComponent,
     canActivate: [authGuard],

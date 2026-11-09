@@ -43,6 +43,10 @@ export class ExpenseService {
     return this.http.post<Expense>(this.url, payload);
   }
 
+  createBatch(transactions: CreateExpensePayload[]) {
+    return this.http.post<Expense[]>(`${this.url}/batch`, { transactions });
+  }
+
   list() {
     return this.http.get<Expense[]>(this.url);
   }

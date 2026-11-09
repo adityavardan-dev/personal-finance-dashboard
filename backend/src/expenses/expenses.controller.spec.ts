@@ -28,6 +28,7 @@ describe('ExpensesController', () => {
           provide: ExpensesService,
           useValue: {
             create: jest.fn().mockReturnValue(mockExpense),
+            createBatch: jest.fn().mockReturnValue([mockExpense]),
             findByUser: jest.fn().mockReturnValue([mockExpense]),
             findOne: jest.fn().mockReturnValue(mockExpense),
             update: jest.fn().mockReturnValue(mockExpense),
@@ -46,7 +47,13 @@ describe('ExpensesController', () => {
 
   describe('POST /expenses', () => {
     it('creates an expense for the authenticated user', () => {
-      const dto = { type: 'expense', amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-17' };
+      const dto = {
+        type: 'expense',
+        amount: 500,
+        category: 'Food & Dining',
+        merchant: 'Swiggy',
+        date: '2026-09-17',
+      };
 
       const result = controller.create(mockRequest as any, dto as any);
 
@@ -55,12 +62,39 @@ describe('ExpensesController', () => {
     });
 
     it('passes the userId from the JWT token — not from the request body', () => {
-      const dto = { type: 'expense', amount: 200, category: 'Transport', merchant: 'Uber', date: '2026-09-17' };
-      const reqWithDifferentUser = { user: { userId: 42, email: 'other@test.com' } };
+      const dto = {
+        type: 'expense',
+        amount: 200,
+        category: 'Transport',
+        merchant: 'Uber',
+        date: '2026-09-17',
+      };
+      const reqWithDifferentUser = {
+        user: { userId: 42, email: 'other@test.com' },
+      };
 
       controller.create(reqWithDifferentUser as any, dto as any);
 
       expect(service.create).toHaveBeenCalledWith(42, dto);
+    });
+  });
+
+  describe('POST /expenses/batch', () => {
+    it('creates all transactions for the authenticated user', () => {
+      const transactions = [
+        {
+          type: 'expense',
+          amount: 500,
+          category: 'Transport',
+          merchant: 'Ola',
+          date: '2026-11-10',
+        },
+      ];
+
+      expect(
+        controller.createBatch(mockRequest as any, { transactions } as any),
+      ).toEqual([mockExpense]);
+      expect(service.createBatch).toHaveBeenCalledWith(1, transactions);
     });
   });
 
@@ -91,7 +125,11 @@ describe('ExpensesController', () => {
   describe('PATCH /expenses/:id', () => {
     it('calls service.update with authenticated userId and returns result', () => {
       const dto = { amount: 999, merchant: 'Updated' };
-      const result = controller.update(mockRequest as any, 'uuid-1', dto as any);
+      const result = controller.update(
+        mockRequest as any,
+        'uuid-1',
+        dto as any,
+      );
 
       expect(result).toEqual(mockExpense);
       expect(service.update).toHaveBeenCalledWith(1, 'uuid-1', dto);
@@ -121,7 +159,8 @@ describe('ExpensesController', () => {
 
   describe('guard coverage', () => {
     it('JwtAuthGuard is applied at the controller level', () => {
-      const guards: any[] = Reflect.getMetadata('__guards__', ExpensesController) ?? [];
+      const guards: any[] =
+        Reflect.getMetadata('__guards__', ExpensesController) ?? [];
       expect(guards).toContain(JwtAuthGuard);
     });
   });

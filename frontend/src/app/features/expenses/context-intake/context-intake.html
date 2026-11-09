@@ -1,0 +1,503 @@
+<app-app-layout>
+  <div class="mx-auto w-full max-w-7xl space-y-6">
+    <header class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+      <div class="max-w-2xl">
+        <p class="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+          Private rule-based entry
+        </p>
+        <h1 class="mt-1 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">
+          Describe your transactions
+        </h1>
+        <p class="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+          Turn one message into reviewed, editable transactions. Nothing is saved until you confirm
+          it.
+        </p>
+      </div>
+
+      <nav aria-label="Transaction entry actions" class="flex flex-wrap items-center gap-2">
+        @if (messages().length || drafts().length) {
+          <button
+            type="button"
+            (click)="startNewConversation()"
+            class="min-h-11 rounded-2xl px-4 text-sm font-semibold text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 motion-reduce:transition-none dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            New session
+          </button>
+        }
+        <a
+          routerLink="/expenses/new"
+          class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 motion-reduce:transition-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+        >
+          Enter manually
+        </a>
+      </nav>
+    </header>
+
+    @if (errorMessage()) {
+      <div
+        role="alert"
+        class="rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"
+      >
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <main
+      class="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:grid lg:min-h-[38rem] lg:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1.22fr)]"
+    >
+      <section
+        aria-labelledby="conversation-title"
+        class="flex min-h-[31rem] flex-col border-b border-zinc-200 dark:border-zinc-800 lg:max-h-[calc(100vh-11rem)] lg:min-h-[38rem] lg:border-r lg:border-b-0"
+      >
+        <div class="flex items-start justify-between gap-4 px-5 pt-5 md:px-6 md:pt-6">
+          <div>
+            <h2 id="conversation-title" class="text-xl font-semibold text-zinc-950 dark:text-white">
+              Conversation
+            </h2>
+            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Drafts stay temporary until you save them.
+            </p>
+          </div>
+          @if (expiresAt) {
+            <span class="whitespace-nowrap pt-1 text-xs text-zinc-400 dark:text-zinc-500"
+              >30 min session</span
+            >
+          }
+        </div>
+
+        <div class="flex-1 space-y-5 overflow-y-auto px-5 py-6 md:px-6" aria-live="polite">
+          @if (!messages().length) {
+            <div class="max-w-md py-3">
+              <div
+                class="flex size-9 items-center justify-center rounded-full bg-zinc-950 text-xs font-bold text-white dark:bg-white dark:text-zinc-950"
+                aria-hidden="true"
+              >
+                X
+              </div>
+              <h3 class="mt-4 text-lg font-semibold text-zinc-950 dark:text-white">
+                Start with a natural description
+              </h3>
+              <p class="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                “Spent 350 on food, 500 on petrol and 50 on sweets today.”
+              </p>
+              <p class="mt-3 text-xs leading-5 text-zinc-400 dark:text-zinc-500">
+                You can follow up with “use yesterday for all” or “change transaction 2 to 600”.
+              </p>
+            </div>
+          }
+
+          @for (message of messages(); track message.id) {
+            @if (message.role === 'user') {
+              <article class="flex justify-end">
+                <div
+                  class="max-w-[90%] rounded-3xl rounded-br-lg bg-zinc-100 px-4 py-3 text-sm leading-6 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100"
+                >
+                  <p>{{ message.text }}</p>
+                  <time class="mt-1 block text-[10px] text-zinc-400">{{
+                    formatMessageTime(message)
+                  }}</time>
+                </div>
+              </article>
+            } @else {
+              <article class="flex items-start gap-3">
+                <div
+                  class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-950"
+                  aria-hidden="true"
+                >
+                  X
+                </div>
+                <div
+                  class="min-w-0 flex-1 pt-0.5 text-sm leading-6 text-zinc-700 dark:text-zinc-200"
+                >
+                  <p>{{ message.text }}</p>
+                  <time class="mt-1 block text-[10px] text-zinc-400">{{
+                    formatMessageTime(message)
+                  }}</time>
+                </div>
+              </article>
+            }
+          }
+
+          @if (status() === 'parsing') {
+            <div aria-busy="true" class="flex items-center gap-3 text-sm text-zinc-500">
+              <span
+                class="size-2 animate-pulse rounded-full bg-emerald-500 motion-reduce:animate-none"
+                aria-hidden="true"
+              ></span>
+              Checking your message…
+            </div>
+          }
+        </div>
+
+        <form
+          (ngSubmit)="submitMessage()"
+          class="border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 md:p-5"
+        >
+          <label for="transaction-message" class="sr-only">Describe or update transactions</label>
+          <div
+            class="rounded-3xl border border-zinc-200 bg-zinc-50 p-2 transition-colors duration-150 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 motion-reduce:transition-none dark:border-zinc-800 dark:bg-zinc-950"
+          >
+            <textarea
+              id="transaction-message"
+              name="transactionMessage"
+              [(ngModel)]="rawText"
+              required
+              maxlength="4000"
+              rows="3"
+              placeholder="Describe expenses or reply with a correction…"
+              class="w-full resize-none bg-transparent px-2 py-2 text-base text-zinc-950 outline-none placeholder:text-zinc-400 dark:text-white"
+            ></textarea>
+            <div class="flex items-center justify-between gap-3 px-1 pb-1">
+              <span class="text-[11px] text-zinc-400">Private draft</span>
+              <button
+                type="submit"
+                [disabled]="!rawText.trim() || status() === 'parsing' || status() === 'saving'"
+                class="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none dark:text-zinc-950"
+              >
+                {{ status() === 'parsing' ? 'Checking…' : 'Send' }}
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section aria-labelledby="workspace-title" class="min-w-0 bg-zinc-50/70 dark:bg-zinc-950/40">
+        <div class="px-5 pt-5 md:px-6 md:pt-6">
+          <div class="flex items-end justify-between gap-4">
+            <div>
+              <h2 id="workspace-title" class="text-xl font-semibold text-zinc-950 dark:text-white">
+                Transaction workspace
+              </h2>
+              <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                {{ drafts().length }} drafts · {{ readyCount() }} ready to save
+              </p>
+            </div>
+            @if (drafts().length) {
+              <a
+                routerLink="/history"
+                class="inline-flex min-h-11 items-center rounded-2xl px-3 text-sm font-semibold text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 motion-reduce:transition-none dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                History
+              </a>
+            }
+          </div>
+        </div>
+
+        @if (!drafts().length) {
+          <div
+            class="flex min-h-72 items-center justify-center px-6 py-12 text-center lg:min-h-[30rem]"
+          >
+            <div class="max-w-sm">
+              <p class="text-lg font-semibold text-zinc-900 dark:text-white">
+                Your transactions will appear here
+              </p>
+              <p class="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                Send one message to create one or several editable drafts.
+              </p>
+            </div>
+          </div>
+        }
+
+        @if (drafts().length) {
+          <div class="space-y-4 px-4 py-5 md:px-6 md:py-6">
+            @for (draft of drafts(); track draft.id; let i = $index) {
+              <details
+                [open]="draft.expanded"
+                (toggle)="toggleDraft(draft, $any($event.target).open)"
+                class="group overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-shadow duration-200 open:shadow-md motion-reduce:transition-none dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <summary
+                  class="flex min-h-[5.25rem] cursor-pointer list-none items-center gap-3 px-4 py-4 marker:hidden md:px-6"
+                >
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="draft.selected"
+                    (ngModelChange)="touchDrafts()"
+                    (click)="$event.stopPropagation()"
+                    [disabled]="draft.saveStatus === 'saved'"
+                    [attr.aria-label]="'Select transaction ' + (i + 1)"
+                    class="size-5 shrink-0 rounded border-zinc-300 text-emerald-500 focus:ring-emerald-500"
+                  />
+
+                  <div class="min-w-0 flex-1">
+                    <h3 class="truncate text-base font-semibold text-zinc-950 dark:text-white">
+                      {{ draft.merchant || draft.category || 'Transaction ' + (i + 1) }}
+                    </h3>
+                    <p class="mt-1 truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      {{ draft.date || 'Date needed' }} · {{ draft.category || 'Category needed' }}
+                    </p>
+                  </div>
+
+                  <div class="shrink-0 text-right">
+                    <p
+                      class="text-base font-semibold tabular-nums text-zinc-950 dark:text-white md:text-lg"
+                    >
+                      {{ draft.amount ? applicationCurrency() + ' ' + draft.amount : '—' }}
+                    </p>
+                    <p
+                      class="mt-1 flex items-center justify-end gap-1.5 text-[11px] font-medium text-zinc-500"
+                    >
+                      <span
+                        class="size-1.5 rounded-full"
+                        [class.bg-emerald-500]="canSaveDraft(draft) || draft.saveStatus === 'saved'"
+                        [class.bg-amber-500]="!canSaveDraft(draft) && draft.saveStatus !== 'saved'"
+                        aria-hidden="true"
+                      ></span>
+                      {{ draftStatusLabel(draft) }}
+                    </p>
+                  </div>
+
+                  <span
+                    aria-hidden="true"
+                    class="ml-1 text-zinc-400 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+                    >⌄</span
+                  >
+                </summary>
+
+                <div
+                  class="border-t border-zinc-100 bg-zinc-50/80 p-4 md:p-6 dark:border-zinc-800 dark:bg-zinc-950/60"
+                >
+                  <div class="grid gap-5 md:grid-cols-2">
+                    <div>
+                      <label
+                        [for]="'type-' + draft.id"
+                        class="mb-2 block text-xs font-semibold text-zinc-600 dark:text-zinc-300"
+                        >Type</label
+                      >
+                      <select
+                        [id]="'type-' + draft.id"
+                        [name]="'type-' + draft.id"
+                        [ngModel]="draft.type"
+                        (ngModelChange)="onTypeChange(draft, $event)"
+                        class="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-800 dark:bg-zinc-900"
+                      >
+                        <option value="expense">Expense</option>
+                        <option value="income">Income</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        [for]="'amount-' + draft.id"
+                        class="mb-2 block text-xs font-semibold text-zinc-600 dark:text-zinc-300"
+                        >Personal amount ({{ applicationCurrency() }})</label
+                      >
+                      <input
+                        [id]="'amount-' + draft.id"
+                        [name]="'amount-' + draft.id"
+                        [(ngModel)]="draft.amount"
+                        (ngModelChange)="touchDrafts()"
+                        required
+                        min="0.01"
+                        type="number"
+                        inputmode="decimal"
+                        class="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm tabular-nums outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-800 dark:bg-zinc-900"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        [for]="'merchant-' + draft.id"
+                        class="mb-2 block text-xs font-semibold text-zinc-600 dark:text-zinc-300"
+                        >{{ draft.type === 'income' ? 'Source' : 'Merchant' }}</label
+                      >
+                      <input
+                        [id]="'merchant-' + draft.id"
+                        [name]="'merchant-' + draft.id"
+                        [(ngModel)]="draft.merchant"
+                        (ngModelChange)="touchDrafts()"
+                        required
+                        type="text"
+                        class="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-800 dark:bg-zinc-900"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        [for]="'date-' + draft.id"
+                        class="mb-2 block text-xs font-semibold text-zinc-600 dark:text-zinc-300"
+                        >Exact date</label
+                      >
+                      <input
+                        [id]="'date-' + draft.id"
+                        [name]="'date-' + draft.id"
+                        [(ngModel)]="draft.date"
+                        (ngModelChange)="touchDrafts()"
+                        required
+                        type="date"
+                        class="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-800 dark:bg-zinc-900"
+                      />
+                    </div>
+
+                    <div class="md:col-span-2">
+                      <label
+                        [for]="'category-' + draft.id"
+                        class="mb-2 block text-xs font-semibold text-zinc-600 dark:text-zinc-300"
+                        >Category</label
+                      >
+                      <select
+                        [id]="'category-' + draft.id"
+                        [name]="'category-' + draft.id"
+                        [(ngModel)]="draft.category"
+                        (ngModelChange)="touchDrafts()"
+                        required
+                        class="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-800 dark:bg-zinc-900"
+                      >
+                        <option value="" disabled>Select a category</option>
+                        @for (option of categoriesFor(draft); track option) {
+                          <option [value]="option">{{ option }}</option>
+                        }
+                      </select>
+                      @if (draft.categoryResolutionMessage) {
+                        <p class="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                          {{ draft.categoryResolutionMessage }}
+                        </p>
+                      }
+                    </div>
+
+                    <div class="md:col-span-2">
+                      <label
+                        [for]="'note-' + draft.id"
+                        class="mb-2 block text-xs font-semibold text-zinc-600 dark:text-zinc-300"
+                        >Note</label
+                      >
+                      <textarea
+                        [id]="'note-' + draft.id"
+                        [name]="'note-' + draft.id"
+                        [(ngModel)]="draft.note"
+                        (ngModelChange)="touchDrafts()"
+                        rows="2"
+                        class="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-800 dark:bg-zinc-900"
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  @if (!draft.splitResolution || draft.splitResolution === 'split') {
+                    <fieldset
+                      class="mt-5 rounded-3xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900 dark:bg-amber-950/20"
+                    >
+                      <legend class="px-1 text-xs font-semibold text-amber-900 dark:text-amber-200">
+                        Split details
+                      </legend>
+                      <div class="grid gap-2 md:grid-cols-2">
+                        <label class="flex min-h-11 items-center gap-3 text-sm">
+                          <input
+                            type="radio"
+                            [name]="'split-' + draft.id"
+                            value="personal"
+                            [(ngModel)]="draft.splitResolution"
+                            (ngModelChange)="onSplitResolutionChange(draft)"
+                          />
+                          Already my amount
+                        </label>
+                        <label class="flex min-h-11 items-center gap-3 text-sm">
+                          <input
+                            type="radio"
+                            [name]="'split-' + draft.id"
+                            value="split"
+                            [(ngModel)]="draft.splitResolution"
+                            (ngModelChange)="onSplitResolutionChange(draft)"
+                          />
+                          Total to split
+                        </label>
+                      </div>
+                      @if (draft.splitResolution === 'split') {
+                        <label [for]="'factor-' + draft.id" class="mt-3 block text-xs font-semibold"
+                          >Number of people</label
+                        >
+                        <input
+                          [id]="'factor-' + draft.id"
+                          [name]="'factor-' + draft.id"
+                          [(ngModel)]="draft.splitFactor"
+                          (ngModelChange)="recalculateSplit(draft)"
+                          min="2"
+                          max="100"
+                          step="1"
+                          type="number"
+                          class="mt-2 min-h-12 w-full rounded-2xl border border-amber-200 bg-white px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-amber-900 dark:bg-zinc-900"
+                        />
+                      }
+                    </fieldset>
+                  }
+
+                  @if (currencyMismatch(draft)) {
+                    <label
+                      class="mt-5 flex min-h-11 items-start gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                    >
+                      <input
+                        class="mt-1"
+                        type="checkbox"
+                        [name]="'currency-' + draft.id"
+                        [(ngModel)]="draft.currencyAcknowledged"
+                        (ngModelChange)="touchDrafts()"
+                      />
+                      <span
+                        >The text uses {{ draft.detectedCurrency }}, but XPENSE is set to
+                        {{ applicationCurrency() }}. Save the number without conversion.</span
+                      >
+                    </label>
+                  }
+
+                  @if (draft.errorMessage) {
+                    <p role="alert" class="mt-4 text-sm font-medium text-red-600 dark:text-red-300">
+                      {{ draft.errorMessage }}
+                    </p>
+                  }
+
+                  <div
+                    class="mt-5 flex justify-end border-t border-zinc-200 pt-5 dark:border-zinc-800"
+                  >
+                    <button
+                      type="button"
+                      (click)="saveOne(draft)"
+                      [disabled]="
+                        !canSaveDraft(draft) ||
+                        draft.saveStatus === 'saved' ||
+                        draft.saveStatus === 'saving'
+                      "
+                      class="min-h-11 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-zinc-950/15 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+                    >
+                      {{
+                        draft.saveStatus === 'saved'
+                          ? 'Saved'
+                          : draft.saveStatus === 'saving'
+                            ? 'Saving…'
+                            : 'Save transaction'
+                      }}
+                    </button>
+                  </div>
+                </div>
+              </details>
+            }
+          </div>
+
+          <div
+            class="sticky bottom-3 z-10 mx-4 mb-4 rounded-3xl border border-zinc-200 bg-white p-3 shadow-sm md:mx-6 md:mb-6 md:flex md:items-center md:justify-between md:gap-4 dark:border-zinc-800 dark:bg-zinc-900"
+          >
+            <p class="mb-3 text-center text-xs text-zinc-500 md:mb-0 md:text-left">
+              {{ selectedReadyCount() }} selected · {{ readyCount() }} ready
+            </p>
+            <div class="grid grid-cols-2 gap-2 md:flex">
+              <button
+                type="button"
+                (click)="saveSelected()"
+                [disabled]="selectedReadyCount() === 0 || status() === 'saving'"
+                class="min-h-11 rounded-2xl px-4 text-sm font-semibold text-zinc-700 transition-colors duration-150 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Save selected ({{ selectedReadyCount() }})
+              </button>
+              <button
+                type="button"
+                (click)="saveAllReady()"
+                [disabled]="readyCount() === 0 || status() === 'saving'"
+                class="min-h-11 rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none dark:text-zinc-950"
+              >
+                Save all ready ({{ readyCount() }})
+              </button>
+            </div>
+          </div>
+        }
+      </section>
+    </main>
+  </div>
+</app-app-layout>

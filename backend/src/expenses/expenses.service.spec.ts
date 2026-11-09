@@ -38,7 +38,9 @@ describe('ExpensesService', () => {
     jest.clearAllMocks();
 
     mockedFs.existsSync.mockReturnValue(true);
-    (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(storedExpenses));
+    (mockedFs.readFileSync as jest.Mock).mockReturnValue(
+      JSON.stringify(storedExpenses),
+    );
     mockedFs.writeFileSync.mockImplementation(() => undefined);
     (mockedFs.mkdirSync as jest.Mock).mockImplementation(() => undefined);
 
@@ -52,7 +54,13 @@ describe('ExpensesService', () => {
   describe('create', () => {
     it('persists a new expense and returns it with an id', () => {
       (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
-      const dto = { type: 'expense', amount: 750, category: 'Transport', merchant: 'Ola', date: '2026-09-17' };
+      const dto = {
+        type: 'expense',
+        amount: 750,
+        category: 'Transport',
+        merchant: 'Ola',
+        date: '2026-09-17',
+      };
 
       const result = service.create(USER_A, dto as any);
 
@@ -69,7 +77,13 @@ describe('ExpensesService', () => {
       mockedFs.writeFileSync.mockImplementation((_path, data) => {
         written.push(JSON.parse(data as string));
       });
-      const dto = { type: 'expense', amount: 200, category: 'Utilities', merchant: 'BESCOM', date: '2026-09-17' };
+      const dto = {
+        type: 'expense',
+        amount: 200,
+        category: 'Utilities',
+        merchant: 'BESCOM',
+        date: '2026-09-17',
+      };
 
       service.create(USER_A, dto as any);
 
@@ -78,7 +92,14 @@ describe('ExpensesService', () => {
 
     it('stores optional note when provided', () => {
       (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
-      const dto = { type: 'expense', amount: 300, category: 'Other', merchant: 'DMart', date: '2026-09-17', note: 'Weekly groceries' };
+      const dto = {
+        type: 'expense',
+        amount: 300,
+        category: 'Other',
+        merchant: 'DMart',
+        date: '2026-09-17',
+        note: 'Weekly groceries',
+      };
 
       const result = service.create(USER_A, dto as any);
 
@@ -97,6 +118,32 @@ describe('ExpensesService', () => {
       } as any);
 
       expect(result.type).toBe('income');
+    });
+  });
+
+  describe('createBatch', () => {
+    it('validates once and persists the complete batch in one write', () => {
+      (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
+      const result = service.createBatch(USER_A, [
+        {
+          type: 'expense',
+          amount: 350,
+          category: 'Food & Dining',
+          merchant: 'Cafe',
+          date: '2026-11-10',
+        },
+        {
+          type: 'expense',
+          amount: 500,
+          category: 'Transport',
+          merchant: 'Petrol pump',
+          date: '2026-11-10',
+        },
+      ] as any);
+
+      expect(result).toHaveLength(2);
+      expect(result.every((expense) => expense.userId === USER_A)).toBe(true);
+      expect(mockedFs.writeFileSync).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -156,17 +203,24 @@ describe('ExpensesService', () => {
     });
 
     it('throws NotFoundException for a missing ID', () => {
-      expect(() => service.findOne(USER_A, 'not-exist')).toThrow(NotFoundException);
+      expect(() => service.findOne(USER_A, 'not-exist')).toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws NotFoundException when ID belongs to another user', () => {
-      expect(() => service.findOne(USER_A, 'uuid-b1')).toThrow(NotFoundException);
+      expect(() => service.findOne(USER_A, 'uuid-b1')).toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('update', () => {
     it('updates editable fields and returns the updated expense', () => {
-      const result = service.update(USER_A, 'uuid-a1', { amount: 999, merchant: 'NewMerchant' });
+      const result = service.update(USER_A, 'uuid-a1', {
+        amount: 999,
+        merchant: 'NewMerchant',
+      });
 
       expect(result.amount).toBe(999);
       expect(result.merchant).toBe('NewMerchant');
@@ -181,7 +235,9 @@ describe('ExpensesService', () => {
     });
 
     it('updates the transaction type', () => {
-      const result = service.update(USER_A, 'uuid-a1', { type: 'income' } as any);
+      const result = service.update(USER_A, 'uuid-a1', {
+        type: 'income',
+      } as any);
 
       expect(result.type).toBe('income');
     });
@@ -212,11 +268,15 @@ describe('ExpensesService', () => {
     });
 
     it('throws NotFoundException when ID belongs to another user', () => {
-      expect(() => service.update(USER_A, 'uuid-b1', { amount: 999 })).toThrow(NotFoundException);
+      expect(() => service.update(USER_A, 'uuid-b1', { amount: 999 })).toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws NotFoundException for a missing expense', () => {
-      expect(() => service.update(USER_A, 'not-exist', { amount: 999 })).toThrow(NotFoundException);
+      expect(() =>
+        service.update(USER_A, 'not-exist', { amount: 999 }),
+      ).toThrow(NotFoundException);
     });
   });
 
@@ -241,11 +301,15 @@ describe('ExpensesService', () => {
     });
 
     it('throws NotFoundException when ID belongs to another user', () => {
-      expect(() => service.remove(USER_A, 'uuid-b1')).toThrow(NotFoundException);
+      expect(() => service.remove(USER_A, 'uuid-b1')).toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws NotFoundException for a missing expense', () => {
-      expect(() => service.remove(USER_A, 'not-exist')).toThrow(NotFoundException);
+      expect(() => service.remove(USER_A, 'not-exist')).toThrow(
+        NotFoundException,
+      );
     });
   });
 });
