@@ -26,6 +26,7 @@ interface Transaction {
   templateUrl: './history.html',
 })
 export class HistoryComponent {
+  protected readonly pageSize = 10;
   private readonly expenseService = inject(ExpenseService);
   protected readonly budgetStore = inject(BudgetStore);
   protected readonly currencySymbol = computed(() => CURRENCY_SYMBOLS[this.budgetStore.currency()]);
@@ -92,6 +93,20 @@ export class HistoryComponent {
         (!to || transaction.date <= to),
     );
   });
+  protected readonly currentPage = signal(1);
+  protected readonly pageCount = computed(() =>
+    Math.max(1, Math.ceil(this.filteredTransactions().length / this.pageSize)),
+  );
+  protected readonly paginatedTransactions = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.filteredTransactions().slice(start, start + this.pageSize);
+  });
+  protected readonly pageStart = computed(() =>
+    this.filteredTransactions().length ? (this.currentPage() - 1) * this.pageSize + 1 : 0,
+  );
+  protected readonly pageEnd = computed(() =>
+    Math.min(this.currentPage() * this.pageSize, this.filteredTransactions().length),
+  );
 
   protected readonly totalExpenses = computed(() =>
     this.transactions()
@@ -109,18 +124,22 @@ export class HistoryComponent {
 
   protected setFilter(filter: 'all' | TransactionType): void {
     this.filter.set(filter);
+    this.currentPage.set(1);
   }
 
   protected setCategoryFilter(category: string): void {
     this.categoryFilter.set(category);
+    this.currentPage.set(1);
   }
 
   protected setFromDate(date: string): void {
     this.fromDate.set(date);
+    this.currentPage.set(1);
   }
 
   protected setToDate(date: string): void {
     this.toDate.set(date);
+    this.currentPage.set(1);
   }
 
   protected clearFilters(): void {
@@ -128,6 +147,15 @@ export class HistoryComponent {
     this.categoryFilter.set('');
     this.fromDate.set('');
     this.toDate.set('');
+    this.currentPage.set(1);
+  }
+
+  protected previousPage(): void {
+    this.currentPage.update((page) => Math.max(1, page - 1));
+  }
+
+  protected nextPage(): void {
+    this.currentPage.update((page) => Math.min(this.pageCount(), page + 1));
   }
 
   private formatDisplayDate(date: string): string {

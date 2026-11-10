@@ -545,3 +545,41 @@ test('Glass material — authentication and primary app destinations support bot
     }
   }
 });
+
+test('Transaction history — paginates recent activity with side arrows', async ({ page }) => {
+  await signupAndLogin(page);
+  const transactions = Array.from({ length: 12 }, (_, index) => ({
+    id: `pagination-${index + 1}`,
+    userId: 1,
+    type: 'expense',
+    amount: (index + 1) * 10,
+    category: index % 2 ? 'Transport' : 'Food & Dining',
+    merchant: `Pagination merchant ${index + 1}`,
+    date: '2026-11-11',
+    createdAt: '2026-11-11T10:00:00.000Z',
+  }));
+  await page.route('**/expenses', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(transactions),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.getByRole('link', { name: 'History' }).first().click();
+  await expect(page).toHaveURL(/\/history$/);
+  const rows = page.getByRole('link', { name: /^View transaction from Pagination merchant/ });
+  await expect(rows).toHaveCount(10);
+  await expect(page.getByText('1–10 of 12')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Next transaction page' }).click();
+  await expect(rows).toHaveCount(2);
+  await expect(page.getByText('11–12 of 12')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Previous transaction page' }).click();
+  await expect(rows).toHaveCount(10);
+});

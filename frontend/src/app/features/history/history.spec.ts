@@ -180,6 +180,44 @@ describe('HistoryComponent', () => {
     });
   });
 
+  describe('pagination', () => {
+    it('shows at most ten transactions per page and navigates with bounded arrows', async () => {
+      const manyExpenses = Array.from({ length: 23 }, (_, index) => ({
+        ...mockExpenses[0],
+        id: `expense-${index + 1}`,
+        merchant: `Merchant ${index + 1}`,
+        date: `2026-09-${String((index % 20) + 1).padStart(2, '0')}`,
+      }));
+      mockList.mockReturnValue(of(manyExpenses));
+      const paginatedFixture = TestBed.createComponent(HistoryComponent);
+      const paginated = paginatedFixture.componentInstance as any;
+      paginatedFixture.detectChanges();
+      await paginatedFixture.whenStable();
+
+      expect(paginated.pageCount()).toBe(3);
+      expect(paginated.paginatedTransactions()).toHaveLength(10);
+      expect(paginated.currentPage()).toBe(1);
+
+      paginated.nextPage();
+      expect(paginated.currentPage()).toBe(2);
+      expect(paginated.paginatedTransactions()).toHaveLength(10);
+
+      paginated.nextPage();
+      paginated.nextPage();
+      expect(paginated.currentPage()).toBe(3);
+      expect(paginated.paginatedTransactions()).toHaveLength(3);
+
+      paginated.previousPage();
+      expect(paginated.currentPage()).toBe(2);
+    });
+
+    it('returns to page one when a filter changes', () => {
+      c.currentPage.set(2);
+      c.setFilter('expense');
+      expect(c.currentPage()).toBe(1);
+    });
+  });
+
   // --- Totals ---
 
   describe('totals', () => {
