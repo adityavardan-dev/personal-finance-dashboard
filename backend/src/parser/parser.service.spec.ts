@@ -117,6 +117,17 @@ describe('ParserService', () => {
     });
   });
 
+  it('maps plural snacks to Food & Dining', () => {
+    const result = service.parse('spent 200 on snacks today', referenceDate);
+
+    expect(result.draft).toMatchObject({
+      amount: 200,
+      category: 'Food & Dining',
+      date: '2026-11-09',
+    });
+    expect(result.status).toBe('READY');
+  });
+
   it('requires amount clarification when currencies conflict', () => {
     const result = service.parse('Lunch was $100 or €100 today', referenceDate);
 
@@ -270,6 +281,32 @@ describe('ParserService', () => {
     expect(result.status).toBe('READY');
     expect(result.draft.date).toBe(expectedDate);
     expect(result.missingFields).toEqual([]);
+  });
+
+  it('uses a compatible precise relative date when vague month context is also present', () => {
+    const result = service.parse(
+      'I spent 3000 last month 30 days ago',
+      new Date('2026-11-11T12:00:00+05:30'),
+      'Asia/Kolkata',
+    );
+
+    expect(result.draft).toMatchObject({
+      amount: 3000,
+      date: '2026-10-12',
+      category: null,
+    });
+    expect(result.missingFields).toEqual(['category']);
+  });
+
+  it('requires date clarification when precise and vague month context conflict', () => {
+    const result = service.parse(
+      'I spent 3000 last month 3 days ago',
+      new Date('2026-11-11T12:00:00+05:30'),
+      'Asia/Kolkata',
+    );
+
+    expect(result.draft.date).toBeNull();
+    expect(result.missingFields).toEqual(['date', 'category']);
   });
 
   it('clamps calendar-relative years to a valid local date', () => {

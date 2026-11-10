@@ -19,6 +19,20 @@ interface ChatMessage {
   role: ChatRole;
   text: string;
   createdAt: string;
+  savedSummary?: SavedTransactionSummary;
+}
+
+interface SavedTransactionSummary {
+  count: number;
+  total: number;
+  currency: 'INR' | 'USD' | 'EUR';
+  remainingCount: number;
+  items: Array<{
+    label: string;
+    category: string;
+    date: string;
+    amount: number;
+  }>;
 }
 
 interface IntakeDraft {
@@ -50,6 +64,7 @@ interface ConversationSnapshot {
   selector: 'app-context-intake',
   imports: [AppLayout, FormsModule, RouterLink],
   templateUrl: './context-intake.html',
+  styleUrl: './context-intake.css',
 })
 export class ContextIntakeComponent {
   private readonly parserService = inject(ParserService);
@@ -94,9 +109,19 @@ export class ContextIntakeComponent {
     if (cached) {
       this.conversationId = cached.conversationId;
       this.expiresAt = cached.expiresAt;
+      const savedDrafts = cached.value.drafts.filter((draft) => draft.saveStatus === 'saved');
+      const activeDrafts = cached.value.drafts.filter((draft) => draft.saveStatus !== 'saved');
       this.messages.set(cached.value.messages);
-      this.drafts.set(cached.value.drafts);
-      this.status.set(cached.value.drafts.length ? 'draft' : 'idle');
+      this.drafts.set(activeDrafts);
+      if (savedDrafts.length) {
+        this.addMessage(
+          'assistant',
+          `${savedDrafts.length} ${this.pluralize('transaction', savedDrafts.length)} saved successfully.`,
+          this.createSavedSummary(savedDrafts),
+        );
+        this.persistConversation();
+      }
+      this.status.set(activeDrafts.length ? 'draft' : 'idle');
     }
   }
 
@@ -388,24 +413,17 @@ export class ContextIntakeComponent {
     this.drafts.update((current) => [...current]);
     this.expenseService.createBatch(drafts.map((draft) => this.toPayload(draft))).subscribe({
       next: () => {
-        drafts.forEach((draft) => {
-          draft.saveStatus = 'saved';
-          draft.selected = false;
-          draft.expanded = false;
-        });
-        this.drafts.update((current) => [...current]);
+        const savedSummary = this.createSavedSummary(drafts);
+        const savedIds = new Set(drafts.map((draft) => draft.id));
+        this.drafts.update((current) => current.filter((draft) => !savedIds.has(draft.id)));
         this.metricsStore.refresh();
         this.addMessage(
           'assistant',
           `${drafts.length} ${this.pluralize('transaction', drafts.length)} saved successfully.`,
+          savedSummary,
         );
         this.status.set('draft');
-        if (this.drafts().every((draft) => draft.saveStatus === 'saved')) {
-          this.session.clear();
-          this.expiresAt = '';
-        } else {
-          this.persistConversation();
-        }
+        this.persistConversation();
       },
       error: () => {
         drafts.forEach((draft) => {
@@ -506,10 +524,27 @@ export class ContextIntakeComponent {
     this.persistConversation();
   }
 
-  private addMessage(role: ChatRole, text: string): void {
+  private createSavedSummary(drafts: IntakeDraft[]): SavedTransactionSummary {
+    return {
+      count: drafts.length,
+      total: this.roundMoney(
+        drafts.reduce((total, draft) => total + (Number(draft.amount) || 0), 0),
+      ),
+      currency: this.applicationCurrency(),
+      remainingCount: Math.max(0, drafts.length - 3),
+      items: drafts.slice(0, 3).map((draft) => ({
+        label: draft.merchant || draft.category,
+        category: draft.category,
+        date: draft.date,
+        amount: Number(draft.amount),
+      })),
+    };
+  }
+
+  private addMessage(role: ChatRole, text: string, savedSummary?: SavedTransactionSummary): void {
     this.messages.update((messages) => [
       ...messages,
-      { id: crypto.randomUUID(), role, text, createdAt: new Date().toISOString() },
+      { id: crypto.randomUUID(), role, text, createdAt: new Date().toISOString(), savedSummary },
     ]);
   }
 

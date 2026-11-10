@@ -405,14 +405,58 @@
     "createdAt": "2026-11-09T22:01:08.138Z"
   },
   {
-    "id": "c81ea02d-1a13-40bc-83d1-f3d9059797a9",
+    "id": "854186a3-0b4c-4c93-a260-7df02903b82b",
     "userId": 4,
     "type": "expense",
-    "amount": 50,
+    "amount": 350,
     "category": "Food & Dining",
-    "merchant": "Repeat the merchants for yesterday",
-    "date": "2026-11-09",
-    "note": "50 on sweets yesterday.",
-    "createdAt": "2026-11-09T22:01:08.138Z"
+    "merchant": "Swiggy",
+    "date": "2026-11-11",
+    "note": "spent 350 on swiggy today",
+    "createdAt": "2026-11-10T19:48:27.920Z"
+  },
+  {
+    "id": "4529c07c-6635-4d7f-954d-2c8480aab709",
+    "userId": 4,
+    "type": "expense",
+    "amount": 5000,
+    "category": "Food & Dining",
+    "merchant": "Ironhill",
+    "date": "2026-10-12",
+    "note": "spent 5000 last month 30 days ago on drinks",
+    "createdAt": "2026-11-10T20:08:52.167Z"
+  },
+  {
+    "id": "556aa62e-169f-495e-bab5-0468447428e9",
+    "userId": 4,
+    "type": "expense",
+    "amount": 4000,
+    "category": "Food & Dining",
+    "merchant": "Swish",
+    "date": "2026-10-12",
+    "note": "spent 4000 on food 30 days ago",
+    "createdAt": "2026-11-10T20:10:03.469Z"
+  },
+  {
+    "id": "390b83e8-c8e7-4f42-b618-9ddd6eccdd23",
+    "userId": 4,
+    "type": "expense",
+    "amount": 500,
+    "category": "Transport",
+    "merchant": "Shell",
+    "date": "2026-10-12",
+    "note": "500 on petrol 30 days ago",
+    "createdAt": "2026-11-10T20:10:03.469Z"
+  },
+  {
+    "id": "eed2b194-b91f-4059-a587-4c296d6b8a38",
+    "userId": 4,
+    "type": "expense",
+    "amount": 200,
+    "category": "Food & Dining",
+    "merchant": "Vending machine",
+    "date": "2026-11-11",
+    "note": "spent 200 on snacks today",
+    "createdAt": "2026-11-10T20:27:18.397Z"
   }
 ]

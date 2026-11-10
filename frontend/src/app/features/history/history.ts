@@ -9,7 +9,6 @@ import { catchError, of } from 'rxjs';
 import { AppLayout } from '../../shared/app-layout/app-layout';
 import { CategoryIcon } from '../../shared/category-icon/category-icon';
 import { ExpenseService, TransactionType } from '../expenses/expense.service';
-import { FinanceMetricsStore } from '../../core/finance/finance-metrics.store';
 
 interface Transaction {
   id: string;
@@ -28,14 +27,13 @@ interface Transaction {
 })
 export class HistoryComponent {
   private readonly expenseService = inject(ExpenseService);
-  private readonly metricsStore = inject(FinanceMetricsStore);
   protected readonly budgetStore = inject(BudgetStore);
   protected readonly currencySymbol = computed(() => CURRENCY_SYMBOLS[this.budgetStore.currency()]);
 
-  constructor() { this.budgetStore.load(); }
+  constructor() {
+    this.budgetStore.load();
+  }
   protected readonly loadError = signal(false);
-  protected readonly deleteError = signal(false);
-  protected readonly deletedIds = signal<Set<string>>(new Set());
 
   private readonly expenses = toSignal(
     this.expenseService.list().pipe(
@@ -50,22 +48,15 @@ export class HistoryComponent {
   protected readonly isLoading = computed(() => this.expenses() === null);
 
   protected readonly transactions = computed<Transaction[]>(() => {
-    const deleted = this.deletedIds();
-    return [...(this.expenses() ?? [])]
-      .filter((e) => !deleted.has(e.id))
-      .reverse()
-      .map((e) => ({
-        id: e.id,
-        merchant: e.merchant,
-        category: e.category,
-        date: e.date,
-        displayDate: new Date(e.date + 'T00:00:00').toLocaleDateString('en-IN', {
-          day: 'numeric',
-          month: 'short',
-        }),
-        amount: e.amount,
-        type: e.type,
-      }));
+    return [...(this.expenses() ?? [])].reverse().map((e) => ({
+      id: e.id,
+      merchant: e.merchant,
+      category: e.category,
+      date: e.date,
+      displayDate: this.formatDisplayDate(e.date),
+      amount: e.amount,
+      type: e.type,
+    }));
   });
 
   protected readonly filter = signal<'all' | TransactionType>('all');
@@ -80,8 +71,9 @@ export class HistoryComponent {
       ? 'The start date must be on or before the end date.'
       : '',
   );
-  protected readonly hasActiveFilters = computed(() =>
-    this.filter() !== 'all' || Boolean(this.categoryFilter() || this.fromDate() || this.toDate()),
+  protected readonly hasActiveFilters = computed(
+    () =>
+      this.filter() !== 'all' || Boolean(this.categoryFilter() || this.fromDate() || this.toDate()),
   );
 
   protected readonly filteredTransactions = computed(() => {
@@ -92,11 +84,12 @@ export class HistoryComponent {
     const from = this.fromDate();
     const to = this.toDate();
 
-    return this.transactions().filter((transaction) =>
-      (type === 'all' || transaction.type === type)
-      && (!category || transaction.category === category)
-      && (!from || transaction.date >= from)
-      && (!to || transaction.date <= to),
+    return this.transactions().filter(
+      (transaction) =>
+        (type === 'all' || transaction.type === type) &&
+        (!category || transaction.category === category) &&
+        (!from || transaction.date >= from) &&
+        (!to || transaction.date <= to),
     );
   });
 
@@ -137,18 +130,19 @@ export class HistoryComponent {
     this.toDate.set('');
   }
 
-  protected deleteExpense(id: string): void {
-    if (!window.confirm('Delete this transaction? This cannot be undone.')) return;
-
-    this.deleteError.set(false);
-    this.expenseService.delete(id).subscribe({
-      next: () => {
-        this.deletedIds.update((ids) => new Set([...ids, id]));
-        this.metricsStore.refresh();
-      },
-      error: () => {
-        this.deleteError.set(true);
-      },
+  private formatDisplayDate(date: string): string {
+    const [year, month, day] = date.split('-').map(Number);
+    const today = new Date();
+    const dayDifference = Math.round(
+      (Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) -
+        Date.UTC(year, month - 1, day)) /
+        (24 * 60 * 60 * 1000),
+    );
+    if (dayDifference === 0) return 'Today';
+    if (dayDifference === 1) return 'Yesterday';
+    return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
     });
   }
 }

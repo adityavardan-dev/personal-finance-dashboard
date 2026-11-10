@@ -21,6 +21,7 @@ const CATEGORY_TOKENS: Readonly<Record<ParserCategory, readonly string[]>> = {
     'food',
     'meal',
     'snack',
+    'snacks',
     'sweet',
     'sweets',
     'groceries',
@@ -567,8 +568,6 @@ export class ParserService {
     referenceDate: Date,
     timeZone?: string,
   ): string | null {
-    if (this.hasVagueDateExpression(text)) return null;
-
     const candidates: string[] = [];
     const referenceParts = this.getDateParts(referenceDate, timeZone);
 
@@ -663,7 +662,78 @@ export class ParserService {
     }
 
     const unique = [...new Set(candidates)];
-    return unique.length === 1 ? unique[0] : null;
+    if (unique.length !== 1) return null;
+    return this.vagueContextAllowsPreciseDate(
+      text,
+      unique[0],
+      referenceDate,
+      timeZone,
+    )
+      ? unique[0]
+      : null;
+  }
+
+  private vagueContextAllowsPreciseDate(
+    text: string,
+    candidate: string,
+    referenceDate: Date,
+    timeZone?: string,
+  ): boolean {
+    if (!this.hasVagueDateExpression(text)) return true;
+
+    const hasLastMonth = /\blast\s+month\b/i.test(text);
+    const hasLastWeek = /\blast\s+week\b/i.test(text);
+    const remainingVagueText = text.replace(/\blast\s+(?:month|week)\b/gi, ' ');
+    if (
+      (!hasLastMonth && !hasLastWeek) ||
+      this.hasVagueDateExpression(remainingVagueText)
+    ) {
+      return false;
+    }
+
+    const [candidateYear, candidateMonth, candidateDay] = candidate
+      .split('-')
+      .map(Number);
+    const candidateTime = Date.UTC(
+      candidateYear,
+      candidateMonth - 1,
+      candidateDay,
+    );
+    const reference = this.getDateParts(referenceDate, timeZone);
+
+    if (hasLastMonth) {
+      const previousMonth = new Date(
+        Date.UTC(reference.year, reference.month - 2, 1),
+      );
+      if (
+        candidateYear !== previousMonth.getUTCFullYear() ||
+        candidateMonth !== previousMonth.getUTCMonth() + 1
+      ) {
+        return false;
+      }
+    }
+
+    if (hasLastWeek) {
+      const dayMilliseconds = 24 * 60 * 60 * 1000;
+      const referenceTime = Date.UTC(
+        reference.year,
+        reference.month - 1,
+        reference.day,
+      );
+      const referenceWeekday = new Date(referenceTime).getUTCDay();
+      const daysSinceMonday = (referenceWeekday + 6) % 7;
+      const previousWeekStart =
+        referenceTime - (daysSinceMonday + 7) * dayMilliseconds;
+      const previousWeekEnd = previousWeekStart + 6 * dayMilliseconds;
+      if (
+        candidateTime < previousWeekStart ||
+        candidateTime > previousWeekEnd
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private subtractRelativeDate(

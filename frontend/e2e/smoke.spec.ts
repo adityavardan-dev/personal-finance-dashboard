@@ -77,6 +77,7 @@ test('V1 expense journey — add expense persists to history and dashboard', asy
 });
 
 test('V1 expense CRUD — create, edit, delete full lifecycle', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
   await signupAndLogin(page);
 
   await page.getByRole('link', { name: 'Add Expense' }).first().click();
@@ -92,8 +93,9 @@ test('V1 expense CRUD — create, edit, delete full lifecycle', async ({ page })
   await page.waitForLoadState('networkidle');
   await expect(page.getByText(merchant, { exact: true })).toBeVisible({ timeout: 15000 });
 
-  const row = page.locator('article').filter({ hasText: merchant });
-  await row.getByRole('link', { name: 'Edit' }).click();
+  await page.getByRole('link', { name: `View transaction from ${merchant}` }).click();
+  await expect(page.getByRole('heading', { name: 'Review transaction' })).toBeVisible();
+  await page.getByRole('link', { name: 'Edit transaction' }).click();
   await expect(page).toHaveURL(/\/expenses\/.+\/edit$/, { timeout: 10000 });
   await expect(page.getByRole('heading', { name: 'Edit expense' })).toBeVisible();
 
@@ -109,8 +111,9 @@ test('V1 expense CRUD — create, edit, delete full lifecycle', async ({ page })
 
   page.on('dialog', (dialog) => dialog.accept());
 
-  const updatedRow = page.locator('article').filter({ hasText: updatedMerchant });
-  await updatedRow.getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('link', { name: `View transaction from ${updatedMerchant}` }).click();
+  await page.getByRole('button', { name: 'Delete transaction' }).click();
+  await expect(page).toHaveURL(/\/history$/, { timeout: 10000 });
   await expect(page.getByText(updatedMerchant, { exact: true })).not.toBeVisible({
     timeout: 10000,
   });
@@ -390,8 +393,7 @@ test('V1 transaction history — expense and income remain truthful and isolated
   await expect(page.getByText(incomeSource, { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Clear filters' }).first().click();
-  const expenseRow = page.locator('article').filter({ hasText: expenseMerchant });
-  await expenseRow.getByRole('link', { name: `View ${expenseMerchant}` }).click();
+  await page.getByRole('link', { name: `View transaction from ${expenseMerchant}` }).click();
   await expect(page).toHaveURL(/\/history\/.+$/);
   await expect(page.getByRole('heading', { name: 'Review transaction' })).toBeVisible();
   await expect(page.getByText(expenseMerchant, { exact: true })).toBeVisible();
@@ -439,7 +441,7 @@ test('Milestone 10 conversational intake — clarify and batch-save editable dra
     .fill(
       `spent 350 at ${cafe} on food, spent 500 at ${fuel} on petrol and spent 50 at ${sweets} on sweets`,
     );
-  await page.getByRole('button', { name: 'Send' }).click();
+  await page.getByRole('button', { name: 'Send transaction description' }).click();
   await expect(page.locator('details')).toHaveCount(3);
   await expect(page.getByText('3 drafts · 0 ready to save')).toBeVisible();
 
@@ -454,12 +456,23 @@ test('Milestone 10 conversational intake — clarify and batch-save editable dra
   );
 
   await page.locator('#transaction-message').fill('use today for all');
-  await page.getByRole('button', { name: 'Send' }).click();
+  await page.getByRole('button', { name: 'Send transaction description' }).click();
   await expect(page.getByText('3 drafts · 3 ready to save')).toBeVisible();
   await page.getByRole('button', { name: 'Save all ready (3)' }).click();
   await expect(page.getByText('3 transactions saved successfully.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Transaction workspace' })).toHaveCount(0);
+  await expect(page.locator('details')).toHaveCount(0);
+  await expect(page.getByLabel('Saved transaction summary')).toBeVisible();
 
-  await page.getByRole('link', { name: 'History', exact: true }).last().click();
+  await page.getByRole('link', { name: 'View history', exact: true }).click();
+  await expect(page).toHaveURL(/\/history$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/expenses\/intake$/);
+  await expect(page.getByText('3 transactions saved successfully.')).toBeVisible();
+  await expect(page.getByLabel('Saved transaction summary')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Transaction workspace' })).toHaveCount(0);
+
+  await page.getByRole('link', { name: 'View history', exact: true }).click();
   await expect(page).toHaveURL(/\/history$/);
   await expect(page.getByText(cafe, { exact: true })).toBeVisible();
   await expect(page.getByText(fuel, { exact: true })).toBeVisible();
@@ -471,17 +484,64 @@ test('Milestone 10 conversational intake — responsive workspace stays usable',
   await page.getByRole('link', { name: 'Add Expense' }).first().click();
   await page.getByRole('link', { name: 'Describe it in plain language' }).click();
 
-  for (const viewport of [
-    { width: 320, height: 568 },
-    { width: 768, height: 1024 },
-    { width: 1024, height: 768 },
-    { width: 1440, height: 900 },
-  ]) {
-    await page.setViewportSize(viewport);
-    await expect(page.locator('#transaction-message')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Transaction workspace' })).toBeVisible();
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-    ).toBe(true);
+  await expect(page.getByRole('heading', { name: 'Transaction workspace' })).toHaveCount(0);
+  await page.locator('#transaction-message').fill('spent 350 at Cafe on food today');
+  await page.getByRole('button', { name: 'Send transaction description' }).click();
+  await expect(page.getByRole('heading', { name: 'Transaction workspace' })).toBeVisible();
+
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    for (const viewport of [
+      { width: 320, height: 568 },
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+      { width: 1440, height: 900 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await expect(page.locator('#transaction-message')).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Transaction workspace' })).toBeVisible();
+      const backdropFilter = await page
+        .locator('.composer')
+        .evaluate((element) => getComputedStyle(element).backdropFilter);
+      expect(backdropFilter).toContain('blur');
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+    }
+  }
+});
+
+test('Glass material — authentication and primary app destinations support both themes', async ({
+  page,
+}) => {
+  await page.goto('/login');
+  await expect(page.locator('.auth-glass-card')).toBeVisible();
+  expect(
+    await page
+      .locator('.auth-glass-card')
+      .evaluate((element) => getComputedStyle(element).backdropFilter),
+  ).toContain('blur');
+
+  await signupAndLogin(page);
+  const destinations = [
+    { name: 'Dashboard', path: /\/dashboard$/ },
+    { name: 'Insights', path: /\/insights$/ },
+    { name: 'Add Expense', path: /\/expenses\/new$/ },
+    { name: 'History', path: /\/history$/ },
+    { name: 'Profile', path: /\/profile$/ },
+  ];
+
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    for (const destination of destinations) {
+      await page.getByRole('link', { name: destination.name }).first().click();
+      await expect(page).toHaveURL(destination.path);
+      await expect(page.locator('.glass-layout')).toBeVisible();
+      expect(
+        await page
+          .locator('app-header > header')
+          .evaluate((element) => getComputedStyle(element).backdropFilter),
+      ).toContain('blur');
+    }
   }
 });

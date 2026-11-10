@@ -74,6 +74,8 @@ describe('ContextIntakeComponent', () => {
   });
 
   it('creates multiple editable drafts without saving during parsing', () => {
+    expect(fixture.nativeElement.querySelector('#workspace-title')).toBeNull();
+
     const batch: ParseBatchResult = {
       status: 'READY',
       drafts: [
@@ -94,12 +96,24 @@ describe('ContextIntakeComponent', () => {
     component['rawText'] = 'spent 350 on food and spent 500 on petrol today';
 
     component['submitMessage']();
+    fixture.detectChanges();
 
     expect(parserService.parseBatch).toHaveBeenCalledOnce();
     expect(component['drafts']()).toHaveLength(2);
+    expect(fixture.nativeElement.querySelector('#workspace-title')).not.toBeNull();
     expect(component['drafts']()[1].category).toBe('Transport');
     expect(expenseService.createBatch).not.toHaveBeenCalled();
     expect(session.save).toHaveBeenCalled();
+  });
+
+  it('uses an icon-only composer action with an accessible label', () => {
+    const submitButton = fixture.nativeElement.querySelector(
+      'button[aria-label="Send transaction description"]',
+    ) as HTMLButtonElement;
+
+    expect(submitButton).not.toBeNull();
+    expect(submitButton.textContent?.trim()).toBe('');
+    expect(submitButton.querySelector('svg')).not.toBeNull();
   });
 
   it('uses a deterministic chat follow-up to fill the missing date', () => {
@@ -146,12 +160,26 @@ describe('ContextIntakeComponent', () => {
     component['submitMessage']();
 
     component['saveSelected']();
+    fixture.detectChanges();
 
     expect(expenseService.createBatch).toHaveBeenCalledTimes(1);
     expect(expenseService.createBatch.mock.calls[0][0]).toHaveLength(2);
-    expect(component['drafts']().every((draft) => draft.saveStatus === 'saved')).toBe(true);
+    expect(component['drafts']()).toHaveLength(0);
+    expect(component['messages']().at(-1)?.savedSummary).toMatchObject({
+      count: 2,
+      total: 700,
+      currency: 'INR',
+    });
+    expect(fixture.nativeElement.querySelector('#workspace-title')).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[aria-label="Saved transaction summary"]'),
+    ).not.toBeNull();
     expect(metricsStore.refresh).toHaveBeenCalledOnce();
-    expect(session.clear).toHaveBeenCalled();
+    expect(session.clear).not.toHaveBeenCalled();
+    expect(session.save).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.objectContaining({ drafts: [] }),
+    );
   });
 
   it('keeps existing drafts when a follow-up request fails', () => {
@@ -166,5 +194,30 @@ describe('ContextIntakeComponent', () => {
     expect(component['drafts']()).toHaveLength(1);
     expect(component['drafts']()[0].amount).toBe('350');
     expect(component['errorMessage']()).toContain("couldn't process");
+  });
+
+  it('converts a legacy cached saved draft into a chat summary instead of reopening it', () => {
+    parserService.parseBatch.mockReturnValue(of({ status: 'READY', drafts: [readyDraft] }));
+    component['rawText'] = readyDraft.draft.notes;
+    component['submitMessage']();
+    const savedDraft = { ...component['drafts']()[0], saveStatus: 'saved' as const };
+    const messages = component['messages']();
+
+    fixture.destroy();
+    session.load.mockReturnValue({
+      conversationId: 'legacy-conversation',
+      lastActivityAt: '2026-11-10T10:00:00.000Z',
+      expiresAt: '2026-11-10T10:30:00.000Z',
+      value: { messages, drafts: [savedDraft] },
+    });
+    session.save.mockClear();
+    fixture = TestBed.createComponent(ContextIntakeComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(component['drafts']()).toHaveLength(0);
+    expect(component['messages']().at(-1)?.savedSummary).toMatchObject({ count: 1, total: 350 });
+    expect(fixture.nativeElement.querySelector('#workspace-title')).toBeNull();
+    expect(session.save).toHaveBeenCalledOnce();
   });
 });

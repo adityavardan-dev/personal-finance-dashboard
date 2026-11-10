@@ -1,0 +1,137 @@
+:host {
+  display: block;
+}
+
+.glass-layout {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 14% 8%, rgb(209 250 229 / 0.72), transparent 28rem),
+    radial-gradient(circle at 86% 18%, rgb(224 231 255 / 0.68), transparent 30rem),
+    radial-gradient(circle at 54% 94%, rgb(254 243 199 / 0.45), transparent 28rem), #f4f4f5;
+}
+
+.glass-layout::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background-image: linear-gradient(rgb(255 255 255 / 0.12) 1px, transparent 1px);
+  background-size: 100% 4rem;
+  content: '';
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+:host ::ng-deep .glass-layout app-header > header,
+:host ::ng-deep .glass-layout app-sidebar nav > div,
+:host ::ng-deep .glass-layout app-bottom-nav > nav {
+  border-color: rgb(255 255 255 / 0.72);
+  background: rgb(255 255 255 / 0.5);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.78),
+    0 18px 50px rgb(63 63 70 / 0.08);
+  backdrop-filter: blur(24px) saturate(145%);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+}
+
+:host ::ng-deep .glass-layout app-header > header {
+  border-radius: 2rem;
+}
+
+:host ::ng-deep .glass-layout app-header button {
+  border: 1px solid rgb(255 255 255 / 0.68);
+  background: rgb(255 255 255 / 0.4);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(14px);
+}
+
+:host
+  ::ng-deep
+  .glass-layout
+  main
+  :where(section, article, form).rounded-3xl.border-zinc-200.bg-white {
+  border-color: rgb(255 255 255 / 0.7);
+  background: rgb(255 255 255 / 0.54);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.8),
+    0 20px 52px rgb(63 63 70 / 0.09);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+}
+
+:host
+  ::ng-deep
+  .glass-layout
+  main
+  :where(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  border-color: rgb(255 255 255 / 0.76);
+  background-color: rgb(255 255 255 / 0.48);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(14px) saturate(130%);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+}
+
+:host ::ng-deep .glass-layout main a.rounded-2xl.border-zinc-200 {
+  border-color: rgb(255 255 255 / 0.7);
+  background: rgb(255 255 255 / 0.34);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .glass-layout {
+    background:
+      radial-gradient(circle at 12% 4%, rgb(6 78 59 / 0.24), transparent 30rem),
+      radial-gradient(circle at 88% 18%, rgb(39 39 42 / 0.7), transparent 34rem),
+      radial-gradient(circle at 48% 100%, rgb(6 95 70 / 0.12), transparent 30rem), #060708;
+  }
+
+  .glass-layout::before {
+    background-image: linear-gradient(rgb(255 255 255 / 0.018) 1px, transparent 1px);
+  }
+
+  :host ::ng-deep .glass-layout app-header > header,
+  :host ::ng-deep .glass-layout app-sidebar nav > div,
+  :host ::ng-deep .glass-layout app-bottom-nav > nav {
+    border-color: rgb(255 255 255 / 0.1);
+    background: rgb(24 24 27 / 0.58);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.07),
+      0 24px 60px rgb(0 0 0 / 0.28);
+  }
+
+  :host ::ng-deep .glass-layout app-header button {
+    border-color: rgb(255 255 255 / 0.08);
+    background: rgb(255 255 255 / 0.055);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07);
+  }
+
+  :host
+    ::ng-deep
+    .glass-layout
+    main
+    :where(section, article, form).rounded-3xl.border-zinc-200.bg-white {
+    border-color: rgb(255 255 255 / 0.095);
+    background: rgb(24 24 27 / 0.58);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.06),
+      0 24px 60px rgb(0 0 0 / 0.24);
+  }
+
+  :host
+    ::ng-deep
+    .glass-layout
+    main
+    :where(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+    border-color: rgb(255 255 255 / 0.09);
+    background-color: rgb(9 9 11 / 0.48);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  }
+
+  :host ::ng-deep .glass-layout main a.rounded-2xl.border-zinc-200 {
+    border-color: rgb(255 255 255 / 0.09);
+    background: rgb(255 255 255 / 0.045);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.055);
+  }
+}

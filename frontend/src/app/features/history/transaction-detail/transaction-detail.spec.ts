@@ -2,6 +2,8 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BudgetStore } from '../../../core/budget/budget.store';
 import { ActivatedRoute, provideRouter } from '@angular/router';
+import { Router } from '@angular/router';
+import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { ExpenseService } from '../../expenses/expense.service';
@@ -10,6 +12,8 @@ import { TransactionDetailComponent } from './transaction-detail';
 describe('TransactionDetailComponent', () => {
   let fixture: ComponentFixture<TransactionDetailComponent>;
   let getById: ReturnType<typeof vi.fn>;
+  let deleteExpense: ReturnType<typeof vi.fn>;
+  let refreshMetrics: ReturnType<typeof vi.fn>;
 
   const income = {
     id: 'income-1',
@@ -25,13 +29,19 @@ describe('TransactionDetailComponent', () => {
 
   async function setup(response = of(income)) {
     getById = vi.fn().mockReturnValue(response);
+    deleteExpense = vi.fn();
+    refreshMetrics = vi.fn();
     await TestBed.configureTestingModule({
       imports: [TransactionDetailComponent],
       providers: [
         provideRouter([]),
-        { provide: ExpenseService, useValue: { getById } },
+        { provide: ExpenseService, useValue: { getById, delete: deleteExpense } },
+        { provide: FinanceMetricsStore, useValue: { refresh: refreshMetrics } },
         { provide: BudgetStore, useValue: { currency: signal('INR'), load: vi.fn() } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'income-1' } } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => 'income-1' } } },
+        },
       ],
     }).compileComponents();
 
@@ -67,5 +77,30 @@ describe('TransactionDetailComponent', () => {
     await setup(throwError(() => ({ status: 500 })));
 
     expect(fixture.nativeElement.textContent).toContain("couldn't load this transaction");
+  });
+
+  it('deletes from the detail page after confirmation and returns to history', async () => {
+    await setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    deleteExpense.mockReturnValue(of(income));
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    fixture.componentInstance['deleteTransaction']();
+
+    expect(deleteExpense).toHaveBeenCalledWith('income-1');
+    expect(refreshMetrics).toHaveBeenCalledOnce();
+    expect(navigate).toHaveBeenCalledWith(['/history']);
+  });
+
+  it('keeps the detail visible and shows an error when deletion fails', async () => {
+    await setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    deleteExpense.mockReturnValue(throwError(() => new Error('Network error')));
+
+    fixture.componentInstance['deleteTransaction']();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Unable to delete this transaction');
+    expect(fixture.componentInstance['transaction']()).toEqual(income);
   });
 });
