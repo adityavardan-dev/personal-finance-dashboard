@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Complete — conversational multi-draft intake verified |
+| Status | Deterministic foundation complete - hybrid semantic lane planned |
 | Target branch | `feature/v3-context-parser-db` |
 | Base branch | `develop` |
 | Depends on | Existing JWT authentication and transaction contracts |
@@ -12,7 +12,7 @@
 
 ## 1. Objective
 
-Convert raw transaction text, natural-language sentences, and common UPI notification text into a typed transaction draft without paid APIs or automatic persistence. The parser is deterministic, low-latency TypeScript code. A user must review and confirm a draft before any expense or income record is created.
+Convert raw transaction text, natural-language sentences, and common UPI notification text into a typed transaction draft. The default path is deterministic, low-latency TypeScript code. An optional provider-neutral semantic lane may handle complex language, but its output is untrusted, must pass strict validation, and can never persist automatically. A user must review and confirm a draft before any expense or income record is created.
 
 Example input:
 
@@ -27,6 +27,9 @@ The parser computes a personal amount of `400`, preserves `originalAmount: 1200`
 ### In scope
 
 - Deterministic amount, split, category, merchant, and date extraction.
+- Optional AI semantic extraction for unsupported or complex phrasing, behind a feature flag.
+- Provider-neutral `SemanticIntentExtractor` interface so hosted and local models can be exchanged.
+- AI-generated explanations and clarification suggestions must be grounded in the typed draft.
 - Every currency supported by the application: INR (`₹`, `Rs`, `Rs.`, `INR`, `rupee(s)`), USD (`$`, `US$`, `USD`, `dollar(s)`), and EUR (`€`, `EUR`, `euro(s)`).
 - Comma-separated amounts and up to two decimal places.
 - Split forms `/ 3`, `split by 3`, `split between 3`, `among 3`, and `half`.
@@ -45,7 +48,8 @@ The parser computes a personal amount of `400`, preserves `originalAmount: 1200`
 
 ### Out of scope
 
-- Calling an LLM, paid API, bank, SMS provider, or UPI provider.
+- Automatic persistence from an LLM response.
+- Trusting model arithmetic, database IDs, participant identities, or financial advice.
 - Reading device notifications or SMS messages.
 - Automatically creating, updating, or deleting transactions.
 - Probabilistic merchant classification, currency conversion, or financial advice.
