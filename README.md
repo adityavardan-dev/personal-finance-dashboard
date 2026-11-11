@@ -29,4 +29,8 @@ Local JSON persistence and plaintext development passwords are intentionally sco
 - [Milestone 8 — UX, Responsive & Accessibility Hardening](docs/milestones/08-ux-accessibility-hardening-spec.md)
 - [Milestone 9 — V1 Release Readiness](docs/milestones/09-release-readiness-spec.md)
 
-V2 AI assistance and V3 automated transaction ingestion remain roadmap scope and are not part of the V1 implementation specifications.
+### V3 foundation specifications
+
+- [Milestone 10 — Zero-Prompt Context Parser Intake](docs/milestones/10-context-parser-intake-spec.md)
+
+Milestone 10 implements deterministic, user-confirmed conversational intake: one message can create multiple editable transaction accordions, rule-based follow-ups can complete them, and ready drafts can be batch-saved after review. It uses no paid AI service or server-side chat cache. V2 AI assistance and automated transaction-source ingestion remain roadmap scope and are not part of the V1 implementation specifications.

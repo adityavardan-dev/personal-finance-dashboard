@@ -26,7 +26,9 @@ export class ExpensesService {
     try {
       if (!fs.existsSync(DATA_FILE)) return [];
       const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      const expenses = JSON.parse(raw) as Array<Omit<Expense, 'type'> & { type?: TransactionType }>;
+      const expenses = JSON.parse(raw) as Array<
+        Omit<Expense, 'type'> & { type?: TransactionType }
+      >;
       return expenses.map((expense) => ({
         ...expense,
         type: expense.type ?? TransactionType.Expense,
@@ -62,12 +64,33 @@ export class ExpensesService {
     return expense;
   }
 
+  createBatch(userId: number, dtos: CreateExpenseDto[]): Expense[] {
+    const expenses = this.readAll();
+    const createdAt = new Date().toISOString();
+    const created = dtos.map((dto) => ({
+      id: randomUUID(),
+      userId,
+      type: dto.type,
+      amount: dto.amount,
+      category: dto.category,
+      merchant: dto.merchant,
+      date: dto.date,
+      note: dto.note,
+      createdAt,
+    }));
+    expenses.push(...created);
+    this.writeAll(expenses);
+    return created;
+  }
+
   findByUser(userId: number): Expense[] {
     return this.readAll().filter((e) => e.userId === userId);
   }
 
   findOne(userId: number, id: string): Expense {
-    const expense = this.readAll().find((e) => e.id === id && e.userId === userId);
+    const expense = this.readAll().find(
+      (e) => e.id === id && e.userId === userId,
+    );
     if (!expense) throw new NotFoundException(`Expense ${id} not found`);
     return expense;
   }

@@ -495,7 +495,7 @@ Bright gradients
 
 Heavy shadows
 
-Glassmorphism
+Unstructured decorative glassmorphism outside approved functional surfaces
 
 Neon colors
 
@@ -504,6 +504,23 @@ Large floating elements
 Multiple accent colors
 
 Visual clutter
+
+## Glass Material Exception
+
+XPENSE uses a restrained glass material across authentication, navigation, controls, neutral cards,
+form fields, and hierarchy-bearing containers.
+
+Glass must:
+
+- retain zinc and emerald as the only primary visual language
+
+- use stronger, more opaque material for content and form fields
+
+- preserve readable contrast in both system light and dark themes
+
+- avoid neon decoration, excessive transparency, or competing glass cards
+
+- respect reduced-motion preferences
 
 ---
 

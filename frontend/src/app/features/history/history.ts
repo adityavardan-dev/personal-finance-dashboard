@@ -9,7 +9,6 @@ import { catchError, of } from 'rxjs';
 import { AppLayout } from '../../shared/app-layout/app-layout';
 import { CategoryIcon } from '../../shared/category-icon/category-icon';
 import { ExpenseService, TransactionType } from '../expenses/expense.service';
-import { FinanceMetricsStore } from '../../core/finance/finance-metrics.store';
 
 interface Transaction {
   id: string;
@@ -27,15 +26,15 @@ interface Transaction {
   templateUrl: './history.html',
 })
 export class HistoryComponent {
+  protected readonly pageSize = 10;
   private readonly expenseService = inject(ExpenseService);
-  private readonly metricsStore = inject(FinanceMetricsStore);
   protected readonly budgetStore = inject(BudgetStore);
   protected readonly currencySymbol = computed(() => CURRENCY_SYMBOLS[this.budgetStore.currency()]);
 
-  constructor() { this.budgetStore.load(); }
+  constructor() {
+    this.budgetStore.load();
+  }
   protected readonly loadError = signal(false);
-  protected readonly deleteError = signal(false);
-  protected readonly deletedIds = signal<Set<string>>(new Set());
 
   private readonly expenses = toSignal(
     this.expenseService.list().pipe(
@@ -50,22 +49,15 @@ export class HistoryComponent {
   protected readonly isLoading = computed(() => this.expenses() === null);
 
   protected readonly transactions = computed<Transaction[]>(() => {
-    const deleted = this.deletedIds();
-    return [...(this.expenses() ?? [])]
-      .filter((e) => !deleted.has(e.id))
-      .reverse()
-      .map((e) => ({
-        id: e.id,
-        merchant: e.merchant,
-        category: e.category,
-        date: e.date,
-        displayDate: new Date(e.date + 'T00:00:00').toLocaleDateString('en-IN', {
-          day: 'numeric',
-          month: 'short',
-        }),
-        amount: e.amount,
-        type: e.type,
-      }));
+    return [...(this.expenses() ?? [])].reverse().map((e) => ({
+      id: e.id,
+      merchant: e.merchant,
+      category: e.category,
+      date: e.date,
+      displayDate: this.formatDisplayDate(e.date),
+      amount: e.amount,
+      type: e.type,
+    }));
   });
 
   protected readonly filter = signal<'all' | TransactionType>('all');
@@ -80,8 +72,9 @@ export class HistoryComponent {
       ? 'The start date must be on or before the end date.'
       : '',
   );
-  protected readonly hasActiveFilters = computed(() =>
-    this.filter() !== 'all' || Boolean(this.categoryFilter() || this.fromDate() || this.toDate()),
+  protected readonly hasActiveFilters = computed(
+    () =>
+      this.filter() !== 'all' || Boolean(this.categoryFilter() || this.fromDate() || this.toDate()),
   );
 
   protected readonly filteredTransactions = computed(() => {
@@ -92,13 +85,28 @@ export class HistoryComponent {
     const from = this.fromDate();
     const to = this.toDate();
 
-    return this.transactions().filter((transaction) =>
-      (type === 'all' || transaction.type === type)
-      && (!category || transaction.category === category)
-      && (!from || transaction.date >= from)
-      && (!to || transaction.date <= to),
+    return this.transactions().filter(
+      (transaction) =>
+        (type === 'all' || transaction.type === type) &&
+        (!category || transaction.category === category) &&
+        (!from || transaction.date >= from) &&
+        (!to || transaction.date <= to),
     );
   });
+  protected readonly currentPage = signal(1);
+  protected readonly pageCount = computed(() =>
+    Math.max(1, Math.ceil(this.filteredTransactions().length / this.pageSize)),
+  );
+  protected readonly paginatedTransactions = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.filteredTransactions().slice(start, start + this.pageSize);
+  });
+  protected readonly pageStart = computed(() =>
+    this.filteredTransactions().length ? (this.currentPage() - 1) * this.pageSize + 1 : 0,
+  );
+  protected readonly pageEnd = computed(() =>
+    Math.min(this.currentPage() * this.pageSize, this.filteredTransactions().length),
+  );
 
   protected readonly totalExpenses = computed(() =>
     this.transactions()
@@ -116,18 +124,22 @@ export class HistoryComponent {
 
   protected setFilter(filter: 'all' | TransactionType): void {
     this.filter.set(filter);
+    this.currentPage.set(1);
   }
 
   protected setCategoryFilter(category: string): void {
     this.categoryFilter.set(category);
+    this.currentPage.set(1);
   }
 
   protected setFromDate(date: string): void {
     this.fromDate.set(date);
+    this.currentPage.set(1);
   }
 
   protected setToDate(date: string): void {
     this.toDate.set(date);
+    this.currentPage.set(1);
   }
 
   protected clearFilters(): void {
@@ -135,20 +147,30 @@ export class HistoryComponent {
     this.categoryFilter.set('');
     this.fromDate.set('');
     this.toDate.set('');
+    this.currentPage.set(1);
   }
 
-  protected deleteExpense(id: string): void {
-    if (!window.confirm('Delete this transaction? This cannot be undone.')) return;
+  protected previousPage(): void {
+    this.currentPage.update((page) => Math.max(1, page - 1));
+  }
 
-    this.deleteError.set(false);
-    this.expenseService.delete(id).subscribe({
-      next: () => {
-        this.deletedIds.update((ids) => new Set([...ids, id]));
-        this.metricsStore.refresh();
-      },
-      error: () => {
-        this.deleteError.set(true);
-      },
+  protected nextPage(): void {
+    this.currentPage.update((page) => Math.min(this.pageCount(), page + 1));
+  }
+
+  private formatDisplayDate(date: string): string {
+    const [year, month, day] = date.split('-').map(Number);
+    const today = new Date();
+    const dayDifference = Math.round(
+      (Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) -
+        Date.UTC(year, month - 1, day)) /
+        (24 * 60 * 60 * 1000),
+    );
+    if (dayDifference === 0) return 'Today';
+    if (dayDifference === 1) return 'Yesterday';
+    return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
     });
   }
 }

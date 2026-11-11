@@ -21,15 +21,13 @@ export class AuthService {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   login(email: string, password: string) {
-    return this.http
-      .post<AuthResponse>(`${this.API_URL}/login`, { email, password })
-      .pipe(
-        tap((response) => {
-          if (this.isBrowser && response.accessToken) {
-            sessionStorage.setItem(this.TOKEN_KEY, response.accessToken);
-          }
-        }),
-      );
+    return this.http.post<AuthResponse>(`${this.API_URL}/login`, { email, password }).pipe(
+      tap((response) => {
+        if (this.isBrowser && response.accessToken) {
+          sessionStorage.setItem(this.TOKEN_KEY, response.accessToken);
+        }
+      }),
+    );
   }
 
   signup(username: string, email: string, password: string) {
@@ -46,6 +44,10 @@ export class AuthService {
 
   clearSession(): void {
     if (this.isBrowser) {
+      const intakeKeys = Array.from({ length: sessionStorage.length }, (_, index) =>
+        sessionStorage.key(index),
+      ).filter((key): key is string => Boolean(key?.startsWith('xpense:intake:')));
+      intakeKeys.forEach((key) => sessionStorage.removeItem(key));
       sessionStorage.removeItem(this.TOKEN_KEY);
     }
   }

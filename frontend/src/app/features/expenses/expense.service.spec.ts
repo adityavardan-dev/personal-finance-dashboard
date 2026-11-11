@@ -20,8 +20,19 @@ describe('ExpenseService', () => {
   afterEach(() => http.verify());
 
   it('sends POST to /expenses with the correct payload', () => {
-    const payload = { type: 'expense' as const, amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-17' };
-    const mockResponse = { id: 'uuid-1', userId: 1, createdAt: '2026-09-17T10:00:00.000Z', ...payload };
+    const payload = {
+      type: 'expense' as const,
+      amount: 500,
+      category: 'Food & Dining',
+      merchant: 'Swiggy',
+      date: '2026-09-17',
+    };
+    const mockResponse = {
+      id: 'uuid-1',
+      userId: 1,
+      createdAt: '2026-09-17T10:00:00.000Z',
+      ...payload,
+    };
 
     service.create(payload).subscribe((result) => {
       expect(result.id).toBe('uuid-1');
@@ -33,6 +44,25 @@ describe('ExpenseService', () => {
     req.flush(mockResponse);
   });
 
+  it('sends one batch POST for multiple transactions', () => {
+    const transactions = [
+      {
+        type: 'expense' as const,
+        amount: 350,
+        category: 'Food & Dining',
+        merchant: 'Cafe',
+        date: '2026-11-10',
+      },
+    ];
+
+    service.createBatch(transactions).subscribe();
+
+    const req = http.expectOne(`${API_URL}/batch`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ transactions });
+    req.flush([]);
+  });
+
   it('sends GET to /expenses for list', () => {
     service.list().subscribe();
 
@@ -42,7 +72,16 @@ describe('ExpenseService', () => {
   });
 
   it('sends GET to /expenses/:id', () => {
-    const mockExpense = { id: 'uuid-1', userId: 1, type: 'expense' as const, amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-17', createdAt: '' };
+    const mockExpense = {
+      id: 'uuid-1',
+      userId: 1,
+      type: 'expense' as const,
+      amount: 500,
+      category: 'Food & Dining',
+      merchant: 'Swiggy',
+      date: '2026-09-17',
+      createdAt: '',
+    };
 
     service.getById('uuid-1').subscribe((result) => {
       expect(result.id).toBe('uuid-1');
@@ -55,7 +94,16 @@ describe('ExpenseService', () => {
 
   it('sends PATCH to /expenses/:id with the update payload', () => {
     const payload = { amount: 999, merchant: 'Updated' };
-    const mockResponse = { id: 'uuid-1', userId: 1, type: 'expense' as const, amount: 999, category: 'Food & Dining', merchant: 'Updated', date: '2026-09-17', createdAt: '' };
+    const mockResponse = {
+      id: 'uuid-1',
+      userId: 1,
+      type: 'expense' as const,
+      amount: 999,
+      category: 'Food & Dining',
+      merchant: 'Updated',
+      date: '2026-09-17',
+      createdAt: '',
+    };
 
     service.update('uuid-1', payload).subscribe((result) => {
       expect(result.amount).toBe(999);
@@ -68,7 +116,16 @@ describe('ExpenseService', () => {
   });
 
   it('sends DELETE to /expenses/:id', () => {
-    const mockResponse = { id: 'uuid-1', userId: 1, type: 'expense' as const, amount: 500, category: 'Food & Dining', merchant: 'Swiggy', date: '2026-09-17', createdAt: '' };
+    const mockResponse = {
+      id: 'uuid-1',
+      userId: 1,
+      type: 'expense' as const,
+      amount: 500,
+      category: 'Food & Dining',
+      merchant: 'Swiggy',
+      date: '2026-09-17',
+      createdAt: '',
+    };
 
     service.delete('uuid-1').subscribe((result) => {
       expect(result.id).toBe('uuid-1');
