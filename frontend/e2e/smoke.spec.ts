@@ -511,6 +511,55 @@ test('Milestone 10 conversational intake — responsive workspace stays usable',
   }
 });
 
+test('Milestone 10 conversational intake — requires explicit currency mismatch review', async ({
+  page,
+}) => {
+  await signupAndLogin(page);
+  await page.getByRole('link', { name: 'Add Expense' }).first().click();
+  await page.getByRole('link', { name: 'Describe it in plain language' }).click();
+  await page.locator('#transaction-message').fill('spent USD 20 at Cafe on food today');
+  await page.getByRole('button', { name: 'Send transaction description' }).click();
+
+  const saveButton = page.getByRole('button', { name: 'Save transaction' });
+  const mismatchReview = page.getByRole('checkbox', { name: /text uses USD/i });
+  await expect(page.getByText(/The text uses USD, but XPENSE is set to INR/i)).toBeVisible();
+  await expect(saveButton).toBeDisabled();
+
+  await mismatchReview.check();
+  await expect(saveButton).toBeEnabled();
+});
+
+test('Milestone 10 conversational intake — preserves drafts across parser and save failures', async ({
+  page,
+}) => {
+  await signupAndLogin(page);
+  await page.getByRole('link', { name: 'Add Expense' }).first().click();
+  await page.getByRole('link', { name: 'Describe it in plain language' }).click();
+
+  await page.route('**/parser/parse-batch', async (route) => {
+    await route.fulfill({ status: 503, body: 'Parser unavailable' });
+  });
+  await page.locator('#transaction-message').fill('spent 350 at Cafe on food today');
+  await page.getByRole('button', { name: 'Send transaction description' }).click();
+  await expect(page.getByRole('alert')).toContainText("couldn't process that message");
+  await expect(page.locator('details')).toHaveCount(0);
+
+  await page.unroute('**/parser/parse-batch');
+  await page.locator('#transaction-message').fill('spent 350 at Cafe on food today');
+  await page.getByRole('button', { name: 'Send transaction description' }).click();
+  await expect(page.locator('details')).toHaveCount(1);
+
+  await page.route('**/expenses/batch', async (route) => {
+    await route.fulfill({ status: 503, body: 'Persistence unavailable' });
+  });
+  await page.getByRole('button', { name: 'Save transaction' }).click();
+  await expect(page.getByRole('alert').first()).toContainText(
+    'No transactions from this batch were saved',
+  );
+  await expect(page.locator('details')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Save transaction' })).toBeEnabled();
+});
+
 test('Glass material — authentication and primary app destinations support both themes', async ({
   page,
 }) => {

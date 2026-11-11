@@ -458,5 +458,60 @@
     "date": "2026-11-11",
     "note": "spent 200 on snacks today",
     "createdAt": "2026-11-10T20:27:18.397Z"
+  },
+  {
+    "id": "fff055f5-6118-439d-a6c4-cca74c79ebe7",
+    "userId": 4,
+    "type": "expense",
+    "amount": 350,
+    "category": "Food & Dining",
+    "merchant": "Swiggy",
+    "date": "2026-11-12",
+    "note": "Spent 350 at Swiggy on food",
+    "createdAt": "2026-11-11T20:24:37.219Z"
+  },
+  {
+    "id": "2c2d6fe6-8145-4692-8a80-3f3d4da54c1a",
+    "userId": 4,
+    "type": "expense",
+    "amount": 350,
+    "category": "Food & Dining",
+    "merchant": "Swiggy",
+    "date": "2026-11-11",
+    "note": "Spent 350 at Swiggy on food",
+    "createdAt": "2026-11-11T20:26:08.683Z"
+  },
+  {
+    "id": "e911fb1c-e9e8-422c-9477-864b3cfc6a24",
+    "userId": 4,
+    "type": "expense",
+    "amount": 500,
+    "category": "Transport",
+    "merchant": "Shell",
+    "date": "2026-11-11",
+    "note": "spent 500 at Shell on petrol",
+    "createdAt": "2026-11-11T20:26:08.683Z"
+  },
+  {
+    "id": "2191e242-3fc6-4d0b-9dcf-324e98923cc0",
+    "userId": 4,
+    "type": "expense",
+    "amount": 200,
+    "category": "Food & Dining",
+    "merchant": "Zomato",
+    "date": "2026-11-12",
+    "note": "Spent 200 at Zomato on food today",
+    "createdAt": "2026-11-11T20:27:52.668Z"
+  },
+  {
+    "id": "f0dfca83-0592-4664-9af0-92c9958477cf",
+    "userId": 4,
+    "type": "expense",
+    "amount": 200,
+    "category": "Food & Dining",
+    "merchant": "Zomato",
+    "date": "2026-11-12",
+    "note": "Spent 200 at Zomato on food today",
+    "createdAt": "2026-11-11T20:29:17.877Z"
   }
 ]

@@ -1,9 +1,15 @@
+import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { BudgetStore } from '../../../core/budget/budget.store';
 import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store';
-import { ParseBatchResult, ParseResult, ParserCategory } from '../../../core/parser/parser.models';
+import {
+  ParseBatchResult,
+  ParseResult,
+  ParserCategory,
+  ParserMissingField,
+} from '../../../core/parser/parser.models';
 import { ParserService } from '../../../core/parser/parser.service';
 import { AppLayout } from '../../../shared/app-layout/app-layout';
 import { CreateExpensePayload, ExpenseService, TransactionType } from '../expense.service';
@@ -71,6 +77,7 @@ export class ContextIntakeComponent {
   private readonly expenseService = inject(ExpenseService);
   private readonly metricsStore = inject(FinanceMetricsStore);
   private readonly session = inject(ContextIntakeSessionService);
+  private readonly document = inject(DOCUMENT);
   protected readonly budgetStore = inject(BudgetStore);
 
   protected readonly status = signal<IntakeStatus>('idle');
@@ -205,6 +212,10 @@ export class ContextIntakeComponent {
     return Boolean(draft.detectedCurrency && draft.detectedCurrency !== this.applicationCurrency());
   }
 
+  protected isMissing(draft: IntakeDraft, field: string): boolean {
+    return this.missingLabels(draft).includes(field);
+  }
+
   protected draftStatusLabel(draft: IntakeDraft): string {
     if (draft.saveStatus === 'saved') return 'Saved';
     if (draft.saveStatus === 'saving') return 'Saving';
@@ -257,11 +268,12 @@ export class ContextIntakeComponent {
     this.addMessage(
       'assistant',
       attention
-        ? `I created ${added.length} ${this.pluralize('transaction draft', added.length)}. ${attention} ${attention === 1 ? 'needs' : 'need'} attention; expand the cards or reply here to complete them.`
+        ? `I created ${added.length} ${this.pluralize('transaction draft', added.length)}. ${result.clarificationPrompt ?? `${attention} ${attention === 1 ? 'needs' : 'need'} attention; expand the cards or reply here to complete them.`}`
         : `I created ${added.length} ready ${this.pluralize('transaction draft', added.length)}. Review the details before saving.`,
     );
     this.status.set('draft');
     this.persistConversation();
+    this.focusFirstMissingControl(result.drafts, added);
   }
 
   private applyFollowUp(text: string): void {
@@ -377,20 +389,45 @@ export class ContextIntakeComponent {
         const searchable = `${draft.note} ${draft.category} ${draft.merchant}`.toLowerCase();
         return words.some((word) => searchable.includes(word));
       });
-      if (matches.length) return matches;
+      if (matches.length === 1) return matches;
+      if (matches.length > 1) return [];
     }
     const needingAttention = unsaved.filter((draft) => this.missingLabels(draft).length > 0);
     if (needingAttention.length === 1) return needingAttention;
-    if (needingAttention.length > 1) {
-      const firstMissing = this.missingLabels(needingAttention[0])[0];
-      if (
-        firstMissing &&
-        needingAttention.every((draft) => this.missingLabels(draft)[0] === firstMissing)
-      ) {
-        return needingAttention;
-      }
-    }
     return unsaved.length === 1 ? unsaved : [];
+  }
+
+  private focusFirstMissingControl(results: ParseResult[], drafts: IntakeDraft[]): void {
+    const index = results.findIndex(
+      (result, resultIndex) =>
+        result.missingFields.length > 0 || this.missingLabels(drafts[resultIndex]).length > 0,
+    );
+    if (index < 0) return;
+
+    const result = results[index];
+    const draft = drafts[index];
+    const parserField = result.missingFields[0];
+    const controlId = this.controlIdForMissingField(
+      draft,
+      parserField ?? this.missingLabels(draft)[0],
+    );
+    if (!controlId) return;
+
+    this.document.defaultView?.setTimeout(() => {
+      this.document.getElementById(controlId)?.focus();
+    });
+  }
+
+  private controlIdForMissingField(
+    draft: IntakeDraft,
+    field: ParserMissingField | string | undefined,
+  ): string | null {
+    if (field === 'split' || field === 'split decision') return `split-personal-${draft.id}`;
+    if (field === 'amount' || field === 'category' || field === 'date' || field === 'merchant') {
+      return `${field}-${draft.id}`;
+    }
+    if (field === 'currency review') return `currency-${draft.id}`;
+    return null;
   }
 
   private shouldTreatAsFollowUp(text: string): boolean {

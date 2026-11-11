@@ -299,7 +299,7 @@ The authenticated request accepts between 1 and 50 fully validated `CreateExpens
 - If detected currency is `null`, the selected profile/budget currency applies.
 - If detected currency differs from the selected application currency, the user must explicitly choose to interpret the number in the application currency; no conversion occurs.
 - Merchant/source is required by the existing transaction API, so a missing merchant is collected in the editable draft even though it does not block parser readiness.
-- A single-card confirmation uses the same batch boundary with one item; successful saves refresh metrics and remain visible as `Saved`, with an explicit link to history.
+- A single-card confirmation uses the same batch boundary with one item. Successful saves refresh metrics, remove confirmed cards from the active workspace, and add a compact saved summary with an explicit link to history in the conversation.
 - The conversational workspace may save one card or use `Save selected` / `Save all ready`; batch confirmation calls the batch endpoint once and leaves incomplete cards unsaved.
 
 ### 7.3 Conversational workspace
@@ -334,7 +334,7 @@ Target selection uses `for all`, a one-based transaction number, or bounded word
 - The browser generates a conversation ID with `crypto.randomUUID()`.
 - Keys contain the authenticated JWT subject and conversation ID, preventing one signed-in user session from restoring another user's draft.
 - Every valid message or manual edit refreshes a 30-minute inactivity expiry.
-- Expired/corrupt caches, logout session removal, `New conversation`, and completion cleanup prevent stale recovery.
+- Expired/corrupt caches, logout session removal, and `New conversation` prevent stale recovery. After completion, confirmed drafts are removed from the workspace; the compact saved summary may remain in the user-scoped conversation cache until the 30-minute inactivity expiry so navigation does not reopen saved forms or lose the conversational receipt.
 - Confirmed transactions remain in the normal expense store; the temporary conversation is not a financial system of record and is not shared across browsers or devices.
 
 ### 7.6 Responsive and accessible behavior
@@ -434,6 +434,15 @@ Manual API verification must cover a valid JWT, an unauthenticated rejection, a 
 - Full Playwright Chromium suite: all 11 journeys passed.
 - Milestone 10 browser coverage includes deterministic follow-up, three-draft batch save, non-persistence before confirmation, and horizontal-overflow checks at 320×568, 768×1024, 1024×768, and 1440×900.
 - `git diff --check` passed apart from Git's informational LF-to-CRLF notices.
+
+### Gap-closure verification — 2026-11-12
+
+- Incomplete parser results now render the backend `clarificationPrompt`, visually mark missing controls, and move keyboard focus to the first missing field after the draft renders.
+- Untargeted follow-ups no longer update several possible drafts. Multiple drafts require `for all`, a one-based transaction number, or a unique bounded merchant/category/note target.
+- Session-recovery language now reflects the implemented product behavior: confirmed cards leave the workspace while the compact conversational receipt remains user-scoped until the 30-minute inactivity expiry.
+- Currency-mismatch and parser/batch-save failure Playwright journeys were added; all 4 Milestone 10 Chromium journeys passed.
+- Frontend Vitest: 26 files, 131 tests passed, including clarification focus, ambiguous-target rejection, and batch-save failure recovery.
+- Backend Jest: 15 suites, 164 tests passed. Backend and frontend production builds passed; the existing frontend initial-bundle warning remains (`546.61 kB` against `500 kB`).
 
 ## 12. Definition of done
 

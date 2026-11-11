@@ -151,6 +151,74 @@ describe('ContextIntakeComponent', () => {
     expect(component['canSaveDraft'](component['drafts']()[0])).toBe(true);
   });
 
+  it('shows the parser clarification and focuses the first missing control', async () => {
+    const missingDate: ParseResult = {
+      ...readyDraft,
+      status: 'NEEDS_CLARIFICATION',
+      draft: { ...readyDraft.draft, date: null },
+      missingFields: ['date'],
+      clarificationPrompt: 'What exact date should I use for this transaction?',
+    };
+    parserService.parseBatch.mockReturnValue(
+      of({
+        status: 'NEEDS_CLARIFICATION',
+        drafts: [missingDate],
+        clarificationPrompt: 'What exact date should I use for this transaction?',
+      }),
+    );
+    component['rawText'] = 'spent 350 at Cafe on food';
+
+    component['submitMessage']();
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    const draft = component['drafts']()[0];
+    const dateInput = fixture.nativeElement.querySelector(`#date-${draft.id}`) as HTMLInputElement;
+    expect(component['messages']().at(-1)?.text).toContain(
+      'What exact date should I use for this transaction?',
+    );
+    expect(dateInput.getAttribute('aria-invalid')).toBe('true');
+    expect(dateInput.classList.contains('field-needs-attention')).toBe(true);
+    expect(document.activeElement).toBe(dateInput);
+  });
+
+  it('does not guess an ambiguous follow-up target across multiple drafts', () => {
+    const missingDate = (merchant: string): ParseResult => ({
+      ...readyDraft,
+      status: 'NEEDS_CLARIFICATION',
+      draft: { ...readyDraft.draft, merchant, date: null },
+      missingFields: ['date'],
+    });
+    parserService.parseBatch.mockReturnValue(
+      of({
+        status: 'NEEDS_CLARIFICATION',
+        drafts: [missingDate('Cafe'), missingDate('Fuel stop')],
+      }),
+    );
+    parserService.parse.mockReturnValue(
+      of({
+        status: 'NEEDS_CLARIFICATION',
+        draft: {
+          amount: null,
+          currency: null,
+          category: null,
+          merchant: null,
+          date: '2026-11-09',
+          notes: 'yesterday',
+        },
+        missingFields: ['amount', 'category'],
+      }),
+    );
+    component['rawText'] = 'two transactions without dates';
+    component['submitMessage']();
+    component['rawText'] = 'yesterday';
+
+    component['submitMessage']();
+
+    expect(component['drafts']().every((draft) => draft.date === '')).toBe(true);
+    expect(component['messages']().at(-1)?.text).toContain('could not identify which transaction');
+  });
+
   it('saves all selected ready drafts through one batch request', () => {
     parserService.parseBatch.mockReturnValue(
       of({ status: 'READY', drafts: [readyDraft, readyDraft] }),
@@ -194,6 +262,21 @@ describe('ContextIntakeComponent', () => {
     expect(component['drafts']()).toHaveLength(1);
     expect(component['drafts']()[0].amount).toBe('350');
     expect(component['errorMessage']()).toContain("couldn't process");
+  });
+
+  it('keeps ready drafts editable when batch saving fails', () => {
+    parserService.parseBatch.mockReturnValue(of({ status: 'READY', drafts: [readyDraft] }));
+    expenseService.createBatch.mockReturnValue(throwError(() => new Error('offline')));
+    component['rawText'] = readyDraft.draft.notes;
+    component['submitMessage']();
+
+    component['saveAllReady']();
+    fixture.detectChanges();
+
+    expect(component['drafts']()).toHaveLength(1);
+    expect(component['drafts']()[0].saveStatus).toBe('error');
+    expect(component['errorMessage']()).toContain('No transactions from this batch were saved');
+    expect(metricsStore.refresh).not.toHaveBeenCalled();
   });
 
   it('converts a legacy cached saved draft into a chat summary instead of reopening it', () => {

@@ -360,6 +360,8 @@
                         min="0.01"
                         type="number"
                         inputmode="decimal"
+                        [attr.aria-invalid]="isMissing(draft, 'amount') ? 'true' : null"
+                        [class.field-needs-attention]="isMissing(draft, 'amount')"
                         class="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm tabular-nums outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-800 dark:bg-zinc-900"
                       />
                     </div>
@@ -377,6 +379,8 @@
                         (ngModelChange)="touchDrafts()"
                         required
                         type="text"
+                        [attr.aria-invalid]="isMissing(draft, 'merchant') ? 'true' : null"
+                        [class.field-needs-attention]="isMissing(draft, 'merchant')"
                         class="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-800 dark:bg-zinc-900"
                       />
                     </div>
@@ -394,6 +398,8 @@
                         (ngModelChange)="touchDrafts()"
                         required
                         type="date"
+                        [attr.aria-invalid]="isMissing(draft, 'date') ? 'true' : null"
+                        [class.field-needs-attention]="isMissing(draft, 'date')"
                         class="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-800 dark:bg-zinc-900"
                       />
                     </div>
@@ -410,6 +416,8 @@
                         [(ngModel)]="draft.category"
                         (ngModelChange)="touchDrafts()"
                         required
+                        [attr.aria-invalid]="isMissing(draft, 'category') ? 'true' : null"
+                        [class.field-needs-attention]="isMissing(draft, 'category')"
                         class="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-800 dark:bg-zinc-900"
                       >
                         <option value="" disabled>Select a category</option>
@@ -451,6 +459,7 @@
                       <div class="grid gap-2 md:grid-cols-2">
                         <label class="flex min-h-11 items-center gap-3 text-sm">
                           <input
+                            [id]="'split-personal-' + draft.id"
                             type="radio"
                             [name]="'split-' + draft.id"
                             value="personal"
@@ -494,6 +503,7 @@
                       class="mt-5 flex min-h-11 items-start gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
                     >
                       <input
+                        [id]="'currency-' + draft.id"
                         class="mt-1"
                         type="checkbox"
                         [name]="'currency-' + draft.id"
