@@ -1,7 +1,10 @@
-import { DOCUMENT } from '@angular/common';
+import { DecimalPipe, DOCUMENT } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { PeerSplitsService } from '../../peer-splits/peer-splits.service';
+import { parseSplitPrompt } from '../../peer-splits/prompt-parser';
+import { localDate, parseSplitDateFollowUp } from '../../peer-splits/split-date';
 import { BudgetStore } from '../../../core/budget/budget.store';
 import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store';
 import {
@@ -26,6 +29,14 @@ interface ChatMessage {
   text: string;
   createdAt: string;
   savedSummary?: SavedTransactionSummary;
+  splitPreview?: {
+    id: string;
+    totalAmountMinor: number;
+    currency: string;
+    people: number;
+    date: string | null;
+    title: string;
+  };
 }
 
 interface SavedTransactionSummary {
@@ -68,7 +79,7 @@ interface ConversationSnapshot {
 
 @Component({
   selector: 'app-context-intake',
-  imports: [AppLayout, FormsModule, RouterLink],
+  imports: [AppLayout, FormsModule, RouterLink, DecimalPipe],
   templateUrl: './context-intake.html',
   styleUrl: './context-intake.css',
 })
@@ -78,6 +89,9 @@ export class ContextIntakeComponent {
   private readonly metricsStore = inject(FinanceMetricsStore);
   private readonly session = inject(ContextIntakeSessionService);
   private readonly document = inject(DOCUMENT);
+  private readonly route = inject(ActivatedRoute);
+  private readonly peerSplits = inject(PeerSplitsService);
+  protected readonly splitMode = this.route.snapshot.queryParamMap?.get('mode') === 'split';
   protected readonly budgetStore = inject(BudgetStore);
 
   protected readonly status = signal<IntakeStatus>('idle');
@@ -144,6 +158,13 @@ export class ContextIntakeComponent {
     this.status.set('parsing');
     this.errorMessage.set('');
 
+    if (this.applySplitDateFollowUp(text)) return;
+
+    if (this.splitMode || /\b(split|share|owes|owed|among|between)\b/i.test(text)) {
+      this.previewSplitMessage(text);
+      return;
+    }
+
     if (this.shouldTreatAsFollowUp(text)) {
       this.applyFollowUp(text);
       return;
@@ -153,6 +174,87 @@ export class ContextIntakeComponent {
       next: (result) => this.addParsedBatch(result),
       error: () => this.handleParseError(),
     });
+  }
+
+  private previewSplitMessage(text: string): void {
+    const draft = parseSplitPrompt(text);
+    if (!draft) {
+      this.addMessage(
+        'assistant',
+        'I need the total and the people by name to make a peer split. Try “I paid INR 1200 with Harsha and Jaswanth, split equally”, or use the manual split form.',
+      );
+      this.status.set('idle');
+      this.persistConversation();
+      return;
+    }
+    const service = this.peerSplits;
+    service.preview(draft.input).subscribe({
+      next: (result) => {
+        const title =
+          text.match(/\bfor\s+([A-Za-z][A-Za-z ]{1,35})/i)?.[1]?.trim() || 'Group split';
+        const date =
+          text.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0] ??
+          (/\btoday\b/i.test(text) ? localDate() : null);
+        const id = service.addPreview(title, draft.input.participants, result, { date });
+        this.addMessage(
+          'assistant',
+          'Split preview ready. Open the card to review everyone’s share.',
+          undefined,
+          {
+            id,
+            totalAmountMinor: result.totalAmountMinor,
+            currency: result.currency,
+            people: draft.input.participants.length,
+            date,
+            title,
+          },
+        );
+        this.status.set('idle');
+        this.persistConversation();
+      },
+      error: (response: { error?: { issues?: { message: string }[] } }) => {
+        this.addMessage(
+          'assistant',
+          response.error?.issues?.map((issue) => issue.message).join(' ') ||
+            'This split needs clarification. Review the total, payers, and people in the manual split form.',
+        );
+        this.status.set('idle');
+        this.persistConversation();
+      },
+    });
+  }
+
+  protected splitPreviewDate(message: ChatMessage): string | null {
+    const preview = message.splitPreview;
+    return preview ? (this.peerSplits.getGroup(preview.id)?.date ?? preview.date) : null;
+  }
+
+  private applySplitDateFollowUp(text: string): boolean {
+    const date = parseSplitDateFollowUp(text);
+    if (!date) return false;
+    const previews = this.messages()
+      .flatMap((message) => (message.splitPreview ? [message.splitPreview] : []))
+      .filter((preview) => this.peerSplits.getGroup(preview.id));
+    if (!previews.length) return false;
+    const missingDates = previews.filter((preview) => !this.peerSplits.getGroup(preview.id)?.date);
+    const targets = missingDates.length === 1 ? missingDates : previews.length === 1 ? previews : [];
+    if (targets.length !== 1) {
+      this.addMessage('assistant', 'Which split should I update? Open its details and set the date there.');
+    } else if (this.peerSplits.updateDate(targets[0].id, date)) {
+      this.messages.update((messages) =>
+        messages.map((message) =>
+          message.splitPreview?.id === targets[0].id
+            ? { ...message, splitPreview: { ...message.splitPreview, date } }
+            : message,
+        ),
+      );
+      this.addMessage('assistant', `Date updated to ${date}. Review the split details.`);
+    } else {
+      this.addMessage('assistant', 'I could not update that split date. Open its details to edit it.');
+    }
+    this.status.set(this.drafts().length ? 'draft' : 'idle');
+    this.persistConversation();
+    return true;
   }
 
   protected onTypeChange(draft: IntakeDraft, type: TransactionType): void {
@@ -578,10 +680,22 @@ export class ContextIntakeComponent {
     };
   }
 
-  private addMessage(role: ChatRole, text: string, savedSummary?: SavedTransactionSummary): void {
+  private addMessage(
+    role: ChatRole,
+    text: string,
+    savedSummary?: SavedTransactionSummary,
+    splitPreview?: ChatMessage['splitPreview'],
+  ): void {
     this.messages.update((messages) => [
       ...messages,
-      { id: crypto.randomUUID(), role, text, createdAt: new Date().toISOString(), savedSummary },
+      {
+        id: crypto.randomUUID(),
+        role,
+        text,
+        createdAt: new Date().toISOString(),
+        savedSummary,
+        splitPreview,
+      },
     ]);
   }
 

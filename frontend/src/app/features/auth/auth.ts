@@ -1,4 +1,4 @@
-import { inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
@@ -19,12 +19,14 @@ export class AuthService {
   private readonly API_URL = `${API_CONFIG.baseUrl}/auth`;
   private readonly http = inject(HttpClient);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  readonly sessionVersion = signal(0);
 
   login(email: string, password: string) {
     return this.http.post<AuthResponse>(`${this.API_URL}/login`, { email, password }).pipe(
       tap((response) => {
         if (this.isBrowser && response.accessToken) {
           sessionStorage.setItem(this.TOKEN_KEY, response.accessToken);
+          this.sessionVersion.update((version) => version + 1);
         }
       }),
     );
@@ -46,9 +48,12 @@ export class AuthService {
     if (this.isBrowser) {
       const intakeKeys = Array.from({ length: sessionStorage.length }, (_, index) =>
         sessionStorage.key(index),
-      ).filter((key): key is string => Boolean(key?.startsWith('xpense:intake:')));
+      ).filter((key): key is string =>
+        Boolean(key?.startsWith('xpense:intake:') || key?.startsWith('xpense:split:')),
+      );
       intakeKeys.forEach((key) => sessionStorage.removeItem(key));
       sessionStorage.removeItem(this.TOKEN_KEY);
+      this.sessionVersion.update((version) => version + 1);
     }
   }
 }

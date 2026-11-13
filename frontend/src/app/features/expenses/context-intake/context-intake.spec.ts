@@ -10,6 +10,7 @@ import { ParserService } from '../../../core/parser/parser.service';
 import { ExpenseService } from '../expense.service';
 import { ContextIntakeSessionService } from './context-intake-session.service';
 import { ContextIntakeComponent } from './context-intake';
+import { PeerSplitsService } from '../../peer-splits/peer-splits.service';
 
 describe('ContextIntakeComponent', () => {
   let component: ContextIntakeComponent;
@@ -20,6 +21,12 @@ describe('ContextIntakeComponent', () => {
   };
   let expenseService: { createBatch: ReturnType<typeof vi.fn> };
   let metricsStore: { refresh: ReturnType<typeof vi.fn> };
+  let splitService: {
+    preview: ReturnType<typeof vi.fn>;
+    addPreview: ReturnType<typeof vi.fn>;
+    getGroup: ReturnType<typeof vi.fn>;
+    updateDate: ReturnType<typeof vi.fn>;
+  };
   let session: {
     load: ReturnType<typeof vi.fn>;
     save: ReturnType<typeof vi.fn>;
@@ -44,6 +51,12 @@ describe('ContextIntakeComponent', () => {
     parserService = { parse: vi.fn(), parseBatch: vi.fn() };
     expenseService = { createBatch: vi.fn() };
     metricsStore = { refresh: vi.fn() };
+    splitService = {
+      preview: vi.fn(),
+      addPreview: vi.fn().mockReturnValue('split-1'),
+      getGroup: vi.fn(),
+      updateDate: vi.fn(),
+    };
     session = {
       load: vi.fn().mockReturnValue(null),
       save: vi.fn().mockImplementation((conversationId, value) => ({
@@ -61,6 +74,7 @@ describe('ContextIntakeComponent', () => {
         provideRouter([]),
         { provide: ParserService, useValue: parserService },
         { provide: ExpenseService, useValue: expenseService },
+        { provide: PeerSplitsService, useValue: splitService },
         { provide: FinanceMetricsStore, useValue: metricsStore },
         { provide: BudgetStore, useValue: { currency, load: vi.fn() } },
         { provide: ContextIntakeSessionService, useValue: session },
@@ -71,6 +85,57 @@ describe('ContextIntakeComponent', () => {
     fixture = TestBed.createComponent(ContextIntakeComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+  });
+
+  it('turns a named split message into a linked summary without personal parser persistence', () => {
+    splitService.preview.mockReturnValue(
+      of({
+        totalAmountMinor: 180000,
+        currency: 'INR',
+        allocations: [],
+        balances: [],
+        obligations: [],
+      }),
+    );
+    component['rawText'] =
+      'Self paid INR 1800; Jaswanth owes INR 400; Self and Harsha split the remainder.';
+
+    component['submitMessage']();
+    fixture.detectChanges();
+
+    expect(splitService.preview).toHaveBeenCalledOnce();
+    expect(parserService.parseBatch).not.toHaveBeenCalled();
+    expect(expenseService.createBatch).not.toHaveBeenCalled();
+    expect(component['messages']().at(-1)?.splitPreview).toMatchObject({
+      id: 'split-1',
+      totalAmountMinor: 180000,
+      people: 3,
+    });
+    expect(
+      fixture.nativeElement.querySelector('a[aria-label="View split details for Group split"]'),
+    ).toBeTruthy();
+  });
+
+  it('applies a date-only chat follow-up to the split preview', () => {
+    splitService.preview.mockReturnValue(
+      of({ totalAmountMinor: 300000, currency: 'INR', allocations: [], balances: [], obligations: [] }),
+    );
+    splitService.getGroup.mockReturnValue({ id: 'split-1', date: null, example: false });
+    splitService.updateDate.mockReturnValue(true);
+    component['rawText'] = 'I paid INR 3000 with Harsha and Khyathi, split equally';
+    component['submitMessage']();
+
+    component['rawText'] = 'today is the date';
+    component['submitMessage']();
+    fixture.detectChanges();
+
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    expect(splitService.updateDate).toHaveBeenCalledWith('split-1', today);
+    expect(splitService.preview).toHaveBeenCalledOnce();
+    expect(parserService.parseBatch).not.toHaveBeenCalled();
+    expect(component['messages']().find((message) => message.splitPreview)?.splitPreview?.date).toBe(today);
+    expect(fixture.nativeElement.textContent).toContain(today);
   });
 
   it('creates multiple editable drafts without saving during parsing', () => {

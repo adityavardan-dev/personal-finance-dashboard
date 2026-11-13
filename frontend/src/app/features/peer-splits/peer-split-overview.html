@@ -1,0 +1,112 @@
+<app-app-layout>
+  <div class="overview">
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">SHARED EXPENSES</p>
+        <h1>Splits</h1>
+        <p class="subtitle">See what you owe and what is coming back to you.</p>
+      </div>
+      <a class="create-button" routerLink="/expenses/new" [queryParams]="{ mode: 'split' }">＋ New split</a>
+    </header>
+    <p class="preview-banner">
+      Preview workspace · Example groups are marked below. New previews stay in this browser session for 30 minutes; no balances are saved to your account.
+    </p>
+    <div class="kpi-grid" aria-label="Split balance preview">
+      <section class="kpi owe">
+        <div class="kpi-top">
+          <span>What I owe</span
+          ><svg viewBox="0 0 90 32" aria-hidden="true">
+            <path d="M2 5 19 10 31 7 46 18 60 16 75 25 87 28" />
+            <path d="m79 28 8 0 0-8" />
+          </svg>
+        </div>
+        <strong>{{ money(totals().owe, 'INR') }}</strong
+        ><small>INR preview groups only</small>
+      </section>
+      <section class="kpi back">
+        <div class="kpi-top">
+          <span>How much I get back</span
+          ><svg viewBox="0 0 90 32" aria-hidden="true">
+            <path d="M2 28 18 24 32 26 47 15 62 18 76 7 87 3" />
+            <path d="m79 3 8 0 0 8" />
+          </svg>
+        </div>
+        <strong>{{ money(totals().back, 'INR') }}</strong
+        ><small>INR preview groups only</small>
+      </section>
+    </div>
+    <section class="groups-section" aria-labelledby="groups-title">
+      <div class="group-heading">
+        <div>
+          <h2 id="groups-title">Split groups</h2>
+          <p>Open a group for its summary, then view every participant.</p>
+        </div>
+        <span>{{ visibleGroups().length }} groups</span>
+      </div>
+      <label class="search-field"
+        ><svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m15.5 15.5 5 5" /></svg
+        ><input
+          type="search"
+          aria-label="Search split groups or people"
+          placeholder="Search groups or people"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+      /></label>
+      <div class="groups-scroll" role="region" aria-label="Scrollable split groups" tabindex="0">
+        @for (group of visibleGroups(); track group.id) {
+          <article class="group-panel" [class.expanded]="openId() === group.id">
+            <button
+              type="button"
+              class="group-trigger"
+              [attr.aria-expanded]="openId() === group.id"
+              [attr.aria-controls]="'group-summary-' + group.id"
+              (click)="toggle(group.id)"
+            >
+              <span class="group-icon">{{ group.title.slice(0, 1).toUpperCase() }}</span
+              ><span class="group-main"
+                ><b>{{ group.title }}</b
+                ><small
+                  >{{ group.participants.length }} members <span>·</span>
+                  {{ group.example ? 'Example' : 'Temporary preview' }}</small
+                ></span
+              ><span class="group-total">{{
+                money(group.result.totalAmountMinor, group.result.currency)
+              }}</span
+              ><span class="chevron" aria-hidden="true">⌄</span>
+            </button>
+            @if (openId() === group.id) {
+              <div class="group-summary" [id]="'group-summary-' + group.id">
+                <div>
+                  <span>You owe</span
+                  ><b class="negative">{{
+                    money(groupBalance(group).owe, group.result.currency)
+                  }}</b>
+                </div>
+                <div>
+                  <span>You get back</span
+                  ><b class="positive">{{
+                    money(groupBalance(group).back, group.result.currency)
+                  }}</b>
+                </div>
+                <div>
+                  <span>Total split</span
+                  ><b>{{ money(group.result.totalAmountMinor, group.result.currency) }}</b>
+                </div>
+                <a [routerLink]="['/peer-splits', group.id]"
+                  >View details <span aria-hidden="true">→</span></a
+                >
+              </div>
+            }
+          </article>
+        } @empty {
+          <div class="empty-state">
+            No matching split groups. Try another name or
+            <a routerLink="/expenses/new" [queryParams]="{ mode: 'split' }">create a split</a>.
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+</app-app-layout>

@@ -39,6 +39,26 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'peer-splits',
+    loadComponent: () =>
+      import('./features/peer-splits/peer-split-overview').then(
+        (module) => module.PeerSplitOverviewComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'peer-splits/new',
+    redirectTo: '/expenses/new?mode=split',
+  },
+  {
+    path: 'peer-splits/:id',
+    loadComponent: () =>
+      import('./features/peer-splits/peer-split-detail').then(
+        (module) => module.PeerSplitDetailComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'expenses/new',
     component: NewExpenseComponent,
     canActivate: [authGuard],

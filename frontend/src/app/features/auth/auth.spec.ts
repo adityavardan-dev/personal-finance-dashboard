@@ -50,12 +50,14 @@ describe('AuthService', () => {
   it('clears the token and temporary intake conversations on logout', () => {
     sessionStorage.setItem('accessToken', 'token');
     sessionStorage.setItem('xpense:intake:index:1', 'conversation');
+    sessionStorage.setItem('xpense:split:1', 'temporary split');
     sessionStorage.setItem('unrelated', 'keep');
 
     service.clearSession();
 
     expect(sessionStorage.getItem('accessToken')).toBeNull();
     expect(sessionStorage.getItem('xpense:intake:index:1')).toBeNull();
+    expect(sessionStorage.getItem('xpense:split:1')).toBeNull();
     expect(sessionStorage.getItem('unrelated')).toBe('keep');
     sessionStorage.removeItem('unrelated');
   });

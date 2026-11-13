@@ -7,8 +7,8 @@
   isolation: isolate;
   background:
     radial-gradient(circle at 14% 8%, rgb(209 250 229 / 0.72), transparent 28rem),
-    radial-gradient(circle at 86% 18%, rgb(224 231 255 / 0.68), transparent 30rem),
-    radial-gradient(circle at 54% 94%, rgb(254 243 199 / 0.45), transparent 28rem), #f4f4f5;
+    radial-gradient(circle at 86% 18%, rgb(226 238 225 / 0.68), transparent 30rem),
+    radial-gradient(circle at 54% 94%, rgb(254 249 231 / 0.45), transparent 28rem), #fafaf8;
 }
 
 .glass-layout::before {

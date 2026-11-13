@@ -2,11 +2,50 @@
 
 @import 'tailwindcss';
 
+/* Shared XPENSE palette. Keep action, surface and highlight roles consistent across features. */
+:root {
+  --xp-surface: #fffefa;
+  --xp-surface-tint: #eef6ef;
+  --xp-ink: #1f2925;
+  --xp-muted: #63746b;
+  --xp-action: #047857;
+  --xp-action-hover: #065f46;
+  --xp-action-soft: #d1fae5;
+  --xp-highlight: #facc15;
+  --xp-border: #dce9df;
+}
+
+.dark {
+  --xp-surface: #202923;
+  --xp-surface-tint: #26372e;
+  --xp-ink: #f6faf6;
+  --xp-muted: #b1c5b7;
+  --xp-action: #34d399;
+  --xp-action-hover: #6ee7b7;
+  --xp-action-soft: #124b38;
+  --xp-highlight: #facc15;
+  --xp-border: #3c5546;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --xp-surface: #202923;
+    --xp-surface-tint: #26372e;
+    --xp-ink: #f6faf6;
+    --xp-muted: #b1c5b7;
+    --xp-action: #34d399;
+    --xp-action-hover: #6ee7b7;
+    --xp-action-soft: #124b38;
+    --xp-highlight: #facc15;
+    --xp-border: #3c5546;
+  }
+}
+
 .auth-glass-page {
   background:
     radial-gradient(circle at 16% 10%, rgb(209 250 229 / 0.76), transparent 28rem),
-    radial-gradient(circle at 86% 18%, rgb(224 231 255 / 0.72), transparent 30rem),
-    radial-gradient(circle at 52% 100%, rgb(254 243 199 / 0.42), transparent 28rem), #f4f4f5;
+    radial-gradient(circle at 86% 18%, rgb(226 238 225 / 0.72), transparent 30rem),
+    radial-gradient(circle at 52% 100%, rgb(254 249 231 / 0.42), transparent 28rem), #fafaf8;
 }
 
 .auth-glass-card {

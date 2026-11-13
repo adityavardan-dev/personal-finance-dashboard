@@ -7,12 +7,19 @@ import { vi } from 'vitest';
 import { ExpenseService } from '../expense.service';
 import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store';
 import { NewExpenseComponent } from './new-expense';
+import { PeerSplitsService } from '../../peer-splits/peer-splits.service';
 
 describe('NewExpenseComponent', () => {
   let component: NewExpenseComponent;
   let fixture: ComponentFixture<NewExpenseComponent>;
-  let mockExpenseService: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+  let mockExpenseService: {
+    create: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    getById: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+  };
   let router: Router;
+  let splitService: { preview: ReturnType<typeof vi.fn>; addPreview: ReturnType<typeof vi.fn> };
 
   const validExpenseResponse = {
     id: 'uuid-1',
@@ -27,15 +34,20 @@ describe('NewExpenseComponent', () => {
 
   beforeEach(async () => {
     mockExpenseService = { create: vi.fn(), list: vi.fn(), getById: vi.fn(), update: vi.fn() };
+    splitService = { preview: vi.fn(), addPreview: vi.fn().mockReturnValue('split-1') };
 
     await TestBed.configureTestingModule({
       imports: [NewExpenseComponent],
       providers: [
         provideRouter([]),
         { provide: ExpenseService, useValue: mockExpenseService },
+        { provide: PeerSplitsService, useValue: splitService },
         { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
         { provide: BudgetStore, useValue: { currency: signal('INR'), load: vi.fn() } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(null) } } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(null) } } },
+        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -47,8 +59,41 @@ describe('NewExpenseComponent', () => {
     fixture.detectChanges();
   });
 
+  it('previews a split from the existing form without saving a personal expense', () => {
+    component['isSplitMode'] = true;
+    component['amount'] = '1800';
+    component['merchant'] = 'Bowling';
+    component['splitPeople'][1].name = 'Harsha';
+    splitService.preview.mockReturnValue(
+      of({
+        totalAmountMinor: 180000,
+        currency: 'INR',
+        allocations: [],
+        balances: [],
+        obligations: [],
+      }),
+    );
+
+    component['saveExpense']();
+
+    expect(splitService.preview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalAmountMinor: 180000,
+        participants: [
+          { id: 'self', displayName: 'You' },
+          { id: component['splitPeople'][1].id, displayName: 'Harsha' },
+        ],
+        contributions: [{ participantId: 'self', amountMinor: 180000 }],
+      }),
+    );
+    expect(mockExpenseService.create).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/peer-splits', 'split-1']);
+  });
+
   it('lets the user select income and resets to an income category', () => {
-    const typeSelect = fixture.nativeElement.querySelector('#transaction-type') as HTMLSelectElement;
+    const typeSelect = fixture.nativeElement.querySelector(
+      '#transaction-type',
+    ) as HTMLSelectElement;
 
     expect(typeSelect.value).toBe('expense');
     typeSelect.value = 'income';
@@ -119,11 +164,13 @@ describe('NewExpenseComponent', () => {
     });
 
     it('sends an explicit income type and category', () => {
-      mockExpenseService.create.mockReturnValue(of({
-        ...validExpenseResponse,
-        type: 'income',
-        category: 'Salary',
-      }));
+      mockExpenseService.create.mockReturnValue(
+        of({
+          ...validExpenseResponse,
+          type: 'income',
+          category: 'Salary',
+        }),
+      );
       component['type'] = 'income';
       component['category'] = 'Salary';
       component['amount'] = '50000';
@@ -228,7 +275,12 @@ describe('NewExpenseComponent — edit mode', () => {
   };
 
   let component: NewExpenseComponent;
-  let mockExpenseService: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+  let mockExpenseService: {
+    create: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    getById: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+  };
   let router: Router;
 
   async function setupEditMode(id: string, updateMock?: ReturnType<typeof vi.fn>) {
@@ -246,7 +298,10 @@ describe('NewExpenseComponent — edit mode', () => {
         { provide: ExpenseService, useValue: mockExpenseService },
         { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
         { provide: BudgetStore, useValue: { currency: signal('INR'), load: vi.fn() } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(id) } } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(id) } } },
+        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -306,7 +361,10 @@ describe('NewExpenseComponent — edit mode', () => {
   });
 
   it('sets errorMessage when update fails', async () => {
-    await setupEditMode('uuid-edit-1', vi.fn().mockReturnValue(throwError(() => new Error('Server error'))));
+    await setupEditMode(
+      'uuid-edit-1',
+      vi.fn().mockReturnValue(throwError(() => new Error('Server error'))),
+    );
 
     component['saveExpense']();
 
@@ -315,7 +373,10 @@ describe('NewExpenseComponent — edit mode', () => {
   });
 
   it('resets isSubmitting to false after update failure', async () => {
-    await setupEditMode('uuid-edit-1', vi.fn().mockReturnValue(throwError(() => new Error('Server error'))));
+    await setupEditMode(
+      'uuid-edit-1',
+      vi.fn().mockReturnValue(throwError(() => new Error('Server error'))),
+    );
 
     component['saveExpense']();
 
@@ -338,7 +399,10 @@ describe('NewExpenseComponent — edit mode', () => {
         { provide: ExpenseService, useValue: mockExpenseService },
         { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
         { provide: BudgetStore, useValue: { currency: signal('INR'), load: vi.fn() } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue('bad-id') } } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue('bad-id') } } },
+        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();

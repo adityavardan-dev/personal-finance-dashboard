@@ -26,6 +26,7 @@
         }
         <a
           routerLink="/expenses/new"
+          [queryParams]="splitMode ? { mode: 'split' } : {}"
           class="glass-control inline-flex min-h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 motion-reduce:transition-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
         >
           Enter manually
@@ -111,6 +112,38 @@
                   class="min-w-0 flex-1 pt-0.5 text-sm leading-6 text-zinc-700 dark:text-zinc-200"
                 >
                   <p>{{ message.text }}</p>
+                  @if (message.splitPreview; as split) {
+                    <a
+                      [routerLink]="['/peer-splits', split.id]"
+                      class="mt-3 block rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 transition hover:bg-emerald-100/80 dark:border-emerald-800 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50"
+                      [attr.aria-label]="'View split details for ' + split.title"
+                    >
+                      <span
+                        class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300"
+                        >Split preview · View details →</span
+                      >
+                      <strong class="mt-1 block text-base text-zinc-950 dark:text-white">{{
+                        split.title
+                      }}</strong>
+                      <span
+                        class="mt-3 grid grid-cols-3 gap-2 text-xs text-zinc-600 dark:text-zinc-300"
+                        ><span
+                          ><b class="block text-zinc-950 dark:text-white"
+                            >{{ split.currency }}
+                            {{ split.totalAmountMinor / 100 | number: '1.2-2' }}</b
+                          >Total split</span
+                        ><span
+                          ><b class="block text-zinc-950 dark:text-white">{{ split.people }}</b
+                          >People</span
+                        ><span
+                          ><b class="block text-zinc-950 dark:text-white">{{
+                            splitPreviewDate(message) || 'Needed'
+                          }}</b
+                          >Date</span
+                        ></span
+                      >
+                    </a>
+                  }
                   @if (message.savedSummary; as summary) {
                     <section
                       aria-label="Saved transaction summary"

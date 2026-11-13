@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Discussion draft — no feature implementation authorized yet |
+| Status | Phase A deterministic domain implementation authorized and completed; later phases remain subject to the decisions in Section 17 |
 | Working branch | `feature/peer-split-engine-design` |
 | Base branch | `develop` |
 | Builds on | Milestone 10 deterministic context parser and conversational intake |
@@ -30,13 +30,42 @@ This proposal keeps Milestone 10 unchanged as the fast personal-expense path and
 
 Use a **hybrid three-lane router**.
 
+### Architecture in a nutshell
+
+```text
+Intent Agent
+  -> extracts meaning
+
+Validation Agent
+  -> rejects incomplete or contradictory meaning
+
+Ledger Solver
+  -> calculates the two-way ledger
+
+Confirmation Service
+  -> saves only after user approval
+```
+
+These names describe architectural responsibilities, not four autonomous LLM agents:
+
+| Component | Responsibility | Implementation boundary |
+|---|---|---|
+| Intent Agent | Convert the user's message into typed participants, contributions, and allocation rules | Internal TypeScript semantic SDK; local extractors first and an optional structured-model adapter for unresolved language |
+| Validation Agent | Reject missing, unsupported, contradictory, or unbalanced meaning | Deterministic schema, evidence, identity, and accounting-constraint validation; no model call required |
+| Ledger Solver | Calculate owed shares, net balances, and two-way obligations | Deterministic integer-minor-unit arithmetic; no language interpretation or persistence |
+| Confirmation Service | Persist the peer expense, obligations, and personal projection after approval | Authenticated, idempotent, transactional write boundary; never invoked automatically by analysis |
+
+The one-way dependency is `Intent Agent -> Validation Agent -> Ledger Solver -> Confirmation Service`. A downstream component must not reinterpret or silently repair the output of an upstream component. Invalid output returns to clarification rather than progressing toward persistence.
+
 | Lane | Example | Extraction | Math | External AI cost |
 |---|---|---|---|---|
 | Personal fast path | `Spent 300 on snacks today` | Existing Milestone 10 parser | Existing personal calculation | None |
 | Deterministic peer path | `I paid 1200 for lunch with Harsha and Jaswanth, split equally` | Local rules and identity resolution | Peer ledger solver | None |
-| Semantic peer path | `Paid 1800 for bowling, Jaswanth only had one beer so he pays 400 and split the rest` | Structured semantic extraction | Peer ledger solver | Only when routed here |
+| Semantic peer path | `Paid 1800 for bowling, Jaswanth only had one beer so he pays 400 and split the rest` | TypeScript semantic SDK with optional structured-model fallback | Peer ledger solver | Only when local SDK modules cannot resolve it |
 
 The semantic model is never the source of truth for arithmetic or persistence. Its only responsibility is to translate flexible language into typed participants, payment facts, allocation constraints, and explicit ambiguities.
+
+Semantic understanding should be exposed through an internal **TypeScript SDK**, not implemented as repeated calls to an LLM agent from controllers or UI code. The SDK composes deterministic recognizers, conversation context, schema validation, and an optional model-provider adapter behind one stable contract. Most personal and simple peer messages finish locally; only unresolved complex language reaches the provider adapter.
 
 ### Why not call an LLM for every message?
 
@@ -56,7 +85,8 @@ Regex remains useful for classification and simple equal splits, but it becomes 
 RAW USER TEXT
       |
       v
-STAGE 1 — LOCAL ROUTER AND FAST EXTRACTION
+INTENT AGENT
+  STAGE 1 — LOCAL ROUTER AND FAST EXTRACTION
       |
       +-- personal transaction ----------------------> MILESTONE 10
       |
@@ -69,15 +99,25 @@ STAGE 1 — LOCAL ROUTER AND FAST EXTRACTION
                                             (typed JSON, no trusted math)
                                                            |
                                                            v
-                                            SCHEMA + SAFETY VALIDATION
+VALIDATION AGENT
+  SCHEMA + EVIDENCE + SAFETY VALIDATION
                                                            |
                                                            v
                                             PARTICIPANT IDENTITY RESOLUTION
                                                            |
                                                            v
-STAGE 3 — DETERMINISTIC CONSTRAINT AND LEDGER SOLVER
+  CONTRIBUTION + ALLOCATION CONSTRAINT VALIDATION
       |
-      +-- incomplete, contradictory, or unbalanced ------> STAGE 4
+      +-- incomplete or contradictory -------------------> STAGE 4
+      |                                                    CLARIFICATION
+      |                                                         |
+      |<--------------------------------------------------------+
+      |
+      v
+LEDGER SOLVER
+  STAGE 3 — DETERMINISTIC TWO-WAY LEDGER CALCULATION
+      |
+      +-- unbalanced or invariant failure ----------------> STAGE 4
       |                                                    CLARIFICATION
       |                                                         |
       |<--------------------------------------------------------+
@@ -89,7 +129,7 @@ REVIEWABLE PEER EXPENSE DRAFT
 EXPLICIT USER CONFIRMATION
       |
       v
-ATOMIC PERSISTENCE
+CONFIRMATION SERVICE — ATOMIC PERSISTENCE
   1. Personal expense projection
   2. Peer expense and participant allocations
   3. Receivable/payable obligations
@@ -149,6 +189,61 @@ Convert raw language into structured facts and constraints. Do not:
 - Resolve participant database IDs.
 - Invent missing people, totals, currencies, dates, or payer information.
 - Persist anything.
+
+### TypeScript semantic SDK boundary
+
+Implement semantic understanding as a reusable workspace package, for example `packages/semantic-intake`, with no dependency on HTTP controllers, persistence, or the ledger solver.
+
+```ts
+interface SemanticUnderstandingSdk {
+  understandPeerExpense(
+    request: SemanticExtractionRequest,
+  ): Promise<SemanticUnderstandingResult>;
+}
+
+type SemanticUnderstandingResult =
+  | {
+      source: 'LOCAL';
+      intent: SemanticPeerExpenseIntent;
+      providerCalled: false;
+    }
+  | {
+      source: 'MODEL';
+      intent: SemanticPeerExpenseIntent;
+      providerCalled: true;
+      providerRequestId?: string;
+    }
+  | {
+      source: 'CLARIFICATION';
+      intent: SemanticPeerExpenseIntent;
+      providerCalled: false;
+    };
+```
+
+Recommended internal modules:
+
+```text
+semantic-intake/
+  router.ts                 # Selects local, model, or clarification path
+  normalizer.ts             # Normalizes text without changing monetary meaning
+  local-extractors/         # Names, amounts, equal splits, dates, and keywords
+  context.ts                # Applies already-confirmed conversation facts
+  model-extractor.ts        # Optional provider-neutral model port
+  evidence-validator.ts     # Verifies facts against the user's text/context
+  schema.ts                 # Versioned runtime schema and TypeScript types
+  index.ts                  # Public SDK surface
+```
+
+The SDK pipeline is:
+
+1. Normalize the new message.
+2. Apply local extractors and already-confirmed conversation facts.
+3. Return immediately when the result is complete and unambiguous.
+4. Ask a deterministic clarification when the missing fact is known.
+5. Call the structured-output model adapter only when flexible language remains unresolved.
+6. Validate model output, merge only evidence-backed facts, and return typed intent.
+
+Using a TypeScript SDK makes the semantic layer modular and testable, but it does not make model inference local by itself. A provider call is still required for language that the local modules cannot interpret unless a self-hosted model is later added. Application code calls the SDK once per new semantic message and never runs an autonomous agent loop.
 
 ### Proposed intermediate contract
 
@@ -219,12 +314,13 @@ All monetary values use integer minor units. For INR, USD, and EUR, `100` minor 
 Recommended first implementation:
 
 1. Define a versioned JSON Schema for `SemanticPeerExpenseIntent`.
-2. Ask the model to return only schema-valid JSON.
-3. Treat the model response as untrusted input.
-4. Validate it with the same strictness as an external HTTP request.
-5. Reject unknown properties and invalid enum values.
-6. Verify that every extracted amount and name has evidence in the raw text.
-7. Convert validation failures into a manual peer-split form rather than retrying indefinitely.
+2. Have the TypeScript SDK attempt local extraction first.
+3. When needed, ask the model adapter to return only schema-valid JSON.
+4. Treat the model response as untrusted input.
+5. Validate it with the same strictness as an external HTTP request.
+6. Reject unknown properties and invalid enum values.
+7. Verify that every extracted amount and name has evidence in the raw text or confirmed conversation context.
+8. Convert validation failures into a manual peer-split form rather than retrying indefinitely.
 
 ### Provider strategy options
 
@@ -234,13 +330,22 @@ Recommended first implementation:
 | Self-hosted small model | Greater data control and predictable marginal cost | Operational complexity and weaker extraction on edge cases | Later, after an evaluation corpus exists |
 | Deterministic-only manual builder | No model cost or disclosure | More user effort for complex language | Mandatory fallback in every release |
 
-The application should depend on an internal `SemanticIntentExtractor` interface, not a specific vendor SDK.
+The application should depend on the internal `SemanticUnderstandingSdk`, which in turn depends on a narrow provider port rather than a specific vendor SDK. A vendor TypeScript client belongs only inside its adapter.
 
 ```ts
-interface SemanticIntentExtractor {
+interface ModelSemanticExtractor {
   extract(request: SemanticExtractionRequest): Promise<SemanticPeerExpenseIntent>;
 }
+
+class SemanticUnderstandingService implements SemanticUnderstandingSdk {
+  constructor(
+    private readonly localExtractor: LocalPeerIntentExtractor,
+    private readonly modelExtractor?: ModelSemanticExtractor,
+  ) {}
+}
 ```
+
+This separation allows unit tests to use an in-memory model stub, permits provider replacement without changing product code, and keeps local extraction available when the model provider is disabled or unavailable.
 
 ## 6. Participant identity resolution
 
@@ -583,8 +688,11 @@ Partial settlements must be supported, and the original expense allocation must 
 ### Cost and latency
 
 - Use local routing to keep personal and simple peer inputs at zero external cost.
+- Run the TypeScript SDK's local extractors before its provider adapter.
 - Set strict input and output token limits.
 - Use one extraction call per new complex message, not per field edit.
+- Reuse the last validated result for the same unchanged message and draft version within the active conversation; do not create a persistent raw-financial-text cache.
+- Use a single structured-output inference request rather than creating a stateful LLM agent session.
 - Do not use autonomous agent loops.
 - Apply a timeout and a small bounded retry policy only for transport failures.
 - Track route rate, latency, schema failures, clarification rate, and cost without storing raw financial text.
@@ -643,6 +751,15 @@ Maintain a versioned corpus containing:
 
 Score schema validity, fact extraction, ambiguity detection, and unsupported-case recognition. Do not score the model on arithmetic because arithmetic is not its responsibility.
 
+### TypeScript SDK tests
+
+- Unit-test every local extractor without a network dependency.
+- Verify that complete local intents never invoke `ModelSemanticExtractor`.
+- Verify that only unresolved complex language invokes the model adapter.
+- Use an in-memory adapter stub for merge, validation, timeout, and failure tests.
+- Contract-test each vendor adapter against the same versioned schema.
+- Verify that an unchanged message and draft version reuse the active-conversation result.
+
 ### End-to-end tests
 
 - No write before confirmation.
@@ -658,10 +775,12 @@ Score schema validity, fact extraction, ambiguity detection, and unsupported-cas
 
 ### Phase A — Contract and deterministic solver
 
-- Finalize participant, contribution, allocation, obligation, and settlement contracts.
-- Implement integer-minor-unit arithmetic.
-- Add invariant and property-based tests.
-- Do not add AI yet.
+- [x] Finalize participant, contribution, allocation, and obligation contracts for the solver boundary.
+- [x] Implement integer-minor-unit arithmetic.
+- [x] Add invariant and generated-case tests.
+- [x] Keep AI outside Phase A.
+
+Phase A is implemented under `backend/src/peer-splits/domain`. Editable expected-versus-actual examples live in `backend/examples/peer-split-cases.json` and run through `npm run peer-split:examples` from the `backend` directory. Settlement lifecycle contracts remain part of Phase E.
 
 ### Phase B — Persistence foundation
 
@@ -679,7 +798,9 @@ Score schema validity, fact extraction, ambiguity detection, and unsupported-cas
 
 ### Phase D — Semantic extraction behind a feature flag
 
-- Implement the provider-neutral extractor interface.
+- Create the internal TypeScript semantic SDK and its public contract.
+- Implement local extractors, context merging, and deterministic clarification before adding a model adapter.
+- Implement the provider-neutral `ModelSemanticExtractor` port and one vendor adapter.
 - Add structured schema validation and evidence checks.
 - Build the evaluation corpus and minimum quality threshold.
 - Roll out only to complex peer inputs.
@@ -731,10 +852,11 @@ Out of scope for the first release:
 
 ## 19. Definition of architecture-ready
 
-Implementation should not begin until:
+Implementation beyond the completed Phase A domain foundation should not begin until:
 
 - The decisions in Section 17 are resolved.
 - The intermediate semantic contract is approved.
+- The internal TypeScript SDK boundary and provider-adapter contract are approved.
 - The peer expense and settlement data model is approved.
 - The solver remainder policy is approved.
 - Personal dashboard projection rules are approved.

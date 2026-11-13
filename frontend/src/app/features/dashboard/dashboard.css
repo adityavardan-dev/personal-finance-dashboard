@@ -1,0 +1,107 @@
+.peer-dashboard-card {
+  position: relative;
+  isolation: isolate;
+  min-height: 340px;
+  overflow: hidden;
+  border-radius: 28px;
+  background: radial-gradient(circle at 80% 10%, #3c8661, #1c5039 48%, #163b2d);
+  color: white;
+  box-shadow: 0 16px 38px #1e51322c;
+}
+.peer-dashboard-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: #a8e5ba55;
+  filter: blur(70px);
+  right: -100px;
+  bottom: -150px;
+}
+.peer-dashboard-inner {
+  position: relative;
+  z-index: 1;
+  padding: 27px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.peer-kicker {
+  color: #c5f5dc;
+  letter-spacing: 0.17em;
+  font-size: 10px;
+  font-weight: 800;
+}
+.peer-dashboard-card h2 {
+  font-size: clamp(25px, 3vw, 35px);
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+  margin: 13px 0;
+}
+.peer-dashboard-card h2 span {
+  color: #e3f6d9;
+}
+.peer-dashboard-card p:not(.peer-kicker) {
+  max-width: 320px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #daf1e1;
+}
+.peer-dashboard-avatars {
+  display: flex;
+  margin: 20px 0;
+}
+.peer-dashboard-avatars span {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #1e5039;
+  border-radius: 50%;
+  margin-right: -7px;
+  background: #438e67;
+  font-size: 11px;
+  font-weight: 800;
+}
+.peer-dashboard-avatars span:nth-child(2) {
+  background: #76b893;
+  color: #193a29;
+}
+.peer-dashboard-avatars span:nth-child(3) {
+  background: #b6d9bd;
+  color: #193a29;
+}
+.peer-dashboard-avatars span:nth-child(4) {
+  background: #facc15;
+  color: #263826;
+}
+.peer-dashboard-inner > a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 180px;
+  padding: 12px 15px;
+  background: #fffefa;
+  color: #065f46;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 9px 20px #07271835;
+}
+.peer-dashboard-inner > a:hover {
+  background: #d1fae5;
+}
+.peer-dashboard-footer {
+  margin-top: auto;
+  padding-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: #d7efdd;
+}
+.peer-dashboard-footer a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

@@ -1,0 +1,96 @@
+<app-app-layout>
+  @if (group(); as split) {
+    <div class="detail">
+      <a routerLink="/peer-splits" class="back">← All splits</a>
+      <header class="detail-hero">
+        <p>{{ split.example ? 'EXAMPLE GROUP' : 'TEMPORARY PREVIEW' }}</p>
+        <h1>{{ split.title }}</h1>
+        <span>Total bill</span><strong>{{ money(split.result.totalAmountMinor) }}</strong
+        ><small
+          >{{ split.participants.length }} people · {{ split.result.currency }} ·
+          {{ split.date || 'Date needed' }} · Review only</small
+        >
+      </header>
+      @if (!split.example) {
+        <div class="date-editor detail-card">
+          <label for="split-date">Split date</label>
+          <input
+            id="split-date"
+            type="date"
+            [ngModel]="split.date ?? ''"
+            (ngModelChange)="setDate($event)"
+            aria-describedby="split-date-help"
+          />
+          <span id="split-date-help">{{ dateMessage() || 'Choose a date for this temporary split preview.' }}</span>
+        </div>
+      }
+      <div class="detail-grid">
+        <section class="detail-card" aria-labelledby="participant-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">THE GROUP</p>
+              <h2 id="participant-title">Participants ({{ split.participants.length }})</h2>
+            </div>
+            <a routerLink="/expenses/new" [queryParams]="{ mode: 'split' }">＋ New split</a>
+          </div>
+          <label class="search-field"
+            ><span aria-hidden="true">⌕</span
+            ><input
+              type="search"
+              aria-label="Search people in this split"
+              placeholder="Search people"
+              [ngModel]="search()"
+              (ngModelChange)="search.set($event)"
+          /></label>
+          <div class="participant-scroll">
+            @for (person of participants(); track person.id) {
+              <div class="participant-row">
+                <span class="avatar">{{ person.displayName.slice(0, 1).toUpperCase() }}</span
+                ><span class="identity"
+                  ><b>{{ person.displayName }}</b
+                  ><small
+                    [class.positive]="balance(person.id) > 0"
+                    [class.negative]="balance(person.id) < 0"
+                    >{{
+                      balance(person.id) > 0
+                        ? 'Gets back'
+                        : balance(person.id) < 0
+                          ? 'Owes'
+                          : 'Settled'
+                    }}
+                    {{
+                      money(balance(person.id) < 0 ? -balance(person.id) : balance(person.id))
+                    }}</small
+                  ></span
+                ><strong>{{ money(share(person.id)) }}<small>share</small></strong>
+              </div>
+            } @empty {
+              <p class="empty">No matching person.</p>
+            }
+          </div>
+        </section>
+        <aside class="detail-card settlement-card">
+          <p class="eyebrow">SETTLEMENTS</p>
+          <h2>Who pays whom</h2>
+          @for (item of split.result.obligations; track $index) {
+            <div class="settlement">
+              <span
+                >{{ name(item.fromParticipantId) }} <small>pays</small>
+                {{ name(item.toParticipantId) }}</span
+              ><b>{{ money(item.amountMinor) }}</b>
+            </div>
+          } @empty {
+            <p>Everyone is settled.</p>
+          }
+          <p class="notice">This is a preview. No payment or expense has been saved.</p>
+        </aside>
+      </div>
+    </div>
+  } @else {
+    <div class="missing">
+      <h1>Split preview unavailable</h1>
+      <p>This temporary preview may have expired after 30 minutes.</p>
+      <a routerLink="/peer-splits">Back to splits</a>
+    </div>
+  }
+</app-app-layout>

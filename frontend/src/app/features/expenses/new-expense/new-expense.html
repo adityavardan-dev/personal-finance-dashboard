@@ -4,30 +4,33 @@
       <p
         class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400"
       >
-        {{ isEditMode ? 'Edit transaction' : 'New transaction' }}
+        {{ isSplitMode ? 'New peer split' : isEditMode ? 'Edit transaction' : 'New transaction' }}
       </p>
       <div class="mt-1.5 flex items-start justify-between gap-4">
         <div class="min-w-0">
           <h2 class="text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">
-            {{ isEditMode ? 'Edit ' : 'Add an ' }}{{ type }}
+            {{ isSplitMode ? 'Add a split expense' : (isEditMode ? 'Edit ' : 'Add an ') + type }}
           </h2>
           <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             {{
-              isEditMode
-                ? 'Update the details for this transaction.'
-                : 'Capture it now so your financial picture stays current.'
+              isSplitMode
+                ? 'Enter the full bill and everyone sharing it. Review the balances before saving.'
+                : isEditMode
+                  ? 'Update the details for this transaction.'
+                  : 'Capture it now so your financial picture stays current.'
             }}
           </p>
           @if (!isEditMode) {
             <a
               routerLink="/expenses/intake"
+              [queryParams]="isSplitMode ? { mode: 'split' } : {}"
               class="mt-3 inline-flex min-h-11 items-center rounded-full text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
               >Describe it in plain language</a
             >
           }
         </div>
         <a
-          routerLink="/history"
+          [routerLink]="isSplitMode ? '/peer-splits' : '/history'"
           class="hidden min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:inline-flex dark:text-zinc-300 dark:hover:bg-zinc-800"
           >Cancel</a
         >
@@ -59,32 +62,37 @@
         novalidate
       >
         <div class="space-y-7">
-          <section aria-labelledby="type-title">
-            <p
-              class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400"
-            >
-              Transaction type
-            </p>
-            <h3 id="type-title" class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white">
-              Money out or money in?
-            </h3>
-            <label
-              for="transaction-type"
-              class="mb-2 mt-4 block text-sm font-medium text-zinc-800 dark:text-zinc-200"
-              >Type</label
-            >
-            <select
-              id="transaction-type"
-              name="transactionType"
-              [ngModel]="type"
-              (ngModelChange)="onTypeChange($event)"
-              required
-              class="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-            >
-              <option value="expense">Expense</option>
-              <option value="income">Income</option>
-            </select>
-          </section>
+          @if (!isSplitMode) {
+            <section aria-labelledby="type-title">
+              <p
+                class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400"
+              >
+                Transaction type
+              </p>
+              <h3
+                id="type-title"
+                class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white"
+              >
+                Money out or money in?
+              </h3>
+              <label
+                for="transaction-type"
+                class="mb-2 mt-4 block text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                >Type</label
+              >
+              <select
+                id="transaction-type"
+                name="transactionType"
+                [ngModel]="type"
+                (ngModelChange)="onTypeChange($event)"
+                required
+                class="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              >
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+              </select>
+            </section>
+          }
 
           <section aria-labelledby="amount-title">
             <div class="flex items-end justify-between gap-4">
@@ -98,7 +106,7 @@
                   id="amount-title"
                   class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white"
                 >
-                  {{ type === 'income' ? 'Income' : 'Expense' }} amount
+                  {{ isSplitMode ? 'Total bill' : type === 'income' ? 'Income' : 'Expense' }} amount
                 </h3>
               </div>
               <span class="text-sm font-medium text-zinc-400">{{ budgetStore.currency() }}</span>
@@ -117,11 +125,85 @@
                 inputmode="decimal"
                 type="number"
                 placeholder="0"
-                [attr.aria-label]="(type === 'income' ? 'Income' : 'Expense') + ' amount'"
+                [attr.aria-label]="
+                  isSplitMode
+                    ? 'Total bill amount'
+                    : (type === 'income' ? 'Income' : 'Expense') + ' amount'
+                "
                 class="min-h-20 min-w-0 flex-1 bg-transparent px-3 text-4xl font-bold tracking-tight text-zinc-950 outline-none placeholder:text-zinc-300 dark:text-white dark:placeholder:text-zinc-700"
               />
             </div>
           </section>
+
+          @if (isSplitMode) {
+            <section
+              aria-labelledby="split-people-title"
+              class="rounded-3xl border border-emerald-100 bg-emerald-50/50 p-4 sm:p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p
+                    class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400"
+                  >
+                    Shared with
+                  </p>
+                  <h3 id="split-people-title" class="mt-1 text-lg font-semibold">
+                    {{ splitPeople.length }} people
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  (click)="addSplitPerson()"
+                  class="min-h-11 rounded-full border border-emerald-300 px-4 text-sm font-semibold text-emerald-800 dark:border-emerald-700 dark:text-emerald-300"
+                >
+                  ＋ Add person
+                </button>
+              </div>
+              <p class="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                Leave a fixed share at 0 to split the remainder equally. If you paid the whole bill,
+                you can leave your paid amount blank.
+              </p>
+              <div class="mt-4 space-y-3">
+                @for (person of splitPeople; track person.id) {
+                  <div
+                    class="grid gap-2 rounded-2xl border border-zinc-200 bg-white/80 p-3 sm:grid-cols-[minmax(120px,1fr)_100px_100px_auto] sm:items-end dark:border-zinc-700 dark:bg-zinc-900/80"
+                  >
+                    <label class="text-xs font-medium"
+                      >Name<input
+                        [name]="'split-name-' + person.id"
+                        [(ngModel)]="person.name"
+                        [readonly]="person.id === 'self'"
+                        required
+                        placeholder="Person name"
+                        class="mt-1 min-h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950" /></label
+                    ><label class="text-xs font-medium"
+                      >Paid<input
+                        [name]="'split-paid-' + person.id"
+                        [(ngModel)]="person.paid"
+                        inputmode="decimal"
+                        placeholder="0.00"
+                        class="mt-1 min-h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950" /></label
+                    ><label class="text-xs font-medium"
+                      >Fixed share<input
+                        [name]="'split-fixed-' + person.id"
+                        [(ngModel)]="person.fixed"
+                        inputmode="decimal"
+                        placeholder="0.00"
+                        class="mt-1 min-h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950" /></label
+                    ><button
+                      type="button"
+                      (click)="removeSplitPerson(person.id)"
+                      [disabled]="person.id === 'self' || splitPeople.length <= 2"
+                      class="min-h-11 rounded-xl px-2 text-xs text-red-700 disabled:opacity-30 dark:text-red-300"
+                      [attr.aria-label]="'Remove ' + person.name"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                }
+              </div>
+            </section>
+          }
 
           <section aria-labelledby="details-title">
             <div>
@@ -211,15 +293,17 @@
           class="mt-7 flex flex-col-reverse gap-3 border-t border-zinc-100 pt-6 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
         >
           <a
-            routerLink="/history"
+            [routerLink]="isSplitMode ? '/peer-splits' : '/history'"
             class="inline-flex min-h-12 items-center justify-center rounded-2xl px-5 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:hidden dark:text-zinc-300 dark:hover:bg-zinc-800"
             >Cancel</a
           >
           <p class="hidden text-xs text-zinc-400 sm:block">
             {{
-              isEditMode
-                ? 'Changes will be saved to your account.'
-                : 'Your transaction will be saved to your account.'
+              isSplitMode
+                ? 'This creates a temporary preview; nothing is saved yet.'
+                : isEditMode
+                  ? 'Changes will be saved to your account.'
+                  : 'Your transaction will be saved to your account.'
             }}
           </p>
           <button
@@ -228,17 +312,21 @@
             class="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-emerald-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto dark:text-zinc-950"
           >
             {{
-              isSubmitting
-                ? isEditMode
-                  ? 'Updating…'
-                  : 'Saving…'
-                : isEditMode
-                  ? type === 'income'
-                    ? 'Update income'
-                    : 'Update expense'
-                  : type === 'income'
-                    ? 'Save income'
-                    : 'Save expense'
+              isSplitMode
+                ? isSubmitting
+                  ? 'Calculating…'
+                  : 'Review split'
+                : isSubmitting
+                  ? isEditMode
+                    ? 'Updating…'
+                    : 'Saving…'
+                  : isEditMode
+                    ? type === 'income'
+                      ? 'Update income'
+                      : 'Update expense'
+                    : type === 'income'
+                      ? 'Save income'
+                      : 'Save expense'
             }}
           </button>
         </div>
