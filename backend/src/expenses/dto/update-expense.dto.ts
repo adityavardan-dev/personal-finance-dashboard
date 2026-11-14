@@ -18,7 +18,6 @@ export class UpdateExpenseDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(1)
   merchant?: string;
 
   @IsOptional()

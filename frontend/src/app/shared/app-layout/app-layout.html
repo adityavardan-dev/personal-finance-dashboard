@@ -3,7 +3,7 @@
   [class.glass-layout]="variant() === 'glass'"
 >
   <div class="mx-auto min-h-screen max-w-7xl px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
-    <app-header />
+    @if (!hideHeader()) { <app-header /> }
 
     <div
       class="mt-5 grid gap-5 md:grid-cols-[5.5rem_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-6"
@@ -12,7 +12,7 @@
         <app-sidebar />
       </aside>
 
-      <main class="min-w-0 pb-24 md:pb-8 lg:pb-2" tabindex="-1">
+      <main class="min-w-0 md:pb-8 lg:pb-2" [class.pb-24]="!hideBottomNav()" [class.pb-8]="hideBottomNav()" tabindex="-1">
         <div class="space-y-6">
           <ng-content />
         </div>
@@ -20,7 +20,9 @@
     </div>
   </div>
 
-  <div class="md:hidden">
-    <app-bottom-nav />
-  </div>
+  @if (!hideBottomNav()) {
+    <div class="md:hidden">
+      <app-bottom-nav />
+    </div>
+  }
 </div>

@@ -1,0 +1,80 @@
+.hero-glass {
+  border: 1px solid #ffffff48;
+  background: linear-gradient(125deg, #073c2fcf, #087357c4);
+  box-shadow: inset 0 1px #ffffff52, 0 18px 44px #0738242b;
+  backdrop-filter: blur(28px) saturate(135%);
+  -webkit-backdrop-filter: blur(28px) saturate(135%);
+}
+
+.budget-progress {
+  position: relative;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  outline: none;
+}
+.budget-progress__track {
+  width: 100%;
+  height: 12px;
+  border: 1px solid #ffffff40;
+  border-radius: 999px;
+  background: #ffffff24;
+  box-shadow: inset 0 2px 5px #012d2033, 0 1px #ffffff19;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+.budget-progress__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #a7e8cf80, #ddfff1a8);
+  box-shadow: inset 0 1px #ffffff89;
+  transition: width 400ms ease, background 200ms ease, box-shadow 200ms ease;
+}
+.budget-progress__fill--warning {
+  background: linear-gradient(90deg, #f4d79a9c, #ffefd0c4);
+}
+.budget-progress__fill--critical {
+  background: linear-gradient(90deg, #f1b1a79c, #ffe2d9c4);
+}
+.budget-progress__tooltip {
+  position: absolute;
+  top: -35px;
+  z-index: 2;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border: 1px solid #ffffff7a;
+  border-radius: 999px;
+  background: #f8fff7f2;
+  padding: 4px 9px;
+  color: #164633;
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+.budget-progress__tooltip--start {
+  transform: none;
+}
+.budget-progress__tooltip--end {
+  transform: translateX(-100%);
+}
+.budget-progress:hover .budget-progress__fill,
+.budget-progress:focus-visible .budget-progress__fill {
+  box-shadow: 0 0 14px #cbffe899, inset 0 1px #ffffff;
+  filter: brightness(1.3);
+}
+.budget-progress:hover .budget-progress__tooltip,
+.budget-progress:focus-visible .budget-progress__tooltip {
+  opacity: 1;
+}
+.budget-progress:focus-visible .budget-progress__track {
+  outline: 2px solid #ddfff1;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .budget-progress__fill,
+  .budget-progress__tooltip {
+    transition: none;
+  }
+}

@@ -20,6 +20,13 @@ describe('expense DTO transaction type validation', () => {
     }
   });
 
+  it('allows merchant to be omitted or blank', async () => {
+    const { merchant: _merchant, ...withoutMerchant } = validCreate;
+    await expect(validate(plainToInstance(CreateExpenseDto, withoutMerchant))).resolves.toHaveLength(0);
+    await expect(validate(plainToInstance(CreateExpenseDto, { ...validCreate, merchant: '' }))).resolves.toHaveLength(0);
+    await expect(validate(plainToInstance(UpdateExpenseDto, { merchant: '' }))).resolves.toHaveLength(0);
+  });
+
   it('rejects a missing create type', async () => {
     const { type: _type, ...withoutType } = validCreate;
     const errors = await validate(plainToInstance(CreateExpenseDto, withoutType));

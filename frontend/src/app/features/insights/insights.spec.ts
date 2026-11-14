@@ -39,4 +39,15 @@ describe('InsightsComponent weekly pagination', () => {
     expect(fixture.nativeElement.querySelector('[aria-label*="spent ₹200"]')).toBeTruthy();
     expect(fixture.nativeElement.textContent).toContain('Spent ₹200');
   });
+
+  it('combines budget usage and spending metrics above the weekly view', () => {
+    const gauge = fixture.nativeElement.querySelector('.insight-gauge') as HTMLElement;
+    const weekly = fixture.nativeElement.querySelector('#weekly-title') as HTMLElement;
+
+    expect(gauge).toBeTruthy();
+    expect(gauge.textContent).toContain('30%');
+    expect(gauge.textContent).toContain('₹300');
+    expect(gauge.textContent).toContain('₹700');
+    expect(gauge.compareDocumentPosition(weekly) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });

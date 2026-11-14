@@ -1,0 +1,427 @@
+.insights-page {
+  display: grid;
+  gap: 24px;
+  color: #1f2925;
+}
+.insights-heading,
+.gauge-heading,
+.weekly-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.insights-heading h1 {
+  margin-top: 6px;
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+.insights-heading p:last-child,
+.gauge-heading p:last-child,
+.weekly-heading p:last-child {
+  margin-top: 5px;
+  color: #64746c;
+  font-size: 13px;
+}
+.insights-eyebrow {
+  color: #047857;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+.insights-add,
+.gauge-budget-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 18px;
+  background: #047857;
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.insights-add:hover,
+.gauge-budget-link:hover {
+  background: #065f46;
+}
+.insights-error {
+  border: 1px solid #f1b8ae;
+  border-radius: 20px;
+  background: #fff0ed;
+  padding: 18px;
+  color: #a53e31;
+  font-size: 13px;
+}
+.insights-error button {
+  margin-top: 10px;
+  font-weight: 800;
+  text-decoration: underline;
+}
+.insight-gauge,
+.insights-panel {
+  border: 1px solid #ffffffcf;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #fffefaeb, #eef7efc9);
+  box-shadow: 0 18px 48px #24422e14;
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+}
+.insight-gauge {
+  padding: clamp(20px, 3vw, 32px);
+}
+.gauge-heading h2,
+.weekly-heading h2,
+.insights-panel h2 {
+  margin-top: 5px;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+.gauge-content {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.82fr) minmax(0, 1.18fr);
+  align-items: center;
+  gap: clamp(18px, 4vw, 44px);
+  margin-top: 18px;
+}
+.gauge-visual {
+  position: relative;
+  width: min(100%, 410px);
+  margin: auto;
+}
+.gauge-visual svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.gauge-track,
+.gauge-safe,
+.gauge-caution,
+.gauge-limit {
+  fill: none;
+  stroke-width: 19;
+  stroke-linecap: round;
+}
+.gauge-track {
+  stroke: #cbded1;
+}
+.gauge-safe {
+  stroke: #40866d;
+}
+.gauge-caution {
+  stroke: #d9b56d;
+}
+.gauge-limit {
+  stroke: #d87e6d;
+}
+.gauge-needle {
+  fill: #245d49;
+  filter: drop-shadow(0 3px 5px #163c293d);
+  transition: transform 450ms ease;
+}
+.gauge-needle-center {
+  fill: #e9f8ec;
+}
+.gauge-readout {
+  margin-top: -4px;
+  display: grid;
+  gap: 1px;
+  text-align: center;
+}
+.gauge-readout strong {
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+.gauge-readout span {
+  color: #64746c;
+  font-size: 11px;
+}
+.gauge-details {
+  display: grid;
+  gap: 16px;
+}
+.gauge-signal {
+  border: 1px solid #cfe6d6;
+  border-radius: 20px;
+  background: #ffffff9e;
+  padding: 18px;
+}
+.gauge-signal--warning {
+  border-color: #ead5a8;
+  background: #fff8e9c7;
+}
+.gauge-signal--critical {
+  border-color: #edc0b6;
+  background: #fff1edc7;
+}
+.gauge-signal span {
+  color: #047857;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+.gauge-signal h3 {
+  margin-top: 7px;
+  font-size: 17px;
+  font-weight: 800;
+}
+.gauge-signal p {
+  margin-top: 5px;
+  color: #55645a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.gauge-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.gauge-stats > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid #dce9df;
+  border-radius: 16px;
+  background: #ffffff8c;
+  padding: 12px;
+}
+.gauge-stats span {
+  color: #64746c;
+  font-size: 11px;
+}
+.gauge-stats strong {
+  font-size: clamp(15px, 1.6vw, 19px);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.insights-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  align-items: start;
+  gap: 24px;
+}
+.insights-panel {
+  padding: 24px;
+}
+.week-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.week-controls button {
+  min-height: 42px;
+  border: 1px solid #cdded2;
+  border-radius: 12px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.week-controls button:disabled {
+  opacity: 0.4;
+}
+.week-controls span {
+  min-width: 40px;
+  color: #64746c;
+  font-size: 11px;
+  text-align: center;
+}
+.weekly-bars {
+  display: flex;
+  height: 208px;
+  align-items: end;
+  gap: 8px;
+  margin-top: 24px;
+}
+.weekly-day {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex: 1;
+  flex-direction: column;
+  justify-content: end;
+  outline: none;
+}
+.weekly-bar {
+  width: min(100%, 40px);
+  margin: 0 auto;
+  border-radius: 12px 12px 0 0;
+  background: #288a62;
+  transition: height 250ms ease, background 150ms ease;
+}
+.weekly-day:hover .weekly-bar,
+.weekly-day:focus-visible .weekly-bar {
+  background: #43b782;
+}
+.weekly-tooltip {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  width: max-content;
+  max-width: 150px;
+  transform: translate(-50%, -8px);
+  border-radius: 12px;
+  background: #183b2c;
+  padding: 8px 10px;
+  color: white;
+  font-size: 11px;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 20px #0003;
+}
+.weekly-day:hover .weekly-tooltip,
+.weekly-day:focus-visible .weekly-tooltip {
+  opacity: 1;
+}
+.weekly-tooltip strong {
+  display: block;
+}
+.weekly-labels {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-top: 8px;
+  color: #64746c;
+  font-size: 11px;
+  text-align: center;
+}
+.category-empty {
+  margin-top: 20px;
+  color: #64746c;
+  font-size: 13px;
+}
+.category-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+.category-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.category-body {
+  flex: 1;
+  min-width: 0;
+}
+.category-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+.category-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2ece4;
+  margin-top: 8px;
+}
+.category-progress > div {
+  height: 100%;
+  border-radius: inherit;
+  background: #2c9f6d;
+}
+.category-body p {
+  margin-top: 5px;
+  color: #64746c;
+  font-size: 11px;
+}
+@media (prefers-color-scheme: dark) {
+  .insights-page {
+    color: #f4f8f4;
+  }
+  .insights-eyebrow,
+  .gauge-signal span {
+    color: #6ee7b7;
+  }
+  .insights-heading p:last-child,
+  .gauge-heading p:last-child,
+  .weekly-heading p:last-child,
+  .gauge-readout span,
+  .gauge-stats span,
+  .week-controls span,
+  .weekly-labels,
+  .category-empty,
+  .category-body p {
+    color: #b5c6b8;
+  }
+  .insight-gauge,
+  .insights-panel {
+    border-color: #435b49;
+    background: linear-gradient(135deg, #25372bcf, #1c2c23d9);
+    box-shadow: 0 18px 48px #0004;
+  }
+  .gauge-track {
+    stroke: #3c5545;
+  }
+  .gauge-needle {
+    fill: #c9f4dd;
+  }
+  .gauge-needle-center {
+    fill: #244332;
+  }
+  .gauge-signal,
+  .gauge-stats > div {
+    border-color: #45604c;
+    background: #ffffff0e;
+  }
+  .gauge-signal--warning {
+    border-color: #8b7649;
+    background: #8b76491c;
+  }
+  .gauge-signal--critical {
+    border-color: #945a50;
+    background: #945a501c;
+  }
+  .gauge-signal p {
+    color: #c2d1c5;
+  }
+  .week-controls button {
+    border-color: #45604c;
+  }
+  .category-progress {
+    background: #3e5545;
+  }
+}
+@media (max-width: 850px) {
+  .gauge-content,
+  .insights-lower {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .insights-heading,
+  .gauge-heading,
+  .weekly-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .gauge-content {
+    gap: 12px;
+  }
+  .gauge-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gauge-stats > div:last-child {
+    grid-column: 1 / -1;
+  }
+  .insights-panel {
+    padding: 18px;
+  }
+  .week-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gauge-needle,
+  .weekly-bar {
+    transition: none;
+  }
+}

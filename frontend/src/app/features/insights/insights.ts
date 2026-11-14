@@ -12,6 +12,7 @@ import { CategoryIcon } from '../../shared/category-icon/category-icon';
   selector: 'app-insights',
   imports: [AppLayout, DatePipe, DecimalPipe, RouterLink, CategoryIcon],
   templateUrl: './insights.html',
+  styleUrl: './insights.css',
 })
 export class InsightsComponent {
   protected readonly budgetStore = inject(BudgetStore);
@@ -27,6 +28,13 @@ export class InsightsComponent {
   get currencySymbol() { return CURRENCY_SYMBOLS[this.budgetStore.currency()]; }
   get remaining() { return this.metrics?.budgetRemaining ?? null; }
   get budgetUsedPercent() { return this.metrics?.budgetUsedPercentage ?? null; }
+  get gaugeAngle(): number {
+    const percentage = this.budgetUsedPercent;
+    const bounded = percentage !== null && Number.isFinite(percentage)
+      ? Math.min(Math.max(percentage, 0), 100)
+      : 0;
+    return -90 + bounded * 1.8;
+  }
   get averageDaily() { return this.metrics?.averageDailySpend ?? 0; }
   get monthWeeks() { return this.metrics?.monthWeeks ?? []; }
   get effectiveWeekIndex() {

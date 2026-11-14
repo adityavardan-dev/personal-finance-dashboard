@@ -171,6 +171,17 @@ describe('ContextIntakeComponent', () => {
     expect(session.save).toHaveBeenCalled();
   });
 
+  it('keeps a parsed personal expense ready when merchant is missing', () => {
+    parserService.parseBatch.mockReturnValue(of({
+      status: 'READY',
+      drafts: [{ ...readyDraft, draft: { ...readyDraft.draft, merchant: null } }],
+    }));
+    component['rawText'] = 'spent 350 on food today';
+    component['submitMessage']();
+
+    expect(component['canSaveDraft'](component['drafts']()[0])).toBe(true);
+  });
+
   it('uses an icon-only composer action with an accessible label', () => {
     const submitButton = fixture.nativeElement.querySelector(
       'button[aria-label="Send transaction description"]',

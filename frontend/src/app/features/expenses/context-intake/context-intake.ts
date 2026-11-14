@@ -195,7 +195,7 @@ export class ContextIntakeComponent {
         const date =
           text.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0] ??
           (/\btoday\b/i.test(text) ? localDate() : null);
-        const id = service.addPreview(title, draft.input.participants, result, { date });
+        const id = service.addPreview(title, draft.input.participants, result, { date, category: title });
         this.addMessage(
           'assistant',
           'Split preview ready. Open the card to review everyone’s share.',
@@ -303,7 +303,6 @@ export class ContextIntakeComponent {
       Number.isFinite(amount) &&
       amount > 0 &&
       Boolean(draft.category) &&
-      Boolean(draft.merchant.trim()) &&
       Boolean(draft.date) &&
       splitResolved &&
       (!this.currencyMismatch(draft) || draft.currencyAcknowledged)
@@ -456,15 +455,6 @@ export class ContextIntakeComponent {
         draft.originalAmount = parsed.draft.originalAmount ?? parsed.draft.amount;
         draftChanged = true;
       }
-      if (
-        missing.length === 1 &&
-        missing[0] === 'merchant' &&
-        !parsed.draft.merchant &&
-        text.length <= 80
-      ) {
-        draft.merchant = text.trim();
-        draftChanged = true;
-      }
       if (draftChanged) {
         draft.expanded = true;
         changed += 1;
@@ -606,7 +596,7 @@ export class ContextIntakeComponent {
       splitFactor: result.draft.splitFactor ? String(result.draft.splitFactor) : '',
       splitResolution: splitNeeded ? '' : 'personal',
       selected: true,
-      expanded: result.status !== 'READY' || !result.draft.merchant || index === 0,
+      expanded: result.status !== 'READY' || index === 0,
       currencyAcknowledged: false,
       categoryResolutionMessage: mapped.message,
       saveStatus: 'draft',
@@ -644,7 +634,6 @@ export class ContextIntakeComponent {
     const missing: string[] = [];
     if (!Number.isFinite(Number(draft.amount)) || Number(draft.amount) <= 0) missing.push('amount');
     if (!draft.category) missing.push('category');
-    if (!draft.merchant.trim()) missing.push('merchant');
     if (!draft.date) missing.push('date');
     if (!draft.splitResolution) missing.push('split decision');
     if (this.currencyMismatch(draft) && !draft.currencyAcknowledged) {

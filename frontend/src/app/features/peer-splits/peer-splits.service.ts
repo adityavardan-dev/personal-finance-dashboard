@@ -190,7 +190,7 @@ export class PeerSplitsService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
-  readonly groups = signal<SplitGroup[]>([...this.loadPreviews(), ...examples]);
+  readonly groups = signal<SplitGroup[]>([...this.loadPreviews(), ...this.loadExamples()]);
   private lastSessionVersion = this.auth.sessionVersion();
 
   constructor() {
@@ -198,7 +198,7 @@ export class PeerSplitsService {
       const version = this.auth.sessionVersion();
       if (version === this.lastSessionVersion) return;
       this.lastSessionVersion = version;
-      this.groups.set([...this.loadPreviews(), ...examples]);
+      this.groups.set([...this.loadPreviews(), ...this.loadExamples()]);
     });
   }
 
@@ -223,7 +223,7 @@ export class PeerSplitsService {
 
   updateDate(id: string, date: string): boolean {
     const group = this.getGroup(id);
-    if (!group || group.example || !isValidSplitDate(date)) return false;
+    if (!group || !isValidSplitDate(date)) return false;
     this.groups.update((groups) =>
       groups.map((item) => (item.id === id ? { ...item, date } : item)),
     );
@@ -261,6 +261,23 @@ export class PeerSplitsService {
     }
   }
 
+  private loadExamples(): SplitGroup[] {
+    if (!this.isBrowser) return examples.map((group) => ({ ...group }));
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(this.storageKey()) ?? 'null') as {
+        expiresAt: number;
+        exampleDates?: Record<string, string>;
+      } | null;
+      if (!cached || cached.expiresAt < Date.now()) return examples.map((group) => ({ ...group }));
+      return examples.map((group) => {
+        const date = cached.exampleDates?.[group.id];
+        return { ...group, date: date && isValidSplitDate(date) ? date : group.date };
+      });
+    } catch {
+      return examples.map((group) => ({ ...group }));
+    }
+  }
+
   private storePreviews(): void {
     if (!this.isBrowser) return;
     sessionStorage.setItem(
@@ -268,6 +285,11 @@ export class PeerSplitsService {
       JSON.stringify({
         expiresAt: Date.now() + 30 * 60 * 1000,
         groups: this.groups().filter((group) => !group.example),
+        exampleDates: Object.fromEntries(
+          this.groups()
+            .filter((group) => group.example && group.date)
+            .map((group) => [group.id, group.date]),
+        ),
       }),
     );
   }

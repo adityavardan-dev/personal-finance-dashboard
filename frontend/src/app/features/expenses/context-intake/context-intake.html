@@ -403,7 +403,7 @@
                       <label
                         [for]="'merchant-' + draft.id"
                         class="mb-2 block text-xs font-semibold text-zinc-600 dark:text-zinc-300"
-                        >{{ draft.type === 'income' ? 'Source' : 'Merchant' }}</label
+                        >{{ draft.type === 'income' ? 'Source' : 'Merchant' }} <span class="font-normal text-zinc-400">(optional)</span></label
                       >
                       <input
                         [id]="'merchant-' + draft.id"

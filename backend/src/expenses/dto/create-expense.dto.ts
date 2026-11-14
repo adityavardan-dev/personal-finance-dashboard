@@ -13,9 +13,9 @@ export class CreateExpenseDto {
   @MinLength(1)
   category!: string;
 
+  @IsOptional()
   @IsString()
-  @MinLength(1)
-  merchant!: string;
+  merchant?: string;
 
   @IsDateString()
   date!: string;

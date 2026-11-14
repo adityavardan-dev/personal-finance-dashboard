@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, computed, inject, Injector, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, HostListener, inject, Injector, OnInit } from '@angular/core';
 import { BudgetStore } from '../../../core/budget/budget.store';
 import { CURRENCY_SYMBOLS } from '../../../core/budget/budget.models';
 import { FormsModule } from '@angular/forms';
@@ -6,8 +6,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppLayout } from '../../../shared/app-layout/app-layout';
 import { ExpenseService, TransactionType } from '../expense.service';
 import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store';
-import { PeerSplitsService, SplitInput } from '../../peer-splits/peer-splits.service';
+import { PeerSplitsService, SplitGroup, SplitInput } from '../../peer-splits/peer-splits.service';
 import { toMinor } from '../../peer-splits/prompt-parser';
+import { localDate } from '../../peer-splits/split-date';
 
 interface SplitPersonEntry {
   id: string;
@@ -24,6 +25,7 @@ interface CategoryOption {
   selector: 'app-new-expense',
   imports: [AppLayout, FormsModule, RouterLink],
   templateUrl: './new-expense.html',
+  styleUrl: './new-expense.css',
 })
 export class NewExpenseComponent implements OnInit {
   private readonly router = inject(Router);
@@ -39,7 +41,8 @@ export class NewExpenseComponent implements OnInit {
   protected amount = '';
   protected category = 'Food & Dining';
   protected merchant = '';
-  protected date = new Date().toISOString().split('T')[0];
+  protected groupName = '';
+  protected date = localDate();
   protected note = '';
   protected isSubmitting = false;
   protected isLoading = false;
@@ -51,6 +54,52 @@ export class NewExpenseComponent implements OnInit {
     { id: 'self', name: 'You', paid: '', fixed: '' },
     { id: crypto.randomUUID(), name: '', paid: '0', fixed: '0' },
   ];
+  protected peoplePickerOpen = false;
+  protected peopleSearch = '';
+  protected pickedPeople = new Set<string>();
+  protected splitView: 'equal' | 'amounts' | 'paid' = 'amounts';
+  protected peoplePage = 1;
+  protected readonly peoplePerPage = 7;
+
+  protected get peoplePageCount(): number {
+    return Math.max(1, Math.ceil(this.splitPeople.length / this.peoplePerPage));
+  }
+
+  protected get visibleSplitPeople(): SplitPersonEntry[] {
+    const start = (this.peoplePage - 1) * this.peoplePerPage;
+    return this.splitPeople.slice(start, start + this.peoplePerPage);
+  }
+
+  protected get peoplePageEnd(): number {
+    return Math.min(this.peoplePage * this.peoplePerPage, this.splitPeople.length);
+  }
+
+  protected changePeoplePage(page: number): void {
+    if (page >= 1 && page <= this.peoplePageCount) {
+      this.peoplePage = page;
+      this.cdr.markForCheck();
+    }
+  }
+
+  protected estimatedShare(person: SplitPersonEntry): string {
+    const total = toMinor(String(this.amount ?? ''));
+    if (total === null || total <= 0) return '—';
+    const fixed = this.splitPeople.map((entry) => toMinor(String(entry.fixed || '0')));
+    if (fixed.some((value) => value === null)) return '—';
+    const ownFixed = toMinor(String(person.fixed || '0')) ?? 0;
+    if (ownFixed > 0) return this.formatShare(ownFixed);
+    const remaining = total - fixed.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+    const equalCount = fixed.filter((value) => value === 0).length;
+    if (remaining < 0 || equalCount === 0) return '—';
+    return `${remaining % equalCount ? '≈ ' : ''}${this.formatShare(Math.round(remaining / equalCount))}`;
+  }
+
+  private formatShare(amountMinor: number): string {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: this.budgetStore.currency(),
+    }).format(amountMinor / 100);
+  }
 
   readonly expenseCategories: CategoryOption[] = [
     { name: 'Food & Dining' },
@@ -112,7 +161,7 @@ export class NewExpenseComponent implements OnInit {
       this.previewSplit();
       return;
     }
-    if (!this.amount || Number(this.amount) <= 0 || !this.merchant.trim()) return;
+    if (!this.amount || Number(this.amount) <= 0 || !this.category || !this.date) return;
 
     this.isSubmitting = true;
     this.errorMessage = '';
@@ -146,34 +195,160 @@ export class NewExpenseComponent implements OnInit {
     });
   }
 
-  protected addSplitPerson(): void {
-    this.splitPeople = [
-      ...this.splitPeople,
-      { id: crypto.randomUUID(), name: '', paid: '0', fixed: '0' },
-    ];
+  protected openPeoplePicker(): void {
+    this.peopleSearch = '';
+    this.pickedPeople = new Set<string>();
+    this.peoplePickerOpen = true;
+    setTimeout(() => document.getElementById('people-search')?.focus());
+  }
+
+  protected closePeoplePicker(): void {
+    this.peoplePickerOpen = false;
+    this.peopleSearch = '';
+    this.pickedPeople = new Set<string>();
+    setTimeout(() => document.getElementById('add-people-trigger')?.focus());
+  }
+
+  protected updatePeopleSearch(event: Event): void {
+    this.peopleSearch = (event.target as HTMLInputElement).value;
+    this.cdr.markForCheck();
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    if (this.peoplePickerOpen) this.closePeoplePicker();
+  }
+
+  @HostListener('document:keydown.tab', ['$event'])
+  protected keepPickerFocus(event: Event): void {
+    if (!this.peoplePickerOpen) return;
+    const keyboardEvent = event as KeyboardEvent;
+    const controls = [...document.querySelectorAll<HTMLElement>(
+      '.people-picker button:not(:disabled), .people-picker input',
+    )];
+    if (!controls.length) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (keyboardEvent.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!keyboardEvent.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  protected recentGroups(): SplitGroup[] {
+    return (this.injector.get(PeerSplitsService).groups?.() ?? []).filter((group) => !group.example);
+  }
+
+  protected availablePeople(): string[] {
+    const seen = new Set<string>();
+    return this.recentGroups()
+      .flatMap((group) => group.participants.map((person) => person.displayName.trim()))
+      .filter((name) => {
+        const key = name.toLocaleLowerCase();
+        if (!name || key === 'you' || key === 'self' || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }
+
+  protected filteredPeople(): string[] {
+    const query = this.peopleSearch.trim().toLocaleLowerCase();
+    return this.availablePeople().filter((name) => name.toLocaleLowerCase().includes(query));
+  }
+
+  protected canAddTypedPerson(): boolean {
+    const name = this.peopleSearch.trim();
+    return !!name && name.toLocaleLowerCase() !== 'you' && name.toLocaleLowerCase() !== 'self' &&
+      !this.availablePeople().some((person) => this.sameName(person, name)) &&
+      !this.splitPeople.some((person) => this.sameName(person.name, name)) &&
+      ![...this.pickedPeople].some((person) => this.sameName(person, name));
+  }
+
+  protected isInSplit(name: string): boolean {
+    return this.splitPeople.some((person) => this.sameName(person.name, name));
+  }
+
+  protected isPicked(name: string): boolean {
+    return [...this.pickedPeople].some((person) => this.sameName(person, name));
+  }
+
+  protected pickPerson(name: string): void {
+    const next = new Set(this.pickedPeople);
+    const current = [...next].find((person) => this.sameName(person, name));
+    if (current) next.delete(current);
+    else if (!this.isInSplit(name)) next.add(name.trim());
+    this.pickedPeople = next;
+    this.peopleSearch = '';
+    this.cdr.markForCheck();
+    document.getElementById('people-search')?.focus();
+  }
+
+  protected pickTypedPerson(): void {
+    if (this.canAddTypedPerson()) this.pickPerson(this.peopleSearch);
+  }
+
+  protected pickGroup(group: SplitGroup): void {
+    const names = group.participants.map((person) => person.displayName.trim())
+      .filter((name) => name && !this.sameName(name, 'You') && !this.isInSplit(name));
+    const next = new Set(this.pickedPeople);
+    for (const name of names) {
+      if (![...next].some((person) => this.sameName(person, name))) next.add(name);
+    }
+    this.pickedPeople = next;
+    this.cdr.markForCheck();
+  }
+
+  protected isGroupPicked(group: SplitGroup): boolean {
+    const names = group.participants.map((person) => person.displayName.trim())
+      .filter((name) => name && !this.sameName(name, 'You') && !this.isInSplit(name));
+    return names.length > 0 && names.every((name) => this.isPicked(name));
+  }
+
+  protected addPickedPeople(): void {
+    if (this.pickedPeople.size === 0) return;
+    const people = [...this.splitPeople];
+    for (const name of this.pickedPeople) {
+      if (people.some((person) => this.sameName(person.name, name))) continue;
+      const blank = people.find((person) => person.id !== 'self' && !person.name.trim());
+      if (blank) blank.name = name;
+      else people.push({ id: crypto.randomUUID(), name, paid: '0', fixed: '0' });
+    }
+    this.splitPeople = people;
+    this.peoplePage = this.peoplePageCount;
+    this.cdr.markForCheck();
+    this.closePeoplePicker();
+  }
+
+  private sameName(first: string, second: string): boolean {
+    return first.trim().toLocaleLowerCase() === second.trim().toLocaleLowerCase();
   }
 
   protected removeSplitPerson(id: string): void {
-    if (id !== 'self' && this.splitPeople.length > 2)
+    if (id !== 'self' && this.splitPeople.length > 2) {
       this.splitPeople = this.splitPeople.filter((person) => person.id !== id);
+      this.peoplePage = Math.min(this.peoplePage, this.peoplePageCount);
+      this.cdr.markForCheck();
+    }
   }
 
   private previewSplit(): void {
-    const totalAmountMinor = toMinor(this.amount);
+    const totalAmountMinor = toMinor(String(this.amount ?? ''));
     if (
       !totalAmountMinor ||
       !this.date ||
-      !this.category ||
-      !this.merchant.trim() ||
+      !this.groupName.trim() ||
       this.splitPeople.some((person) => !person.name.trim())
     ) {
-      this.errorMessage = 'Enter the total, merchant, date, category, and each person’s name.';
+      this.errorMessage = 'Enter the total, group name, and each person’s name.';
       return;
     }
     const people = this.splitPeople.map((person) => ({
       person,
-      paid: toMinor(person.paid || '0'),
-      fixed: toMinor(person.fixed || '0'),
+      paid: toMinor(String(person.paid || '0')),
+      fixed: toMinor(String(person.fixed || '0')),
     }));
     if (people.some((entry) => entry.paid === null || entry.fixed === null)) {
       this.errorMessage = 'Paid and fixed share amounts must have at most two decimal places.';
@@ -222,10 +397,10 @@ export class NewExpenseComponent implements OnInit {
     const service = this.injector.get(PeerSplitsService);
     service.preview(input).subscribe({
       next: (result) => {
-        const id = service.addPreview(this.merchant.trim(), input.participants, result, {
+        const id = service.addPreview(this.groupName.trim(), input.participants, result, {
           date: this.date,
-          category: this.category,
-          merchant: this.merchant.trim(),
+          category: this.groupName.trim(),
+          merchant: this.merchant.trim() || null,
         });
         this.isSubmitting = false;
         void this.router.navigate(['/peer-splits', id]);

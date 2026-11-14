@@ -11,9 +11,8 @@
           {{ split.date || 'Date needed' }} · Review only</small
         >
       </header>
-      @if (!split.example) {
         <div class="date-editor detail-card">
-          <label for="split-date">Split date</label>
+          <label for="split-date">Edit split date</label>
           <input
             id="split-date"
             type="date"
@@ -21,9 +20,8 @@
             (ngModelChange)="setDate($event)"
             aria-describedby="split-date-help"
           />
-          <span id="split-date-help">{{ dateMessage() || 'Choose a date for this temporary split preview.' }}</span>
+          <span id="split-date-help">{{ dateMessage() || 'Choose or change the date for this group.' }}</span>
         </div>
-      }
       <div class="detail-grid">
         <section class="detail-card" aria-labelledby="participant-title">
           <div class="section-heading">

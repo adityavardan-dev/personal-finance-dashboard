@@ -8,12 +8,12 @@ import { PeerSplitsService, SplitGroup } from './peer-splits.service';
 describe('PeerSplitDetailComponent', () => {
   let fixture: ComponentFixture<PeerSplitDetailComponent>;
 
-  it('lets the user change the date on a temporary split preview', async () => {
+  it.each([false, true])('lets the user change the date when example is %s', async (example) => {
     const group = signal<SplitGroup>({
       id: 'split-1',
       title: 'Group split',
       date: null,
-      example: false,
+      example,
       participants: [{ id: 'self', displayName: 'You' }],
       result: {
         totalAmountMinor: 300000,

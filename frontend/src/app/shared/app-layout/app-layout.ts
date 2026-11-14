@@ -11,4 +11,6 @@ import { Header } from '../header/header';
 })
 export class AppLayout {
   readonly variant = input<'default' | 'glass'>('glass');
+  readonly hideHeader = input(false);
+  readonly hideBottomNav = input(false);
 }

@@ -14,16 +14,16 @@ export class PeerSplitOverviewComponent {
   private readonly service = inject(PeerSplitsService);
   protected readonly groups = this.service.groups;
   protected readonly search = signal('');
+  protected readonly visibleGroups = computed(() => {
+    const query = this.search().trim().toLowerCase();
+    return this.groups().filter((group) =>
+      !query || group.title.toLowerCase().includes(query) ||
+      group.participants.some((person) => person.displayName.toLowerCase().includes(query)),
+    );
+  });
   protected readonly openId = signal<string | null>(null);
-  protected readonly visibleGroups = computed(() =>
-    this.groups().filter(
-      (group) =>
-        group.title.toLowerCase().includes(this.search().trim().toLowerCase()) ||
-        group.participants.some((person) =>
-          person.displayName.toLowerCase().includes(this.search().trim().toLowerCase()),
-        ),
-    ),
-  );
+  protected readonly animatedAction = signal<'send' | 'request' | null>(null);
+  protected readonly actionNotice = signal('');
   protected readonly totals = computed(() =>
     this.groups().reduce(
       (total, group) => {
@@ -41,6 +41,11 @@ export class PeerSplitOverviewComponent {
 
   protected toggle(id: string): void {
     this.openId.update((current) => (current === id ? null : id));
+  }
+  protected previewAction(action: 'send' | 'request'): void {
+    this.animatedAction.set(action);
+    this.actionNotice.set(`${action === 'send' ? 'Send' : 'Request'} animation preview. No balances changed.`);
+    setTimeout(() => this.animatedAction.set(null), 950);
   }
   protected groupBalance(group: SplitGroup): { owe: number; back: number } {
     const net =

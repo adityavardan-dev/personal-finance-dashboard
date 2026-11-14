@@ -24,6 +24,7 @@ interface Transaction {
   selector: 'app-history',
   imports: [AppLayout, DecimalPipe, FormsModule, RouterLink, CategoryIcon],
   templateUrl: './history.html',
+  styleUrl: './history.css',
 })
 export class HistoryComponent {
   protected readonly pageSize = 10;
@@ -61,6 +62,7 @@ export class HistoryComponent {
   });
 
   protected readonly filter = signal<'all' | TransactionType>('all');
+  protected readonly search = signal('');
   protected readonly categoryFilter = signal('');
   protected readonly fromDate = signal('');
   protected readonly toDate = signal('');
@@ -74,7 +76,7 @@ export class HistoryComponent {
   );
   protected readonly hasActiveFilters = computed(
     () =>
-      this.filter() !== 'all' || Boolean(this.categoryFilter() || this.fromDate() || this.toDate()),
+      this.filter() !== 'all' || Boolean(this.search() || this.categoryFilter() || this.fromDate() || this.toDate()),
   );
 
   protected readonly filteredTransactions = computed(() => {
@@ -84,13 +86,15 @@ export class HistoryComponent {
     const category = this.categoryFilter();
     const from = this.fromDate();
     const to = this.toDate();
+    const query = this.search().trim().toLocaleLowerCase();
 
     return this.transactions().filter(
       (transaction) =>
         (type === 'all' || transaction.type === type) &&
         (!category || transaction.category === category) &&
         (!from || transaction.date >= from) &&
-        (!to || transaction.date <= to),
+        (!to || transaction.date <= to) &&
+        (!query || `${transaction.merchant} ${transaction.category} ${transaction.type} ${transaction.amount}`.toLocaleLowerCase().includes(query)),
     );
   });
   protected readonly currentPage = signal(1);
@@ -121,6 +125,40 @@ export class HistoryComponent {
   );
 
   protected readonly netActivity = computed(() => this.totalIncome() - this.totalExpenses());
+  protected readonly donutSegments = computed(() => {
+    const palette = ['#145b45', '#358c67', '#77b393', '#a8c3b6', '#e6b974', '#d68370'];
+    const totals = new Map<string, number>();
+    for (const transaction of this.transactions()) {
+      if (transaction.type !== 'expense') continue;
+      totals.set(transaction.category, (totals.get(transaction.category) ?? 0) + transaction.amount);
+    }
+    const ranked = [...totals].sort((a, b) => b[1] - a[1]);
+    const selected = ranked.slice(0, 5);
+    if (ranked.length > 5) selected.push(['Other categories', ranked.slice(5).reduce((sum, [, amount]) => sum + amount, 0)]);
+    const total = selected.reduce((sum, [, amount]) => sum + amount, 0);
+    return selected.map(([name, amount], index) => ({
+      name,
+      amount,
+      percentage: total ? (amount / total) * 100 : 0,
+      color: palette[index],
+    }));
+  });
+  protected readonly donutGradient = computed(() => {
+    const segments = this.donutSegments();
+    if (!segments.length) return 'conic-gradient(#dce9df 0 100%)';
+    let position = 0;
+    return `conic-gradient(${segments.map((segment) => {
+      const start = position;
+      position += segment.percentage;
+      const gap = Math.min(0.55, segment.percentage / 6);
+      return `transparent ${start.toFixed(2)}% ${(start + gap).toFixed(2)}%, ${segment.color} ${(start + gap).toFixed(2)}% ${(position - gap).toFixed(2)}%, transparent ${(position - gap).toFixed(2)}% ${position.toFixed(2)}%`;
+    }).join(', ')})`;
+  });
+
+  protected setSearch(value: string): void {
+    this.search.set(value);
+    this.currentPage.set(1);
+  }
 
   protected setFilter(filter: 'all' | TransactionType): void {
     this.filter.set(filter);
@@ -143,6 +181,7 @@ export class HistoryComponent {
   }
 
   protected clearFilters(): void {
+    this.search.set('');
     this.filter.set('all');
     this.categoryFilter.set('');
     this.fromDate.set('');

@@ -1,336 +1,164 @@
-<app-app-layout>
-  <div class="mx-auto w-full max-w-3xl space-y-6">
-    <header>
-      <p
-        class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400"
-      >
-        {{ isSplitMode ? 'New peer split' : isEditMode ? 'Edit transaction' : 'New transaction' }}
-      </p>
-      <div class="mt-1.5 flex items-start justify-between gap-4">
-        <div class="min-w-0">
-          <h2 class="text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">
-            {{ isSplitMode ? 'Add a split expense' : (isEditMode ? 'Edit ' : 'Add an ') + type }}
-          </h2>
-          <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            {{
-              isSplitMode
-                ? 'Enter the full bill and everyone sharing it. Review the balances before saving.'
-                : isEditMode
-                  ? 'Update the details for this transaction.'
-                  : 'Capture it now so your financial picture stays current.'
-            }}
-          </p>
-          @if (!isEditMode) {
-            <a
-              routerLink="/expenses/intake"
-              [queryParams]="isSplitMode ? { mode: 'split' } : {}"
-              class="mt-3 inline-flex min-h-11 items-center rounded-full text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
-              >Describe it in plain language</a
-            >
-          }
+<app-app-layout [hideHeader]="isSplitMode" [hideBottomNav]="isSplitMode">
+  <div class="expense-entry" [class.expense-entry--split]="isSplitMode">
+    <header class="entry-heading" [class.entry-heading--split]="isSplitMode">
+      @if (isSplitMode) {
+        <div class="entry-heading-actions">
+          <a class="entry-cancel split-back" routerLink="/peer-splits" aria-label="Cancel new split"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg></a>
+          <h1>New split</h1>
+          <button id="add-people-trigger" class="entry-add-people" type="button" (click)="openPeoplePicker()" aria-label="Add people to split" aria-haspopup="dialog" [attr.aria-expanded]="peoplePickerOpen">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
         </div>
-        <a
-          [routerLink]="isSplitMode ? '/peer-splits' : '/history'"
-          class="hidden min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:inline-flex dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >Cancel</a
-        >
-      </div>
+      } @else {
+        <div>
+          <p class="entry-eyebrow">{{ isEditMode ? 'EDIT TRANSACTION' : 'NEW TRANSACTION' }}</p>
+          <h1>{{ (isEditMode ? 'Edit ' : 'Add an ') + type }}</h1>
+          <p>{{ isEditMode ? 'Update the details for this transaction.' : 'Capture it now so your financial picture stays current.' }}</p>
+          @if (!isEditMode) { <a class="entry-chat-link" routerLink="/expenses/intake">Describe it in plain language →</a> }
+        </div>
+        <a class="entry-cancel" routerLink="/history">Cancel</a>
+      }
     </header>
 
     @if (errorMessage) {
-      <section
-        class="rounded-3xl border border-red-200 bg-red-50 p-5 dark:border-red-900/70 dark:bg-red-950/30"
-        role="alert"
-        aria-live="polite"
-      >
-        <p class="text-sm font-medium text-red-700 dark:text-red-400">{{ errorMessage }}</p>
-      </section>
+      <section class="entry-error" role="alert" aria-live="polite">{{ errorMessage }}</section>
     }
-
     @if (isLoading) {
-      <div
-        class="rounded-3xl border border-zinc-200 bg-white p-10 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-        aria-busy="true"
-      >
-        <p class="text-sm text-zinc-500 dark:text-zinc-400">Loading transaction…</p>
-      </div>
+      <div class="entry-loading xp-glass-card" aria-busy="true">Loading transaction…</div>
     } @else {
-      <form
-        class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-        (ngSubmit)="saveExpense()"
-        #expenseForm="ngForm"
-        novalidate
-      >
-        <div class="space-y-7">
-          @if (!isSplitMode) {
-            <section aria-labelledby="type-title">
-              <p
-                class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400"
-              >
-                Transaction type
-              </p>
-              <h3
-                id="type-title"
-                class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white"
-              >
-                Money out or money in?
-              </h3>
-              <label
-                for="transaction-type"
-                class="mb-2 mt-4 block text-sm font-medium text-zinc-800 dark:text-zinc-200"
-                >Type</label
-              >
-              <select
-                id="transaction-type"
-                name="transactionType"
-                [ngModel]="type"
-                (ngModelChange)="onTypeChange($event)"
-                required
-                class="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-              >
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-              </select>
-            </section>
-          }
-
-          <section aria-labelledby="amount-title">
-            <div class="flex items-end justify-between gap-4">
-              <div>
-                <p
-                  class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400"
-                >
-                  How much?
-                </p>
-                <h3
-                  id="amount-title"
-                  class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white"
-                >
-                  {{ isSplitMode ? 'Total bill' : type === 'income' ? 'Income' : 'Expense' }} amount
-                </h3>
-              </div>
-              <span class="text-sm font-medium text-zinc-400">{{ budgetStore.currency() }}</span>
+      <form class="entry-form xp-glass-card" [class.entry-form--split]="isSplitMode" (ngSubmit)="saveExpense()" #expenseForm="ngForm" novalidate>
+        @if (isSplitMode) {
+          <section class="split-compose-card" aria-labelledby="split-compose-title">
+            <h2 id="split-compose-title">Enter amount to split</h2>
+            <div class="split-amount-field">
+              <span aria-hidden="true">{{ currencySymbol() }}</span>
+              <input id="split-amount" name="amount" [(ngModel)]="amount" required min="0.01" step="0.01" inputmode="decimal" type="number" placeholder="0.00" aria-label="Total bill amount" />
             </div>
-            <div
-              class="mt-4 flex items-center rounded-3xl border border-zinc-200 bg-zinc-50 px-4 transition focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950"
-            >
-              <span class="text-2xl font-semibold text-zinc-400" aria-hidden="true">{{
-                currencySymbol()
-              }}</span>
-              <input
-                name="amount"
-                [(ngModel)]="amount"
-                required
-                min="1"
-                inputmode="decimal"
-                type="number"
-                placeholder="0"
-                [attr.aria-label]="
-                  isSplitMode
-                    ? 'Total bill amount'
-                    : (type === 'income' ? 'Income' : 'Expense') + ' amount'
-                "
-                class="min-h-20 min-w-0 flex-1 bg-transparent px-3 text-4xl font-bold tracking-tight text-zinc-950 outline-none placeholder:text-zinc-300 dark:text-white dark:placeholder:text-zinc-700"
-              />
-            </div>
+            <label class="split-group-field" for="split-group-name"><span class="sr-only">What is this split for?</span><input id="split-group-name" name="groupName" [(ngModel)]="groupName" required maxlength="80" type="text" placeholder="What’s this for?" autocomplete="off" /></label>
+            <p class="split-compose-date">{{ date }} · Date can be changed in split details</p>
+            <a class="split-chat-link" routerLink="/expenses/intake" [queryParams]="{ mode: 'split' }">Describe this split in chat →</a>
           </section>
 
-          @if (isSplitMode) {
-            <section
-              aria-labelledby="split-people-title"
-              class="rounded-3xl border border-emerald-100 bg-emerald-50/50 p-4 sm:p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20"
-            >
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <p
-                    class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400"
-                  >
-                    Shared with
-                  </p>
-                  <h3 id="split-people-title" class="mt-1 text-lg font-semibold">
-                    {{ splitPeople.length }} people
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  (click)="addSplitPerson()"
-                  class="min-h-11 rounded-full border border-emerald-300 px-4 text-sm font-semibold text-emerald-800 dark:border-emerald-700 dark:text-emerald-300"
-                >
-                  ＋ Add person
-                </button>
-              </div>
-              <p class="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-                Leave a fixed share at 0 to split the remainder equally. If you paid the whole bill,
-                you can leave your paid amount blank.
-              </p>
-              <div class="mt-4 space-y-3">
-                @for (person of splitPeople; track person.id) {
-                  <div
-                    class="grid gap-2 rounded-2xl border border-zinc-200 bg-white/80 p-3 sm:grid-cols-[minmax(120px,1fr)_100px_100px_auto] sm:items-end dark:border-zinc-700 dark:bg-zinc-900/80"
-                  >
-                    <label class="text-xs font-medium"
-                      >Name<input
-                        [name]="'split-name-' + person.id"
-                        [(ngModel)]="person.name"
-                        [readonly]="person.id === 'self'"
-                        required
-                        placeholder="Person name"
-                        class="mt-1 min-h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950" /></label
-                    ><label class="text-xs font-medium"
-                      >Paid<input
-                        [name]="'split-paid-' + person.id"
-                        [(ngModel)]="person.paid"
-                        inputmode="decimal"
-                        placeholder="0.00"
-                        class="mt-1 min-h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950" /></label
-                    ><label class="text-xs font-medium"
-                      >Fixed share<input
-                        [name]="'split-fixed-' + person.id"
-                        [(ngModel)]="person.fixed"
-                        inputmode="decimal"
-                        placeholder="0.00"
-                        class="mt-1 min-h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950" /></label
-                    ><button
-                      type="button"
-                      (click)="removeSplitPerson(person.id)"
-                      [disabled]="person.id === 'self' || splitPeople.length <= 2"
-                      class="min-h-11 rounded-xl px-2 text-xs text-red-700 disabled:opacity-30 dark:text-red-300"
-                      [attr.aria-label]="'Remove ' + person.name"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                }
-              </div>
-            </section>
-          }
-
-          <section aria-labelledby="details-title">
-            <div>
-              <p
-                class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400"
-              >
-                Details
-              </p>
-              <h3
-                id="details-title"
-                class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white"
-              >
-                Tell us a little more
-              </h3>
+          <section class="split-people" aria-labelledby="split-people-title">
+            <div class="split-view-tabs" role="tablist" aria-label="How to split the bill">
+              <button type="button" role="tab" [attr.aria-selected]="splitView === 'equal'" (click)="splitView = 'equal'"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="8" r="2"/><circle cx="17" cy="8" r="2"/><path d="M2 19v-2a5 5 0 0 1 10 0v2M12 19v-2a5 5 0 0 1 10 0v2"/></svg><span>Equally</span></button>
+              <button type="button" role="tab" [attr.aria-selected]="splitView === 'amounts'" (click)="splitView = 'amounts'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h6M6 5v11M13 7h7l-7 9h7"/></svg><span>By amount</span></button>
+              <button type="button" role="tab" [attr.aria-selected]="splitView === 'paid'" (click)="splitView = 'paid'"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg><span>Who paid</span></button>
             </div>
-            <div class="mt-5 grid gap-5 sm:grid-cols-2">
-              <div class="sm:col-span-2">
-                <label
-                  for="merchant"
-                  class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200"
-                  >{{ type === 'income' ? 'Source' : 'Merchant' }}</label
-                >
-                <input
-                  id="merchant"
-                  name="merchant"
-                  [(ngModel)]="merchant"
-                  required
-                  type="text"
-                  autocomplete="organization"
-                  [placeholder]="type === 'income' ? 'e.g. Employer' : 'e.g. Brew & Co.'"
-                  class="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:placeholder:text-zinc-600"
-                />
-              </div>
-              <div>
-                <label
-                  for="date"
-                  class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200"
-                  >Date</label
-                >
-                <input
-                  id="date"
-                  name="date"
-                  [(ngModel)]="date"
-                  required
-                  type="date"
-                  class="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                />
-              </div>
-              <div>
-                <label
-                  for="category"
-                  class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200"
-                  >Category</label
-                >
-                <select
-                  id="category"
-                  name="category"
-                  [(ngModel)]="category"
-                  required
-                  class="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                >
-                  @for (option of categories; track option.name) {
-                    <option [value]="option.name">{{ option.name }}</option>
+            <div class="split-people-heading">
+              <h2 id="split-people-title">{{ splitView === 'equal' ? 'Split evenly' : splitView === 'amounts' ? 'Split by amounts' : 'Who paid' }}</h2>
+              <span>{{ splitPeople.length }} people</span>
+            </div>
+            <p class="split-view-hint">
+              @if (splitView === 'equal') { Remaining amount is shared equally. }
+              @else if (splitView === 'amounts') { Enter a share, or leave 0 for an equal share of the remainder. }
+              @else { Leave yours blank if you paid the full bill. }
+            </p>
+            @if (peoplePageCount > 1) {
+              <nav class="split-people-pagination" aria-label="Participant pages">
+                <span>{{ (peoplePage - 1) * peoplePerPage + 1 }}–{{ peoplePageEnd }} of {{ splitPeople.length }}</span>
+                <div><button type="button" (click)="changePeoplePage(peoplePage - 1)" [disabled]="peoplePage === 1" aria-label="Previous participants">‹</button><span>Page {{ peoplePage }} / {{ peoplePageCount }}</span><button type="button" (click)="changePeoplePage(peoplePage + 1)" [disabled]="peoplePage === peoplePageCount" aria-label="Next participants">›</button></div>
+              </nav>
+            }
+            <div class="split-person-list" role="group" aria-label="Participants on this page">
+              @for (person of visibleSplitPeople; track person.id) {
+                <div class="split-person-row">
+                  <span class="split-person-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 5 5L19 7" /></svg></span>
+                  <span class="split-person-avatar" aria-hidden="true">{{ person.name ? person.name.slice(0, 1).toUpperCase() : '+' }}</span>
+                  <label class="split-person-name"><span class="sr-only">Person name</span><input [name]="'split-name-' + person.id" [(ngModel)]="person.name" [readonly]="person.id === 'self'" required placeholder="Person name" [attr.aria-label]="person.id === 'self' ? 'Your name' : 'Person name'" /></label>
+                  @if (splitView === 'equal') {
+                    <strong class="split-person-amount">{{ estimatedShare(person) }}</strong>
+                  } @else if (splitView === 'amounts') {
+                    <label class="split-person-value"><span aria-hidden="true">{{ currencySymbol() }}</span><input [name]="'split-fixed-' + person.id" [(ngModel)]="person.fixed" inputmode="decimal" type="text" placeholder="0" [attr.aria-label]="'Fixed share for ' + (person.name || 'person')" /></label>
+                  } @else {
+                    <label class="split-person-value"><span aria-hidden="true">{{ currencySymbol() }}</span><input [name]="'split-paid-' + person.id" [(ngModel)]="person.paid" inputmode="decimal" type="text" placeholder="0" [attr.aria-label]="'Paid by ' + (person.name || 'person')" /></label>
                   }
-                </select>
-              </div>
-              <div class="sm:col-span-2">
-                <label
-                  for="note"
-                  class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200"
-                  >Note <span class="font-normal text-zinc-400">(optional)</span></label
-                >
-                <textarea
-                  id="note"
-                  name="note"
-                  [(ngModel)]="note"
-                  rows="3"
-                  placeholder="Add context for this transaction"
-                  class="w-full resize-none rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:placeholder:text-zinc-600"
-                ></textarea>
-              </div>
+                  @if (person.id !== 'self' && splitPeople.length > 2) {
+                    <button class="split-person-remove" type="button" (click)="removeSplitPerson(person.id)" [attr.aria-label]="'Remove ' + (person.name || 'person')">×</button>
+                  } @else { <span class="split-person-spacer" aria-hidden="true"></span> }
+                </div>
+              }
             </div>
           </section>
-        </div>
 
-        <div
-          class="mt-7 flex flex-col-reverse gap-3 border-t border-zinc-100 pt-6 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
-        >
-          <a
-            [routerLink]="isSplitMode ? '/peer-splits' : '/history'"
-            class="inline-flex min-h-12 items-center justify-center rounded-2xl px-5 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:hidden dark:text-zinc-300 dark:hover:bg-zinc-800"
-            >Cancel</a
-          >
-          <p class="hidden text-xs text-zinc-400 sm:block">
-            {{
-              isSplitMode
-                ? 'This creates a temporary preview; nothing is saved yet.'
-                : isEditMode
-                  ? 'Changes will be saved to your account.'
-                  : 'Your transaction will be saved to your account.'
-            }}
-          </p>
-          <button
-            type="submit"
-            [disabled]="expenseForm.invalid || isSubmitting"
-            class="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-emerald-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto dark:text-zinc-950"
-          >
-            {{
-              isSplitMode
-                ? isSubmitting
-                  ? 'Calculating…'
-                  : 'Review split'
-                : isSubmitting
-                  ? isEditMode
-                    ? 'Updating…'
-                    : 'Saving…'
-                  : isEditMode
-                    ? type === 'income'
-                      ? 'Update income'
-                      : 'Update expense'
-                    : type === 'income'
-                      ? 'Save income'
-                      : 'Save expense'
-            }}
-          </button>
+          <details class="split-more">
+            <summary>More details <span>optional</span></summary>
+            <div class="split-more-fields">
+              <label for="split-merchant">Merchant <span>(optional)</span></label>
+              <input id="split-merchant" name="merchant" [(ngModel)]="merchant" type="text" placeholder="e.g. Swiggy" />
+              <label for="split-note">Note <span>(optional)</span></label>
+              <textarea id="split-note" name="note" [(ngModel)]="note" rows="2" placeholder="Add context for this split"></textarea>
+            </div>
+          </details>
+        } @else {
+          <section class="personal-fields">
+            <div>
+              <p class="entry-eyebrow">TRANSACTION TYPE</p>
+              <h2>Money out or money in?</h2>
+              <label for="transaction-type">Type</label>
+              <select id="transaction-type" name="transactionType" [ngModel]="type" (ngModelChange)="onTypeChange($event)" required>
+                <option value="expense">Expense</option><option value="income">Income</option>
+              </select>
+            </div>
+            <div>
+              <p class="entry-eyebrow">HOW MUCH?</p>
+              <h2>{{ type === 'income' ? 'Income' : 'Expense' }} amount</h2>
+              <div class="personal-amount-field"><span aria-hidden="true">{{ currencySymbol() }}</span><input name="amount" [(ngModel)]="amount" required min="0.01" step="0.01" inputmode="decimal" type="number" placeholder="0.00" [attr.aria-label]="(type === 'income' ? 'Income' : 'Expense') + ' amount'" /></div>
+            </div>
+            <div class="personal-details">
+              <div><label for="merchant">{{ type === 'income' ? 'Source' : 'Merchant' }} <span>(optional)</span></label><input id="merchant" name="merchant" [(ngModel)]="merchant" type="text" [placeholder]="type === 'income' ? 'e.g. Employer' : 'e.g. Brew & Co.'" /></div>
+              <div><label for="date">Date</label><input id="date" name="date" [(ngModel)]="date" required type="date" /></div>
+              <div><label for="category">Category</label><select id="category" name="category" [(ngModel)]="category" required>@for (option of categories; track option.name) { <option [value]="option.name">{{ option.name }}</option> }</select></div>
+              <div class="personal-note"><label for="note">Note <span>(optional)</span></label><textarea id="note" name="note" [(ngModel)]="note" rows="3" placeholder="Add context for this transaction"></textarea></div>
+            </div>
+          </section>
+        }
+        <div class="entry-actions" [class.entry-actions--split]="isSplitMode">
+          <p>{{ isSplitMode ? 'This creates a temporary preview. No expense is saved yet.' : isEditMode ? 'Changes will be saved to your account.' : 'Your transaction will be saved to your account.' }}</p>
+          <button type="submit" [disabled]="expenseForm.invalid || isSubmitting">{{ isSplitMode ? (isSubmitting ? 'Calculating…' : 'Review split') : isSubmitting ? (isEditMode ? 'Updating…' : 'Saving…') : isEditMode ? (type === 'income' ? 'Update income' : 'Update expense') : (type === 'income' ? 'Save income' : 'Save expense') }}</button>
         </div>
       </form>
+    }
+    @if (isSplitMode && peoplePickerOpen) {
+      <div class="people-picker-overlay">
+        <button class="people-picker-scrim" type="button" aria-label="Close people picker" (click)="closePeoplePicker()"></button>
+        <section class="people-picker xp-glass-card" role="dialog" aria-modal="true" aria-labelledby="people-picker-title">
+          <div class="people-picker-handle" aria-hidden="true"></div>
+          <div class="people-picker-heading">
+            <div><p class="entry-eyebrow">SHARED WITH</p><h2 id="people-picker-title">Add people</h2></div>
+            <button type="button" class="people-picker-close" (click)="closePeoplePicker()" aria-label="Close people picker">×</button>
+          </div>
+          <label class="people-picker-search glass-inset" for="people-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+            <input id="people-search" type="search" [value]="peopleSearch" (input)="updatePeopleSearch($event)" (keydown.enter)="$event.preventDefault(); pickTypedPerson()" placeholder="Search or enter a name" autocomplete="off" />
+          </label>
+          @if (pickedPeople.size) {
+            <div class="people-picker-chips" aria-label="Selected people">
+              @for (name of pickedPeople; track name) { <button type="button" (click)="pickPerson(name)" [attr.aria-label]="'Remove ' + name + ' from selection'">{{ name }} <span aria-hidden="true">×</span></button> }
+            </div>
+          }
+          <div class="people-picker-results">
+            @if (canAddTypedPerson()) {
+              <button class="people-picker-row people-picker-create" type="button" (click)="pickTypedPerson()"><span class="people-picker-avatar">+</span><span>Add “{{ peopleSearch.trim() }}”</span><span class="people-picker-check" aria-hidden="true">+</span></button>
+            }
+            @if (recentGroups().length && !peopleSearch.trim()) {
+              <p class="people-picker-section-title">RECENT GROUPS</p>
+              @for (group of recentGroups(); track group.id) {
+                <button class="people-picker-row" type="button" (click)="pickGroup(group)" [attr.aria-pressed]="isGroupPicked(group)"><span class="people-picker-avatar">{{ group.title.slice(0, 1).toUpperCase() }}</span><span>{{ group.title }}<small>{{ isGroupPicked(group) ? 'Selected' : 'Select people from this group' }}</small></span><span class="people-picker-check" aria-hidden="true">{{ isGroupPicked(group) ? '✓' : '+' }}</span></button>
+              }
+            }
+            @if (filteredPeople().length) {
+              <p class="people-picker-section-title">PEOPLE FROM RECENT PREVIEWS</p>
+              @for (name of filteredPeople(); track name) {
+                <button class="people-picker-row" type="button" (click)="pickPerson(name)" [disabled]="isInSplit(name)" [attr.aria-pressed]="isPicked(name)"><span class="people-picker-avatar">{{ name.slice(0, 1).toUpperCase() }}</span><span>{{ name }}<small>@if (isInSplit(name)) { Already in this split }</small></span><span class="people-picker-check" aria-hidden="true">{{ isPicked(name) ? '✓' : '' }}</span></button>
+              }
+            } @else if (!canAddTypedPerson() && !recentGroups().length) {
+              <p class="people-picker-empty">Type a name to add someone to this split.</p>
+            }
+          </div>
+          <div class="people-picker-footer"><button type="button" (click)="addPickedPeople()" [disabled]="!pickedPeople.size">Add {{ pickedPeople.size }} {{ pickedPeople.size === 1 ? 'person' : 'people' }}</button></div>
+        </section>
+      </div>
     }
   </div>
 </app-app-layout>

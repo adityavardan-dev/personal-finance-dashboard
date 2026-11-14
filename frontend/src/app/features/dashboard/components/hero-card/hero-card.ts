@@ -13,15 +13,12 @@ export class HeroCard {
   @Input() budget: number | null = null;
   @Input() currencySymbol = CURRENCY_SYMBOLS.INR;
   @Output() budgetSetupRequested = new EventEmitter<void>();
-  readonly radius = 38;
-  readonly circumference = 2 * Math.PI * this.radius;
-
   get percentage(): number {
     return this.budget ? (this.spent / this.budget) * 100 : 0;
   }
 
   get visualPercentage(): number {
-    return Math.min(this.percentage, 100);
+    return Math.max(0, Math.min(this.percentage, 100));
   }
 
   get remaining(): number | null {
@@ -34,7 +31,4 @@ export class HeroCard {
     return Math.max(lastDay - now.getDate() + 1, 0);
   }
 
-  get progressOffset(): number {
-    return this.circumference - (this.visualPercentage / 100) * this.circumference;
-  }
 }

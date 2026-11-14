@@ -23,8 +23,7 @@
 }
 
 :host ::ng-deep .glass-layout app-header > header,
-:host ::ng-deep .glass-layout app-sidebar nav > div,
-:host ::ng-deep .glass-layout app-bottom-nav > nav {
+:host ::ng-deep .glass-layout app-sidebar nav > div {
   border-color: rgb(255 255 255 / 0.72);
   background: rgb(255 255 255 / 0.5);
   box-shadow:
@@ -92,8 +91,7 @@
   }
 
   :host ::ng-deep .glass-layout app-header > header,
-  :host ::ng-deep .glass-layout app-sidebar nav > div,
-  :host ::ng-deep .glass-layout app-bottom-nav > nav {
+  :host ::ng-deep .glass-layout app-sidebar nav > div {
     border-color: rgb(255 255 255 / 0.1);
     background: rgb(24 24 27 / 0.58);
     box-shadow:
