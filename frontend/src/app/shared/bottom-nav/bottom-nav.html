@@ -2,7 +2,8 @@
   aria-label="Mobile navigation"
   class="mobile-nav-island fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 z-30 mx-auto max-w-lg rounded-[1.75rem] p-1.5"
 >
-  <div class="flex items-center gap-0.5">
+  <div class="nav-track relative flex items-center gap-0.5" [style.--active-index]="activeIndex()" [class.nav-track--active]="activeIndex() >= 0">
+    <span class="nav-active-indicator" aria-hidden="true"></span>
     <a
       routerLink="/dashboard"
       (click)="pressNav()"
@@ -34,11 +35,16 @@
     <a
       routerLink="/expenses/new"
       (click)="pressNav()"
-      class="mx-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_8px_20px_rgba(16,185,129,0.3)] transition-transform hover:bg-emerald-400 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+      routerLinkActive="is-active"
+      #addActive="routerLinkActive"
+      [attr.aria-current]="addActive.isActive ? 'page' : null"
+      class="nav-item nav-add flex min-h-12 flex-1 items-center justify-center rounded-[1.35rem] px-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-inset"
       aria-label="Add expense">
-      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
-        <path d="M12 5v14" /><path d="M5 12h14" />
-      </svg>
+      <span class="nav-add__disc">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14" /><path d="M5 12h14" />
+        </svg>
+      </span>
     </a>
 
     <a

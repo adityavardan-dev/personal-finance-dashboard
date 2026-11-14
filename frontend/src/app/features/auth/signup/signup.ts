@@ -1,11 +1,12 @@
-import { Component, inject } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth';
+import { WelcomeIntroComponent } from '../welcome-intro/welcome-intro';
 
 @Component({
   selector: 'app-signup',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, WelcomeIntroComponent],
   templateUrl: './signup.html',
   styleUrl: './signup.css',
 })
@@ -13,6 +14,7 @@ export class SignupComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly signupForm = this.formBuilder.group({
     name: ['', [Validators.required, Validators.minLength(3)]],
@@ -26,6 +28,18 @@ export class SignupComponent {
   protected isSubmitting = false;
   protected errorMessage = '';
   protected successMessage = '';
+  protected readonly welcomeHighlight = signal(false);
+  private highlightTimer: ReturnType<typeof setTimeout> | undefined;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => clearTimeout(this.highlightTimer));
+  }
+
+  protected onWelcomeFinished(): void {
+    this.welcomeHighlight.set(true);
+    clearTimeout(this.highlightTimer);
+    this.highlightTimer = setTimeout(() => this.welcomeHighlight.set(false), 1000);
+  }
 
   protected togglePassword(): void {
     this.showPassword = !this.showPassword;

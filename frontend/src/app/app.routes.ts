@@ -48,7 +48,8 @@ export const routes: Routes = [
   },
   {
     path: 'peer-splits/new',
-    redirectTo: '/expenses/new?mode=split',
+    component: NewExpenseComponent,
+    canActivate: [authGuard],
   },
   {
     path: 'peer-splits/:id',

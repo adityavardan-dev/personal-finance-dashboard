@@ -44,6 +44,13 @@ export class AuthService {
     return this.isBrowser ? sessionStorage.getItem(this.TOKEN_KEY) : null;
   }
 
+  expireSession(): void {
+    if (this.isBrowser && sessionStorage.getItem(this.TOKEN_KEY)) {
+      sessionStorage.removeItem(this.TOKEN_KEY);
+      this.sessionVersion.update((version) => version + 1);
+    }
+  }
+
   clearSession(): void {
     if (this.isBrowser) {
       const intakeKeys = Array.from({ length: sessionStorage.length }, (_, index) =>

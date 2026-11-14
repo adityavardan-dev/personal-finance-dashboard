@@ -74,6 +74,11 @@ describe('NewExpenseComponent', () => {
       }),
     );
 
+    fixture.detectChanges();
+    const addButton = fixture.nativeElement.querySelector('.split-people .split-add-action button[type="submit"]') as HTMLButtonElement;
+    expect(addButton.textContent?.trim()).toBe('Add');
+    expect(fixture.nativeElement.querySelector('.entry-actions')).toBeNull();
+
     component['saveExpense']();
 
     expect(splitService.preview).toHaveBeenCalledWith(

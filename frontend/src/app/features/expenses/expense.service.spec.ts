@@ -2,12 +2,13 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ExpenseService } from './expense.service';
+import { API_CONFIG } from '../../core/config/api.config';
 
 describe('ExpenseService', () => {
   let service: ExpenseService;
   let http: HttpTestingController;
 
-  const API_URL = 'http://127.0.0.1:3000/expenses';
+  const API_URL = `${API_CONFIG.baseUrl}/expenses`;
 
   beforeEach(() => {
     TestBed.configureTestingModule({

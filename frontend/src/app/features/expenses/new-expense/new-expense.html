@@ -79,6 +79,10 @@
                 </div>
               }
             </div>
+            <div class="split-add-action">
+              <button type="submit" [disabled]="expenseForm.invalid || isSubmitting">{{ isSubmitting ? 'Adding…' : 'Add' }}</button>
+              <p>This creates a temporary preview. No expense is saved yet.</p>
+            </div>
           </section>
 
           <details class="split-more">
@@ -113,10 +117,12 @@
             </div>
           </section>
         }
-        <div class="entry-actions" [class.entry-actions--split]="isSplitMode">
-          <p>{{ isSplitMode ? 'This creates a temporary preview. No expense is saved yet.' : isEditMode ? 'Changes will be saved to your account.' : 'Your transaction will be saved to your account.' }}</p>
-          <button type="submit" [disabled]="expenseForm.invalid || isSubmitting">{{ isSplitMode ? (isSubmitting ? 'Calculating…' : 'Review split') : isSubmitting ? (isEditMode ? 'Updating…' : 'Saving…') : isEditMode ? (type === 'income' ? 'Update income' : 'Update expense') : (type === 'income' ? 'Save income' : 'Save expense') }}</button>
-        </div>
+        @if (!isSplitMode) {
+          <div class="entry-actions">
+            <p>{{ isEditMode ? 'Changes will be saved to your account.' : 'Your transaction will be saved to your account.' }}</p>
+            <button type="submit" [disabled]="expenseForm.invalid || isSubmitting">{{ isSubmitting ? (isEditMode ? 'Updating…' : 'Saving…') : isEditMode ? (type === 'income' ? 'Update income' : 'Update expense') : (type === 'income' ? 'Save income' : 'Save expense') }}</button>
+          </div>
+        }
       </form>
     }
     @if (isSplitMode && peoplePickerOpen) {

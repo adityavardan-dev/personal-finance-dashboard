@@ -9,6 +9,7 @@ import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store
 import { PeerSplitsService, SplitGroup, SplitInput } from '../../peer-splits/peer-splits.service';
 import { toMinor } from '../../peer-splits/prompt-parser';
 import { localDate } from '../../peer-splits/split-date';
+import { createLocalId } from '../../../shared/local-id';
 
 interface SplitPersonEntry {
   id: string;
@@ -52,7 +53,7 @@ export class NewExpenseComponent implements OnInit {
   protected isSplitMode = false;
   protected splitPeople: SplitPersonEntry[] = [
     { id: 'self', name: 'You', paid: '', fixed: '' },
-    { id: crypto.randomUUID(), name: '', paid: '0', fixed: '0' },
+    { id: createLocalId(), name: '', paid: '0', fixed: '0' },
   ];
   protected peoplePickerOpen = false;
   protected peopleSearch = '';
@@ -129,7 +130,7 @@ export class NewExpenseComponent implements OnInit {
 
   ngOnInit(): void {
     this.budgetStore.load();
-    this.isSplitMode = this.route.snapshot.queryParamMap?.get('mode') === 'split';
+    this.isSplitMode = this.route.snapshot.routeConfig?.path === 'peer-splits/new' || this.route.snapshot.queryParamMap?.get('mode') === 'split';
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
 
@@ -314,7 +315,7 @@ export class NewExpenseComponent implements OnInit {
       if (people.some((person) => this.sameName(person.name, name))) continue;
       const blank = people.find((person) => person.id !== 'self' && !person.name.trim());
       if (blank) blank.name = name;
-      else people.push({ id: crypto.randomUUID(), name, paid: '0', fixed: '0' });
+      else people.push({ id: createLocalId(), name, paid: '0', fixed: '0' });
     }
     this.splitPeople = people;
     this.peoplePage = this.peoplePageCount;

@@ -17,6 +17,7 @@ import { ParserService } from '../../../core/parser/parser.service';
 import { AppLayout } from '../../../shared/app-layout/app-layout';
 import { CreateExpensePayload, ExpenseService, TransactionType } from '../expense.service';
 import { ContextIntakeSessionService } from './context-intake-session.service';
+import { createLocalId } from '../../../shared/local-id';
 
 type IntakeStatus = 'idle' | 'parsing' | 'draft' | 'saving' | 'error';
 type SplitResolution = '' | 'personal' | 'split';
@@ -121,7 +122,7 @@ export class ContextIntakeComponent {
     'Other',
   ];
   protected readonly incomeCategories = ['Salary', 'Freelance', 'Refund', 'Other'];
-  protected conversationId: string = crypto.randomUUID();
+  protected conversationId: string = createLocalId();
   protected expiresAt = '';
 
   constructor() {
@@ -344,7 +345,7 @@ export class ContextIntakeComponent {
 
   protected startNewConversation(): void {
     this.session.clear();
-    this.conversationId = crypto.randomUUID();
+    this.conversationId = createLocalId();
     this.expiresAt = '';
     this.messages.set([]);
     this.drafts.set([]);
@@ -584,7 +585,7 @@ export class ContextIntakeComponent {
     const mapped = this.mapCategory(result.draft.category, result.draft.notes);
     const splitNeeded = result.missingFields.includes('split');
     return {
-      id: crypto.randomUUID(),
+      id: createLocalId(),
       type,
       amount: result.draft.amount === null ? '' : String(result.draft.amount),
       category: mapped.category,
@@ -678,7 +679,7 @@ export class ContextIntakeComponent {
     this.messages.update((messages) => [
       ...messages,
       {
-        id: crypto.randomUUID(),
+        id: createLocalId(),
         role,
         text,
         createdAt: new Date().toISOString(),

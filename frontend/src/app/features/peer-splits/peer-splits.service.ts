@@ -4,6 +4,7 @@ import { effect, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { API_CONFIG } from '../../core/config/api.config';
 import { AuthService } from '../auth/auth';
 import { isValidSplitDate } from './split-date';
+import { createLocalId } from '../../shared/local-id';
 
 export type SplitCurrency = 'INR' | 'USD' | 'EUR';
 export interface SplitParticipant {
@@ -208,7 +209,7 @@ export class PeerSplitsService {
     result: SplitResult,
     details?: { date?: string | null; category?: string | null; merchant?: string | null },
   ): string {
-    const id = crypto.randomUUID();
+    const id = createLocalId();
     this.groups.update((groups) => [
       { id, title, participants, result, example: false, ...details },
       ...groups,

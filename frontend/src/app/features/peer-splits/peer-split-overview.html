@@ -5,7 +5,7 @@
         <p class="eyebrow">SHARED EXPENSES</p>
         <h1>Splits</h1>
       </div>
-      <a class="create-button" routerLink="/expenses/new" [queryParams]="{ mode: 'split' }">＋ New split</a>
+      <a class="create-button" routerLink="/peer-splits/new">＋ New split</a>
     </header>
     <p class="preview-banner">Preview workspace · Example groups are marked below. New previews stay in this browser session for 30 minutes; no balances are saved to your account.</p>
 
@@ -67,7 +67,7 @@
             }
           </article>
         } @empty {
-          <div class="empty-state">No matching split groups. <a routerLink="/expenses/new" [queryParams]="{ mode: 'split' }">Create a split</a>.</div>
+          <div class="empty-state">No matching split groups. <a routerLink="/peer-splits/new">Create a split</a>.</div>
         }
       </div>
     </section>

@@ -61,4 +61,15 @@ describe('AuthService', () => {
     expect(sessionStorage.getItem('unrelated')).toBe('keep');
     sessionStorage.removeItem('unrelated');
   });
+
+  it('keeps temporary split previews when a session expires', () => {
+    sessionStorage.setItem('accessToken', 'expired-token');
+    sessionStorage.setItem('xpense:split:1', 'temporary split');
+
+    service.expireSession();
+
+    expect(service.getAccessToken()).toBeNull();
+    expect(sessionStorage.getItem('xpense:split:1')).toBe('temporary split');
+    sessionStorage.removeItem('xpense:split:1');
+  });
 });
