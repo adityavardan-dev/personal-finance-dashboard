@@ -1,9 +1,13 @@
+/**
+ * Purpose: Handles account authentication and JWT validation.
+ */
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  /** Creates this class and receives its required dependencies. */
   constructor() {
     super({
       // Extract JWT from the Authorization header

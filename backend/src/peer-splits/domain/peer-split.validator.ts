@@ -1,3 +1,6 @@
+/**
+ * Purpose: Contains the peer-split domain rules and calculations, independent of HTTP endpoints.
+ */
 import { isMinorUnitAmount } from './money';
 import type {
   AllocationRule,
@@ -6,6 +9,7 @@ import type {
 } from './peer-split.types';
 
 export class PeerSplitValidator {
+  /** Checks whether validate. */
   validate(input: PeerSplitInput): PeerSplitValidationIssue[] {
     const issues: PeerSplitValidationIssue[] = [];
 
@@ -51,6 +55,7 @@ export class PeerSplitValidator {
     return issues;
   }
 
+  /** Checks whether validate contributions. */
   private validateContributions(
     input: PeerSplitInput,
     participantIds: ReadonlySet<string>,
@@ -101,6 +106,7 @@ export class PeerSplitValidator {
     }
   }
 
+  /** Checks whether validate allocations. */
   private validateAllocations(
     input: PeerSplitInput,
     participantIds: ReadonlySet<string>,
@@ -251,6 +257,7 @@ export class PeerSplitValidator {
     }
   }
 
+  /** Handles register allocation participant. */
   private registerAllocationParticipant(
     participantId: string,
     participantIds: ReadonlySet<string>,

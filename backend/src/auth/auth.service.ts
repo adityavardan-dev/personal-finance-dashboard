@@ -1,4 +1,11 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+/**
+ * Purpose: Handles account authentication and JWT validation.
+ */
+import {
+  Injectable,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -6,11 +13,13 @@ import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
+  /** Creates this class and receives its required dependencies. */
   constructor(
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
   ) {}
 
+  /** Handles login. */
   async login(loginDto: LoginDto) {
     const email = this.usersService.normalizeEmail(loginDto.email);
     const user = this.usersService.findByEmail(email);
@@ -29,6 +38,7 @@ export class AuthService {
     };
   }
 
+  /** Handles signup. */
   signup(signupDto: SignupDto) {
     const email = this.usersService.normalizeEmail(signupDto.email);
 
@@ -36,7 +46,11 @@ export class AuthService {
       throw new ConflictException('An account with this email already exists');
     }
 
-    const user = this.usersService.create(signupDto.username, email, signupDto.password);
+    const user = this.usersService.create(
+      signupDto.username,
+      email,
+      signupDto.password,
+    );
 
     return {
       message: 'Signup successful',

@@ -1,3 +1,6 @@
+/**
+ * Purpose: Handles peer-split request routing and split preview calculations.
+ */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CurrencyCode } from '../budgets/currency-code';
 import { LedgerSolver } from './domain/ledger-solver';
@@ -8,6 +11,7 @@ import type { AllocationRule, PeerSplitInput } from './domain/peer-split.types';
 export class PeerSplitsService {
   private readonly solver = new LedgerSolver();
 
+  /** Handles preview. */
   preview(value: unknown) {
     const input = this.parseInput(value);
     try {
@@ -23,6 +27,7 @@ export class PeerSplitsService {
     }
   }
 
+  /** Handles parse input. */
   private parseInput(value: unknown): PeerSplitInput {
     if (!this.record(value))
       throw new BadRequestException('Invalid split draft.');
@@ -118,6 +123,7 @@ export class PeerSplitsService {
     };
   }
 
+  /** Handles record. */
   private record(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
   }

@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { NotFoundException } from '@nestjs/common';
 import * as fs from 'fs';
 import { CurrencyCode } from '../budgets/currency-code';
@@ -22,7 +25,13 @@ describe('UsersService', () => {
   };
 
   beforeEach(() => {
-    budgetsService.getMine.mockReturnValue({ monthlyLimit: 30000, categoryLimits: [{ category: 'Food', limit: 5000 }], currency: CurrencyCode.INR, createdAt: 'a', updatedAt: 'a' });
+    budgetsService.getMine.mockReturnValue({
+      monthlyLimit: 30000,
+      categoryLimits: [{ category: 'Food', limit: 5000 }],
+      currency: CurrencyCode.INR,
+      createdAt: 'a',
+      updatedAt: 'a',
+    });
     budgetsService.upsert.mockReset();
     service = new UsersService(budgetsService as any);
     existsMock.mockReturnValue(false);
@@ -35,18 +44,22 @@ describe('UsersService', () => {
     jest.resetAllMocks();
   });
 
-  it('should be defined', () => {
+  it('should be defined' /** Checks that should be defined. */, () => {
     expect(service).toBeDefined();
   });
 
-  it('returns an empty list when the store does not exist', () => {
+  it('returns an empty list when the store does not exist' /** Checks that returns an empty list when the store does not exist. */, () => {
     expect(service.findByEmail('missing@example.com')).toBeUndefined();
     expect(existsMock).toHaveBeenCalled();
     expect(readMock).not.toHaveBeenCalled();
   });
 
-  it('creates and persists a user with normalized email and trimmed username', () => {
-    const user = service.create('  Test User  ', ' TEST@Example.COM ', 'password123');
+  it('creates and persists a user with normalized email and trimmed username' /** Checks that creates and persists a user with normalized email and trimmed username. */, () => {
+    const user = service.create(
+      '  Test User  ',
+      ' TEST@Example.COM ',
+      'password123',
+    );
 
     expect(user).toEqual({
       id: 1,
@@ -62,11 +75,16 @@ describe('UsersService', () => {
     );
   });
 
-  it('finds users by normalized email', () => {
+  it('finds users by normalized email' /** Checks that finds users by normalized email. */, () => {
     existsMock.mockReturnValue(true);
     readMock.mockReturnValue(
       JSON.stringify([
-        { id: 3, username: 'Test User', email: 'test@example.com', password: 'password123' },
+        {
+          id: 3,
+          username: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        },
       ]),
     );
 
@@ -78,11 +96,16 @@ describe('UsersService', () => {
     });
   });
 
-  it('finds a user by id', () => {
+  it('finds a user by id' /** Checks that finds a user by id. */, () => {
     existsMock.mockReturnValue(true);
     readMock.mockReturnValue(
       JSON.stringify([
-        { id: 3, username: 'Test User', email: 'test@example.com', password: 'password123' },
+        {
+          id: 3,
+          username: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        },
       ]),
     );
 
@@ -90,12 +113,22 @@ describe('UsersService', () => {
     expect(service.findById(99)).toBeUndefined();
   });
 
-  it('generates an unused sequential id', () => {
+  it('generates an unused sequential id' /** Checks that generates an unused sequential id. */, () => {
     existsMock.mockReturnValue(true);
     readMock.mockReturnValue(
       JSON.stringify([
-        { id: 1, username: 'One', email: 'one@example.com', password: 'password123' },
-        { id: 3, username: 'Three', email: 'three@example.com', password: 'password123' },
+        {
+          id: 1,
+          username: 'One',
+          email: 'one@example.com',
+          password: 'password123',
+        },
+        {
+          id: 3,
+          username: 'Three',
+          email: 'three@example.com',
+          password: 'password123',
+        },
       ]),
     );
 
@@ -103,32 +136,61 @@ describe('UsersService', () => {
     expect(user.id).toBe(4);
   });
 
-  it('recovers from malformed persisted data as an empty store', () => {
+  it('recovers from malformed persisted data as an empty store' /** Checks that recovers from malformed persisted data as an empty store. */, () => {
     existsMock.mockReturnValue(true);
     readMock.mockReturnValue('{invalid-json');
 
     expect(service.findByEmail('missing@example.com')).toBeUndefined();
   });
 
-  it('returns a password-safe public profile with canonical preferences', () => {
+  it('returns a password-safe public profile with canonical preferences' /** Checks that returns a password-safe public profile with canonical preferences. */, () => {
     existsMock.mockReturnValue(true);
-    readMock.mockReturnValue(JSON.stringify([{ id: 3, username: 'River Stone', email: 'river@example.com', password: 'password123' }]));
+    readMock.mockReturnValue(
+      JSON.stringify([
+        {
+          id: 3,
+          username: 'River Stone',
+          email: 'river@example.com',
+          password: 'password123',
+        },
+      ]),
+    );
 
     const profile = service.getPublicProfile(3);
 
-    expect(profile).toEqual({ id: 3, username: 'River Stone', email: 'river@example.com', preferences: { currency: CurrencyCode.INR, theme: 'system' } });
+    expect(profile).toEqual({
+      id: 3,
+      username: 'River Stone',
+      email: 'river@example.com',
+      preferences: { currency: CurrencyCode.INR, theme: 'system' },
+    });
     expect(profile).not.toHaveProperty('password');
   });
 
-  it('updates currency while preserving existing budget limits', () => {
+  it('updates currency while preserving existing budget limits' /** Checks that updates currency while preserving existing budget limits. */, () => {
     existsMock.mockReturnValue(true);
-    readMock.mockReturnValue(JSON.stringify([{ id: 3, username: 'River Stone', email: 'river@example.com', password: 'password123' }]));
+    readMock.mockReturnValue(
+      JSON.stringify([
+        {
+          id: 3,
+          username: 'River Stone',
+          email: 'river@example.com',
+          password: 'password123',
+        },
+      ]),
+    );
 
-    expect(service.updatePreferences(3, CurrencyCode.USD)).toEqual({ preferences: { currency: CurrencyCode.USD, theme: 'system' } });
-    expect(budgetsService.upsert).toHaveBeenCalledWith(3, { monthlyLimit: 30000, categoryLimits: [{ category: 'Food', limit: 5000 }], currency: CurrencyCode.USD });
+    expect(service.updatePreferences(3, CurrencyCode.USD)).toEqual({
+      preferences: { currency: CurrencyCode.USD, theme: 'system' },
+    });
+    expect(budgetsService.upsert).toHaveBeenCalledWith(3, {
+      monthlyLimit: 30000,
+      categoryLimits: [{ category: 'Food', limit: 5000 }],
+      currency: CurrencyCode.USD,
+    });
   });
 
-  it('rejects a missing current user', () => {
+  it('rejects a missing current user' /** Checks that rejects a missing current user. */, () => {
     expect(() => service.getPublicProfile(99)).toThrow(NotFoundException);
   });
 });

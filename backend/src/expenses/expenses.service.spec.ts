@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 jest.mock('fs');
 
 import { NotFoundException } from '@nestjs/common';
@@ -52,7 +55,7 @@ describe('ExpensesService', () => {
   });
 
   describe('create', () => {
-    it('persists a new expense and returns it with an id', () => {
+    it('persists a new expense and returns it with an id' /** Checks that persists a new expense and returns it with an id. */, () => {
       (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
       const dto = {
         type: 'expense',
@@ -72,7 +75,7 @@ describe('ExpensesService', () => {
       expect(mockedFs.writeFileSync).toHaveBeenCalledTimes(1);
     });
 
-    it('appends to existing expenses without overwriting others', () => {
+    it('appends to existing expenses without overwriting others' /** Checks that appends to existing expenses without overwriting others. */, () => {
       const written: any[] = [];
       mockedFs.writeFileSync.mockImplementation((_path, data) => {
         written.push(JSON.parse(data as string));
@@ -90,7 +93,7 @@ describe('ExpensesService', () => {
       expect(written[0]).toHaveLength(storedExpenses.length + 1);
     });
 
-    it('stores optional note when provided', () => {
+    it('stores optional note when provided' /** Checks that stores optional note when provided. */, () => {
       (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
       const dto = {
         type: 'expense',
@@ -106,7 +109,7 @@ describe('ExpensesService', () => {
       expect(result.note).toBe('Weekly groceries');
     });
 
-    it('persists the explicit transaction type', () => {
+    it('persists the explicit transaction type' /** Checks that persists the explicit transaction type. */, () => {
       (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
 
       const result = service.create(USER_A, {
@@ -122,7 +125,7 @@ describe('ExpensesService', () => {
   });
 
   describe('createBatch', () => {
-    it('validates once and persists the complete batch in one write', () => {
+    it('validates once and persists the complete batch in one write' /** Checks that validates once and persists the complete batch in one write. */, () => {
       (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
       const result = service.createBatch(USER_A, [
         {
@@ -148,20 +151,20 @@ describe('ExpensesService', () => {
   });
 
   describe('findByUser', () => {
-    it('returns only expenses belonging to the requesting user', () => {
+    it('returns only expenses belonging to the requesting user' /** Checks that returns only expenses belonging to the requesting user. */, () => {
       const results = service.findByUser(USER_A);
 
       expect(results).toHaveLength(1);
       expect(results[0].userId).toBe(USER_A);
     });
 
-    it('normalizes legacy records without a type to expense', () => {
+    it('normalizes legacy records without a type to expense' /** Checks that normalizes legacy records without a type to expense. */, () => {
       const [result] = service.findByUser(USER_A);
 
       expect(result.type).toBe('expense');
     });
 
-    it('enforces user isolation — user A cannot see user B expenses', () => {
+    it('enforces user isolation — user A cannot see user B expenses' /** Checks that enforces user isolation — user A cannot see user B expenses. */, () => {
       const resultsA = service.findByUser(USER_A);
       const resultsB = service.findByUser(USER_B);
 
@@ -170,13 +173,13 @@ describe('ExpensesService', () => {
       expect(resultsA.some((e) => e.userId === USER_B)).toBe(false);
     });
 
-    it('returns empty array when user has no expenses', () => {
+    it('returns empty array when user has no expenses' /** Checks that returns empty array when user has no expenses. */, () => {
       const results = service.findByUser(999);
 
       expect(results).toHaveLength(0);
     });
 
-    it('returns empty array when data file does not exist', () => {
+    it('returns empty array when data file does not exist' /** Checks that returns empty array when data file does not exist. */, () => {
       mockedFs.existsSync.mockReturnValue(false);
 
       const results = service.findByUser(USER_A);
@@ -184,7 +187,7 @@ describe('ExpensesService', () => {
       expect(results).toHaveLength(0);
     });
 
-    it('returns empty array when data file is corrupt', () => {
+    it('returns empty array when data file is corrupt' /** Checks that returns empty array when data file is corrupt. */, () => {
       (mockedFs.readFileSync as jest.Mock).mockReturnValue('not-valid-json');
 
       const results = service.findByUser(USER_A);
@@ -194,7 +197,7 @@ describe('ExpensesService', () => {
   });
 
   describe('findOne', () => {
-    it('returns the correct expense for the owning user', () => {
+    it('returns the correct expense for the owning user' /** Checks that returns the correct expense for the owning user. */, () => {
       const result = service.findOne(USER_A, 'uuid-a1');
 
       expect(result.id).toBe('uuid-a1');
@@ -202,13 +205,13 @@ describe('ExpensesService', () => {
       expect(result.merchant).toBe('Swiggy');
     });
 
-    it('throws NotFoundException for a missing ID', () => {
+    it('throws NotFoundException for a missing ID' /** Checks that throws NotFoundException for a missing ID. */, () => {
       expect(() => service.findOne(USER_A, 'not-exist')).toThrow(
         NotFoundException,
       );
     });
 
-    it('throws NotFoundException when ID belongs to another user', () => {
+    it('throws NotFoundException when ID belongs to another user' /** Checks that throws NotFoundException when ID belongs to another user. */, () => {
       expect(() => service.findOne(USER_A, 'uuid-b1')).toThrow(
         NotFoundException,
       );
@@ -216,7 +219,7 @@ describe('ExpensesService', () => {
   });
 
   describe('update', () => {
-    it('updates editable fields and returns the updated expense', () => {
+    it('updates editable fields and returns the updated expense' /** Checks that updates editable fields and returns the updated expense. */, () => {
       const result = service.update(USER_A, 'uuid-a1', {
         amount: 999,
         merchant: 'NewMerchant',
@@ -226,7 +229,7 @@ describe('ExpensesService', () => {
       expect(result.merchant).toBe('NewMerchant');
     });
 
-    it('supports partial updates — only supplied fields change', () => {
+    it('supports partial updates — only supplied fields change' /** Checks that supports partial updates — only supplied fields change. */, () => {
       const result = service.update(USER_A, 'uuid-a1', { amount: 600 });
 
       expect(result.amount).toBe(600);
@@ -234,7 +237,7 @@ describe('ExpensesService', () => {
       expect(result.category).toBe('Food & Dining');
     });
 
-    it('updates the transaction type', () => {
+    it('updates the transaction type' /** Checks that updates the transaction type. */, () => {
       const result = service.update(USER_A, 'uuid-a1', {
         type: 'income',
       } as any);
@@ -242,7 +245,7 @@ describe('ExpensesService', () => {
       expect(result.type).toBe('income');
     });
 
-    it('preserves id, userId, and createdAt', () => {
+    it('preserves id, userId, and createdAt' /** Checks that preserves id, userId, and createdAt. */, () => {
       const result = service.update(USER_A, 'uuid-a1', { amount: 600 });
 
       expect(result.id).toBe('uuid-a1');
@@ -250,13 +253,13 @@ describe('ExpensesService', () => {
       expect(result.createdAt).toBe('2026-09-17T10:00:00.000Z');
     });
 
-    it('persists updated data to the JSON file', () => {
+    it('persists updated data to the JSON file' /** Checks that persists updated data to the JSON file. */, () => {
       service.update(USER_A, 'uuid-a1', { amount: 777 });
 
       expect(mockedFs.writeFileSync).toHaveBeenCalledTimes(1);
     });
 
-    it('persists normalized types for legacy records on the next write', () => {
+    it('persists normalized types for legacy records on the next write' /** Checks that persists normalized types for legacy records on the next write. */, () => {
       let written: any[] = [];
       mockedFs.writeFileSync.mockImplementation((_path, data) => {
         written = JSON.parse(data as string);
@@ -267,13 +270,13 @@ describe('ExpensesService', () => {
       expect(written.every((expense) => expense.type === 'expense')).toBe(true);
     });
 
-    it('throws NotFoundException when ID belongs to another user', () => {
+    it('throws NotFoundException when ID belongs to another user' /** Checks that throws NotFoundException when ID belongs to another user. */, () => {
       expect(() => service.update(USER_A, 'uuid-b1', { amount: 999 })).toThrow(
         NotFoundException,
       );
     });
 
-    it('throws NotFoundException for a missing expense', () => {
+    it('throws NotFoundException for a missing expense' /** Checks that throws NotFoundException for a missing expense. */, () => {
       expect(() =>
         service.update(USER_A, 'not-exist', { amount: 999 }),
       ).toThrow(NotFoundException);
@@ -281,14 +284,14 @@ describe('ExpensesService', () => {
   });
 
   describe('remove', () => {
-    it('removes the requested expense and returns it', () => {
+    it('removes the requested expense and returns it' /** Checks that removes the requested expense and returns it. */, () => {
       const result = service.remove(USER_A, 'uuid-a1');
 
       expect(result.id).toBe('uuid-a1');
       expect(result.userId).toBe(USER_A);
     });
 
-    it('persists the remaining collection without the deleted expense', () => {
+    it('persists the remaining collection without the deleted expense' /** Checks that persists the remaining collection without the deleted expense. */, () => {
       const written: any[] = [];
       mockedFs.writeFileSync.mockImplementation((_path, data) => {
         written.push(JSON.parse(data as string));
@@ -300,13 +303,13 @@ describe('ExpensesService', () => {
       expect(written[0][0].id).toBe('uuid-b1');
     });
 
-    it('throws NotFoundException when ID belongs to another user', () => {
+    it('throws NotFoundException when ID belongs to another user' /** Checks that throws NotFoundException when ID belongs to another user. */, () => {
       expect(() => service.remove(USER_A, 'uuid-b1')).toThrow(
         NotFoundException,
       );
     });
 
-    it('throws NotFoundException for a missing expense', () => {
+    it('throws NotFoundException for a missing expense' /** Checks that throws NotFoundException for a missing expense. */, () => {
       expect(() => service.remove(USER_A, 'not-exist')).toThrow(
         NotFoundException,
       );

@@ -25,6 +25,42 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## XPENSE hosted intent segmentation
+
+The existing `POST /parser/parse-batch` route now runs through `IntentService`.
+It uses the deterministic parser first. When one draft contains several unclear
+amounts, Cloudflare Workers AI may ask hosted Gemma 4 26B to split the original
+message into exact expense statements. The parser then extracts the fields from
+those statements. The model cannot save expenses or calculate peer balances.
+
+Copy `.env.example` to `.env` in the backend directory, then add a Cloudflare
+Workers AI Account ID and API token:
+
+```dotenv
+CLOUDFLARE_ACCOUNT_ID=your-account-id
+CLOUDFLARE_AI_API_TOKEN=your-api-token
+CLOUDFLARE_AI_MODEL=@cf/google/gemma-4-26b-a4b-it
+```
+
+The backend loads this file when it starts. Keep `.env` private; it is already
+ignored by Git. Start the backend and frontend, then try this in the existing
+intake chat:
+
+```text
+I spent ₹200 on breakfast ₹50 on bus ₹700 on groceries ₹100 on tea ₹300 on petrol today
+```
+
+Five editable draft cards should appear. Without the Cloudflare values, or if
+the model fails or omits part of the message, the existing local clarification
+remains available. When configured, the backend sends the expense message to
+Cloudflare's hosted Gemma model; the browser never receives the API token. The
+current model role is statement segmentation. Semantic field extraction and
+peer-split intent are later slices.
+
+The batch response always includes `modelAttempted`, `modelAccepted`, and
+`interpretationSource` (`LOCAL` or `MODEL`) so the decision is visible in
+browser developer tools.
+
 ## Project setup
 
 ```bash

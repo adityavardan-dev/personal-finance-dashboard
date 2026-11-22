@@ -5,6 +5,7 @@ import { API_CONFIG } from '../../core/config/api.config';
 import { AuthService } from '../auth/auth';
 import { isValidSplitDate } from './split-date';
 import { createLocalId } from '../../shared/local-id';
+import { RequestTrace, requestTraceHeaders } from '../../core/request-trace';
 
 export type SplitCurrency = 'INR' | 'USD' | 'EUR';
 export interface SplitParticipant {
@@ -294,7 +295,9 @@ export class PeerSplitsService {
       }),
     );
   }
-  preview(input: SplitInput) {
-    return this.http.post<SplitResult>(`${API_CONFIG.baseUrl}/peer-splits/preview`, input);
+  preview(input: SplitInput, trace?: RequestTrace) {
+    return this.http.post<SplitResult>(`${API_CONFIG.baseUrl}/peer-splits/preview`, input, {
+      headers: requestTraceHeaders(trace),
+    });
   }
 }

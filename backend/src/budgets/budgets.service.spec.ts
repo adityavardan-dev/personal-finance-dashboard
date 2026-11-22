@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 jest.mock('fs');
 
 import { BadRequestException } from '@nestjs/common';
@@ -24,7 +27,7 @@ describe('BudgetsService', () => {
     (mockedFs.mkdirSync as jest.Mock).mockImplementation(() => undefined);
   });
 
-  it('returns the canonical default for a missing store', () => {
+  it('returns the canonical default for a missing store' /** Checks that returns the canonical default for a missing store. */, () => {
     expect(service.getMine(1)).toEqual({
       monthlyLimit: null,
       categoryLimits: [],
@@ -34,9 +37,11 @@ describe('BudgetsService', () => {
     });
   });
 
-  it('creates and persists an isolated user budget', () => {
+  it('creates and persists an isolated user budget' /** Checks that creates and persists an isolated user budget. */, () => {
     const result = service.upsert(7, payload);
-    const written = JSON.parse((mockedFs.writeFileSync as jest.Mock).mock.calls[0][1]);
+    const written = JSON.parse(
+      (mockedFs.writeFileSync as jest.Mock).mock.calls[0][1],
+    );
 
     expect(result.monthlyLimit).toBe(30000);
     expect(result.categoryLimits).toEqual(payload.categoryLimits);
@@ -44,7 +49,7 @@ describe('BudgetsService', () => {
     expect(result.createdAt).toBeTruthy();
   });
 
-  it('persists across service instances', () => {
+  it('persists across service instances' /** Checks that persists across service instances. */, () => {
     let persisted = '[]';
     mockedFs.existsSync.mockReturnValue(true);
     (mockedFs.readFileSync as jest.Mock).mockImplementation(() => persisted);
@@ -58,22 +63,33 @@ describe('BudgetsService', () => {
     expect(restartedService.getMine(7).monthlyLimit).toBe(30000);
   });
 
-  it('returns only the requesting user budget', () => {
+  it('returns only the requesting user budget' /** Checks that returns only the requesting user budget. */, () => {
     mockedFs.existsSync.mockReturnValue(true);
-    (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([
-      { userId: 1, ...payload, createdAt: 'a', updatedAt: 'a' },
-      { userId: 2, monthlyLimit: 500, categoryLimits: [], currency: CurrencyCode.USD, createdAt: 'b', updatedAt: 'b' },
-    ]));
+    (mockedFs.readFileSync as jest.Mock).mockReturnValue(
+      JSON.stringify([
+        { userId: 1, ...payload, createdAt: 'a', updatedAt: 'a' },
+        {
+          userId: 2,
+          monthlyLimit: 500,
+          categoryLimits: [],
+          currency: CurrencyCode.USD,
+          createdAt: 'b',
+          updatedAt: 'b',
+        },
+      ]),
+    );
 
     expect(service.getMine(2).monthlyLimit).toBe(500);
     expect(service.getMine(2).currency).toBe(CurrencyCode.USD);
   });
 
-  it('updates a record while preserving createdAt', () => {
+  it('updates a record while preserving createdAt' /** Checks that updates a record while preserving createdAt. */, () => {
     mockedFs.existsSync.mockReturnValue(true);
-    (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([
-      { userId: 1, ...payload, createdAt: 'original', updatedAt: 'old' },
-    ]));
+    (mockedFs.readFileSync as jest.Mock).mockReturnValue(
+      JSON.stringify([
+        { userId: 1, ...payload, createdAt: 'original', updatedAt: 'old' },
+      ]),
+    );
 
     const result = service.upsert(1, { ...payload, monthlyLimit: 40000 });
     expect(result.createdAt).toBe('original');
@@ -81,27 +97,36 @@ describe('BudgetsService', () => {
     expect(result.updatedAt).not.toBe('old');
   });
 
-  it('recovers from malformed persisted data', () => {
+  it('recovers from malformed persisted data' /** Checks that recovers from malformed persisted data. */, () => {
     mockedFs.existsSync.mockReturnValue(true);
     (mockedFs.readFileSync as jest.Mock).mockReturnValue('{invalid');
     expect(service.getMine(1).monthlyLimit).toBeNull();
   });
 
-  it('rejects category names that are empty after trimming', () => {
-    expect(() => service.upsert(1, {
-      ...payload,
-      categoryLimits: [{ category: '   ', limit: 100 }],
-    })).toThrow(BadRequestException);
+  it('rejects category names that are empty after trimming' /** Checks that rejects category names that are empty after trimming. */, () => {
+    expect(() =>
+      service.upsert(1, {
+        ...payload,
+        categoryLimits: [{ category: '   ', limit: 100 }],
+      }),
+    ).toThrow(BadRequestException);
   });
 
-  it('rejects duplicate category names', () => {
-    expect(() => service.upsert(1, {
-      ...payload,
-      categoryLimits: [{ category: 'Food', limit: 100 }, { category: 'Food', limit: 200 }],
-    })).toThrow(BadRequestException);
+  it('rejects duplicate category names' /** Checks that rejects duplicate category names. */, () => {
+    expect(() =>
+      service.upsert(1, {
+        ...payload,
+        categoryLimits: [
+          { category: 'Food', limit: 100 },
+          { category: 'Food', limit: 200 },
+        ],
+      }),
+    ).toThrow(BadRequestException);
   });
 
-  it('rejects category limits when monthly budget is cleared', () => {
-    expect(() => service.upsert(1, { ...payload, monthlyLimit: null })).toThrow(BadRequestException);
+  it('rejects category limits when monthly budget is cleared' /** Checks that rejects category limits when monthly budget is cleared. */, () => {
+    expect(() => service.upsert(1, { ...payload, monthlyLimit: null })).toThrow(
+      BadRequestException,
+    );
   });
 });

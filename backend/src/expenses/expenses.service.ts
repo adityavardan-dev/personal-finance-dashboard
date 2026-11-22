@@ -1,3 +1,6 @@
+/**
+ * Purpose: Handles expense request routing, validation, and persistence.
+ */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -22,6 +25,7 @@ const DATA_FILE = path.join(process.cwd(), 'data', 'expenses.json');
 
 @Injectable()
 export class ExpensesService {
+  /** Returns read all. */
   private readAll(): Expense[] {
     try {
       if (!fs.existsSync(DATA_FILE)) return [];
@@ -38,6 +42,7 @@ export class ExpensesService {
     }
   }
 
+  /** Handles write all. */
   private writeAll(expenses: Expense[]): void {
     const dir = path.dirname(DATA_FILE);
     if (!fs.existsSync(dir)) {
@@ -46,6 +51,7 @@ export class ExpensesService {
     fs.writeFileSync(DATA_FILE, JSON.stringify(expenses, null, 2), 'utf-8');
   }
 
+  /** Handles create. */
   create(userId: number, dto: CreateExpenseDto): Expense {
     const expenses = this.readAll();
     const expense: Expense = {
@@ -64,6 +70,7 @@ export class ExpensesService {
     return expense;
   }
 
+  /** Handles create batch. */
   createBatch(userId: number, dtos: CreateExpenseDto[]): Expense[] {
     const expenses = this.readAll();
     const createdAt = new Date().toISOString();
@@ -83,10 +90,12 @@ export class ExpensesService {
     return created;
   }
 
+  /** Returns find by user. */
   findByUser(userId: number): Expense[] {
     return this.readAll().filter((e) => e.userId === userId);
   }
 
+  /** Returns find one. */
   findOne(userId: number, id: string): Expense {
     const expense = this.readAll().find(
       (e) => e.id === id && e.userId === userId,
@@ -95,6 +104,7 @@ export class ExpensesService {
     return expense;
   }
 
+  /** Handles update. */
   update(userId: number, id: string, dto: UpdateExpenseDto): Expense {
     const expenses = this.readAll();
     const index = expenses.findIndex((e) => e.id === id && e.userId === userId);
@@ -117,6 +127,7 @@ export class ExpensesService {
     return updated;
   }
 
+  /** Handles remove. */
   remove(userId: number, id: string): Expense {
     const expenses = this.readAll();
     const index = expenses.findIndex((e) => e.id === id && e.userId === userId);

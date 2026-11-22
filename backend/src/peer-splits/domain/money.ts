@@ -1,3 +1,6 @@
+/**
+ * Purpose: Contains the peer-split domain rules and calculations, independent of HTTP endpoints.
+ */
 import { PeerSplitInvariantError } from './peer-split.errors';
 
 export interface RationalShare {
@@ -6,10 +9,12 @@ export interface RationalShare {
   denominator: bigint;
 }
 
+/** Checks whether is minor unit amount. */
 export function isMinorUnitAmount(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0;
 }
 
+/** Handles allocate rational shares. */
 export function allocateRationalShares(
   targetAmountMinor: number,
   shares: RationalShare[],
@@ -82,6 +87,7 @@ export function allocateRationalShares(
   return allocations;
 }
 
+/** Handles sum minor units. */
 export function sumMinorUnits(values: Iterable<number>): number {
   let total = 0;
   for (const value of values) total += value;

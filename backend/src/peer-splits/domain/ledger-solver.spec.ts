@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { CurrencyCode } from '../../budgets/currency-code';
 import { PeerSplitValidationError } from './peer-split.errors';
 import type { PeerSplitInput } from './peer-split.types';
@@ -6,7 +9,7 @@ import { LedgerSolver } from './ledger-solver';
 describe('LedgerSolver', () => {
   const solver = new LedgerSolver();
 
-  it('solves a fixed share plus equal remainder and creates two-way obligations', () => {
+  it('solves a fixed share plus equal remainder and creates two-way obligations' /** Checks that solves a fixed share plus equal remainder and creates two-way obligations. */, () => {
     const result = solver.solve({
       totalAmountMinor: 180_000,
       currency: CurrencyCode.INR,
@@ -80,7 +83,7 @@ describe('LedgerSolver', () => {
     ]);
   });
 
-  it('assigns equal-split remainder minor units to the payer first', () => {
+  it('assigns equal-split remainder minor units to the payer first' /** Checks that assigns equal-split remainder minor units to the payer first. */, () => {
     const result = solver.solve({
       totalAmountMinor: 100_000,
       currency: CurrencyCode.INR,
@@ -100,7 +103,7 @@ describe('LedgerSolver', () => {
     ]);
   });
 
-  it('supports percentages plus an equal remainder', () => {
+  it('supports percentages plus an equal remainder' /** Checks that supports percentages plus an equal remainder. */, () => {
     const result = solver.solve({
       totalAmountMinor: 100_000,
       currency: CurrencyCode.INR,
@@ -121,7 +124,7 @@ describe('LedgerSolver', () => {
     ]);
   });
 
-  it('uses largest remainders for weighted allocations', () => {
+  it('uses largest remainders for weighted allocations' /** Checks that uses largest remainders for weighted allocations. */, () => {
     const result = solver.solve({
       totalAmountMinor: 1_001,
       currency: CurrencyCode.INR,
@@ -143,7 +146,7 @@ describe('LedgerSolver', () => {
     ]);
   });
 
-  it('supports multiple payers and clears one debtor across multiple creditors', () => {
+  it('supports multiple payers and clears one debtor across multiple creditors' /** Checks that supports multiple payers and clears one debtor across multiple creditors. */, () => {
     const result = solver.solve({
       totalAmountMinor: 100_000,
       currency: CurrencyCode.INR,
@@ -167,7 +170,7 @@ describe('LedgerSolver', () => {
     ]);
   });
 
-  it('rejects contribution totals that do not equal the expense total', () => {
+  it('rejects contribution totals that do not equal the expense total' /** Checks that rejects contribution totals that do not equal the expense total. */, () => {
     const input: PeerSplitInput = {
       totalAmountMinor: 100_000,
       currency: CurrencyCode.INR,
@@ -192,7 +195,7 @@ describe('LedgerSolver', () => {
     }
   });
 
-  it('rejects duplicate and missing allocation rules', () => {
+  it('rejects duplicate and missing allocation rules' /** Checks that rejects duplicate and missing allocation rules. */, () => {
     const input: PeerSplitInput = {
       totalAmountMinor: 100_000,
       currency: CurrencyCode.INR,
@@ -222,7 +225,7 @@ describe('LedgerSolver', () => {
     }
   });
 
-  it('rejects weighted and equal remainder rules in the same expense', () => {
+  it('rejects weighted and equal remainder rules in the same expense' /** Checks that rejects weighted and equal remainder rules in the same expense. */, () => {
     const input: PeerSplitInput = {
       totalAmountMinor: 100_000,
       currency: CurrencyCode.INR,
@@ -248,7 +251,7 @@ describe('LedgerSolver', () => {
     }
   });
 
-  it('rejects more than one equal remainder rule', () => {
+  it('rejects more than one equal remainder rule' /** Checks that rejects more than one equal remainder rule. */, () => {
     const input: PeerSplitInput = {
       totalAmountMinor: 100_000,
       currency: CurrencyCode.INR,
@@ -274,7 +277,7 @@ describe('LedgerSolver', () => {
     }
   });
 
-  it('preserves accounting invariants across generated equal splits', () => {
+  it('preserves accounting invariants across generated equal splits' /** Checks that preserves accounting invariants across generated equal splits. */, () => {
     for (
       let totalAmountMinor = 1;
       totalAmountMinor <= 250;

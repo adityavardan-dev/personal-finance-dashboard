@@ -1,3 +1,6 @@
+/**
+ * Purpose: Defines and validates the data shape accepted or returned by this backend feature.
+ */
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,

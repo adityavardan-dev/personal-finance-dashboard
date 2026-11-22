@@ -87,6 +87,42 @@ describe('ContextIntakeComponent', () => {
     fixture.detectChanges();
   });
 
+  it.each(['Hi', 'Hello!', 'hey there'])('answers "%s" without making a transaction draft', (text) => {
+    component['rawText'] = text;
+    component['submitMessage']();
+
+    expect(parserService.parseBatch).not.toHaveBeenCalled();
+    expect(splitService.preview).not.toHaveBeenCalled();
+    expect(component['drafts']()).toHaveLength(0);
+    expect(component['messages']().map((message) => message.text)).toEqual([
+      text,
+      'Hi! How much did you spend today?',
+    ]);
+    expect(component['messages']()[0].requestId).toBe(component['messages']()[1].requestId);
+  });
+
+  it('asks for the amount and participants when greeted in split mode', () => {
+    Object.defineProperty(component, 'splitMode', { value: true });
+    component['rawText'] = 'Hey!';
+    component['submitMessage']();
+
+    expect(splitService.preview).not.toHaveBeenCalled();
+    expect(parserService.parseBatch).not.toHaveBeenCalled();
+    expect(component['drafts']()).toHaveLength(0);
+    expect(component['messages']().at(-1)?.text).toBe(
+      'Hi! How much did you spend today, and who are you splitting it with?',
+    );
+  });
+
+  it('parses a transaction that starts with a greeting', () => {
+    parserService.parseBatch.mockReturnValue(of({ status: 'READY', drafts: [readyDraft] }));
+    component['rawText'] = 'Hi, I spent INR 350 on lunch today';
+    component['submitMessage']();
+
+    expect(parserService.parseBatch).toHaveBeenCalledOnce();
+    expect(component['drafts']()).toHaveLength(1);
+  });
+
   it('turns a named split message into a linked summary without personal parser persistence', () => {
     splitService.preview.mockReturnValue(
       of({
@@ -104,6 +140,10 @@ describe('ContextIntakeComponent', () => {
     fixture.detectChanges();
 
     expect(splitService.preview).toHaveBeenCalledOnce();
+    expect(splitService.preview.mock.calls[0][1]).toMatchObject({
+      conversationId: expect.any(String),
+      requestId: expect.any(String),
+    });
     expect(parserService.parseBatch).not.toHaveBeenCalled();
     expect(expenseService.createBatch).not.toHaveBeenCalled();
     expect(component['messages']().at(-1)?.splitPreview).toMatchObject({
@@ -171,6 +211,30 @@ describe('ContextIntakeComponent', () => {
     expect(session.save).toHaveBeenCalled();
   });
 
+  it('keeps one conversation ID and creates a new request ID for each submitted turn', () => {
+    parserService.parseBatch.mockReturnValue(of({ status: 'READY', drafts: [readyDraft] }));
+
+    component['rawText'] = 'spent 350 on lunch today';
+    component['submitMessage']();
+    component['rawText'] = 'spent 500 on petrol today';
+    component['submitMessage']();
+
+    const firstTrace = parserService.parseBatch.mock.calls[0][1];
+    const secondTrace = parserService.parseBatch.mock.calls[1][1];
+    expect(firstTrace.conversationId).toBe(secondTrace.conversationId);
+    expect(firstTrace.requestId).not.toBe(secondTrace.requestId);
+    expect(component['messages']().map((message) => message.requestId)).toEqual([
+      firstTrace.requestId,
+      firstTrace.requestId,
+      secondTrace.requestId,
+      secondTrace.requestId,
+    ]);
+    expect(session.save.mock.calls.at(-1)?.[1].messages[0]).toMatchObject(firstTrace);
+
+    component['startNewConversation']();
+    expect(component['conversationId']).not.toBe(firstTrace.conversationId);
+  });
+
   it('keeps a parsed personal expense ready when merchant is missing', () => {
     parserService.parseBatch.mockReturnValue(of({
       status: 'READY',
@@ -222,7 +286,10 @@ describe('ContextIntakeComponent', () => {
     component['rawText'] = 'yesterday';
     component['submitMessage']();
 
-    expect(parserService.parse).toHaveBeenCalledWith('yesterday');
+    expect(parserService.parse).toHaveBeenCalledWith('yesterday', {
+      conversationId: expect.any(String),
+      requestId: expect.any(String),
+    });
     expect(component['drafts']()[0].date).toBe('2026-11-09');
     expect(component['canSaveDraft'](component['drafts']()[0])).toBe(true);
   });

@@ -1,3 +1,6 @@
+/**
+ * Purpose: Handles account authentication and JWT validation.
+ */
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';

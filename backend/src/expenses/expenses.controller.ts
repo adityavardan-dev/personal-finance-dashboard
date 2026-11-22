@@ -1,3 +1,6 @@
+/**
+ * Purpose: Handles expense request routing, validation, and persistence.
+ */
 import {
   Body,
   Controller,
@@ -22,13 +25,16 @@ interface AuthenticatedRequest {
 @Controller('expenses')
 @UseGuards(JwtAuthGuard)
 export class ExpensesController {
+  /** Creates this class and receives its required dependencies. */
   constructor(private readonly expensesService: ExpensesService) {}
 
+  /** Handles create. */
   @Post()
   create(@Request() req: AuthenticatedRequest, @Body() dto: CreateExpenseDto) {
     return this.expensesService.create(req.user.userId, dto);
   }
 
+  /** Handles create batch. */
   @Post('batch')
   createBatch(
     @Request() req: AuthenticatedRequest,
@@ -37,16 +43,19 @@ export class ExpensesController {
     return this.expensesService.createBatch(req.user.userId, dto.transactions);
   }
 
+  /** Returns find all. */
   @Get()
   findAll(@Request() req: AuthenticatedRequest) {
     return this.expensesService.findByUser(req.user.userId);
   }
 
+  /** Returns find one. */
   @Get(':id')
   findOne(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.expensesService.findOne(req.user.userId, id);
   }
 
+  /** Handles update. */
   @Patch(':id')
   update(
     @Request() req: AuthenticatedRequest,
@@ -56,6 +65,7 @@ export class ExpensesController {
     return this.expensesService.update(req.user.userId, id, dto);
   }
 
+  /** Handles remove. */
   @Delete(':id')
   remove(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.expensesService.remove(req.user.userId, id);

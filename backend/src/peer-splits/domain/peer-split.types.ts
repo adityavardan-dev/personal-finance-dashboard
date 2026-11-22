@@ -1,3 +1,6 @@
+/**
+ * Purpose: Contains the peer-split domain rules and calculations, independent of HTTP endpoints.
+ */
 import type { CurrencyCode } from '../../budgets/currency-code';
 
 export interface PeerParticipant {

@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ExpensesController } from './expenses.controller';
@@ -46,7 +49,7 @@ describe('ExpensesController', () => {
   });
 
   describe('POST /expenses', () => {
-    it('creates an expense for the authenticated user', () => {
+    it('creates an expense for the authenticated user' /** Checks that creates an expense for the authenticated user. */, () => {
       const dto = {
         type: 'expense',
         amount: 500,
@@ -61,7 +64,7 @@ describe('ExpensesController', () => {
       expect(service.create).toHaveBeenCalledWith(1, dto);
     });
 
-    it('passes the userId from the JWT token — not from the request body', () => {
+    it('passes the userId from the JWT token — not from the request body' /** Checks that passes the userId from the JWT token — not from the request body. */, () => {
       const dto = {
         type: 'expense',
         amount: 200,
@@ -80,7 +83,7 @@ describe('ExpensesController', () => {
   });
 
   describe('POST /expenses/batch', () => {
-    it('creates all transactions for the authenticated user', () => {
+    it('creates all transactions for the authenticated user' /** Checks that creates all transactions for the authenticated user. */, () => {
       const transactions = [
         {
           type: 'expense',
@@ -99,7 +102,7 @@ describe('ExpensesController', () => {
   });
 
   describe('GET /expenses', () => {
-    it('returns expenses for the authenticated user', () => {
+    it('returns expenses for the authenticated user' /** Checks that returns expenses for the authenticated user. */, () => {
       const result = controller.findAll(mockRequest as any);
 
       expect(result).toEqual([mockExpense]);
@@ -108,14 +111,14 @@ describe('ExpensesController', () => {
   });
 
   describe('GET /expenses/:id', () => {
-    it('returns the expense by ID for the authenticated user', () => {
+    it('returns the expense by ID for the authenticated user' /** Checks that returns the expense by ID for the authenticated user. */, () => {
       const result = controller.findOne(mockRequest as any, 'uuid-1');
 
       expect(result).toEqual(mockExpense);
       expect(service.findOne).toHaveBeenCalledWith(1, 'uuid-1');
     });
 
-    it('passes the userId from the JWT token', () => {
+    it('passes the userId from the JWT token' /** Checks that passes the userId from the JWT token. */, () => {
       controller.findOne({ user: { userId: 42 } } as any, 'uuid-1');
 
       expect(service.findOne).toHaveBeenCalledWith(42, 'uuid-1');
@@ -123,7 +126,7 @@ describe('ExpensesController', () => {
   });
 
   describe('PATCH /expenses/:id', () => {
-    it('calls service.update with authenticated userId and returns result', () => {
+    it('calls service.update with authenticated userId and returns result' /** Checks that calls service.update with authenticated userId and returns result. */, () => {
       const dto = { amount: 999, merchant: 'Updated' };
       const result = controller.update(
         mockRequest as any,
@@ -135,7 +138,7 @@ describe('ExpensesController', () => {
       expect(service.update).toHaveBeenCalledWith(1, 'uuid-1', dto);
     });
 
-    it('passes the userId from the JWT token — not the body', () => {
+    it('passes the userId from the JWT token — not the body' /** Checks that passes the userId from the JWT token — not the body. */, () => {
       controller.update({ user: { userId: 7 } } as any, 'uuid-1', {} as any);
 
       expect(service.update).toHaveBeenCalledWith(7, 'uuid-1', {});
@@ -143,14 +146,14 @@ describe('ExpensesController', () => {
   });
 
   describe('DELETE /expenses/:id', () => {
-    it('calls service.remove with authenticated userId and returns result', () => {
+    it('calls service.remove with authenticated userId and returns result' /** Checks that calls service.remove with authenticated userId and returns result. */, () => {
       const result = controller.remove(mockRequest as any, 'uuid-1');
 
       expect(result).toEqual(mockExpense);
       expect(service.remove).toHaveBeenCalledWith(1, 'uuid-1');
     });
 
-    it('passes the userId from the JWT token', () => {
+    it('passes the userId from the JWT token' /** Checks that passes the userId from the JWT token. */, () => {
       controller.remove({ user: { userId: 5 } } as any, 'uuid-1');
 
       expect(service.remove).toHaveBeenCalledWith(5, 'uuid-1');
@@ -158,7 +161,7 @@ describe('ExpensesController', () => {
   });
 
   describe('guard coverage', () => {
-    it('JwtAuthGuard is applied at the controller level', () => {
+    it('JwtAuthGuard is applied at the controller level' /** Checks that JwtAuthGuard is applied at the controller level. */, () => {
       const guards: any[] =
         Reflect.getMetadata('__guards__', ExpensesController) ?? [];
       expect(guards).toContain(JwtAuthGuard);

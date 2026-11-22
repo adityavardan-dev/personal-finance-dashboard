@@ -1,3 +1,6 @@
+/**
+ * Purpose: Contains the peer-split domain rules and calculations, independent of HTTP endpoints.
+ */
 export * from './ledger-solver';
 export * from './money';
 export * from './peer-split.errors';

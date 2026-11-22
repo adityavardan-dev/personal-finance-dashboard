@@ -1,3 +1,6 @@
+/**
+ * Purpose: Handles user profile and preference operations.
+ */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BudgetsService } from '../budgets/budgets.service';
 import { CurrencyCode } from '../budgets/currency-code';
@@ -22,8 +25,10 @@ export interface UserPublicProfile {
 
 @Injectable()
 export class UsersService {
+  /** Creates this class and receives its required dependencies. */
   constructor(private readonly budgetsService: BudgetsService) {}
 
+  /** Returns read all. */
   private readAll(): User[] {
     try {
       if (!fs.existsSync(DATA_FILE)) return [];
@@ -34,6 +39,7 @@ export class UsersService {
     }
   }
 
+  /** Handles write all. */
   private writeAll(users: User[]): void {
     const dir = path.dirname(DATA_FILE);
     if (!fs.existsSync(dir)) {
@@ -42,15 +48,18 @@ export class UsersService {
     fs.writeFileSync(DATA_FILE, JSON.stringify(users, null, 2), 'utf-8');
   }
 
+  /** Returns find by email. */
   findByEmail(email: string): User | undefined {
     const normalizedEmail = this.normalizeEmail(email);
     return this.readAll().find((user) => user.email === normalizedEmail);
   }
 
+  /** Returns find by id. */
   findById(id: number): User | undefined {
     return this.readAll().find((user) => user.id === id);
   }
 
+  /** Handles create. */
   create(username: string, email: string, password: string): User {
     const users = this.readAll();
     const normalizedEmail = this.normalizeEmail(email);
@@ -67,25 +76,38 @@ export class UsersService {
     return user;
   }
 
+  /** Returns get public profile. */
   getPublicProfile(id: number): UserPublicProfile {
     const user = this.findById(id);
     if (!user) throw new NotFoundException('User not found');
     const budget = this.budgetsService.getMine(id);
-    return { id: user.id, username: user.username, email: user.email, preferences: { currency: budget.currency, theme: 'system' } };
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      preferences: { currency: budget.currency, theme: 'system' },
+    };
   }
 
+  /** Handles update preferences. */
   updatePreferences(id: number, currency: CurrencyCode) {
     const user = this.findById(id);
     if (!user) throw new NotFoundException('User not found');
     const budget = this.budgetsService.getMine(id);
-    this.budgetsService.upsert(id, { monthlyLimit: budget.monthlyLimit, categoryLimits: budget.categoryLimits, currency });
+    this.budgetsService.upsert(id, {
+      monthlyLimit: budget.monthlyLimit,
+      categoryLimits: budget.categoryLimits,
+      currency,
+    });
     return { preferences: { currency, theme: 'system' as const } };
   }
 
+  /** Handles normalize email. */
   normalizeEmail(email: string): string {
     return email.trim().toLowerCase();
   }
 
+  /** Provides generate id. */
   private generateId(users: User[]): number {
     const ids = new Set(users.map((user) => user.id));
     let id = users.length + 1;

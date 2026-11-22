@@ -1,3 +1,6 @@
+/**
+ * Purpose: Contains the peer-split domain rules and calculations, independent of HTTP endpoints.
+ */
 import {
   PeerSplitInvariantError,
   PeerSplitValidationError,
@@ -20,8 +23,10 @@ interface AllocationEntry {
 }
 
 export class LedgerSolver {
+  /** Creates this class and receives its required dependencies. */
   constructor(private readonly validator = new PeerSplitValidator()) {}
 
+  /** Handles solve. */
   solve(input: PeerSplitInput): PeerSplitResult {
     const issues = this.validator.validate(input);
     if (issues.length > 0) throw new PeerSplitValidationError(issues);
@@ -78,6 +83,7 @@ export class LedgerSolver {
     };
   }
 
+  /** Handles calculate allocations. */
   private calculateAllocations(
     input: PeerSplitInput,
     tieBreakOrder: ReadonlyMap<string, number>,
@@ -177,6 +183,7 @@ export class LedgerSolver {
     return allocations;
   }
 
+  /** Handles create tie break order. */
   private createTieBreakOrder(input: PeerSplitInput): Map<string, number> {
     const payers = new Set(
       input.contributions.map((item) => item.participantId),
@@ -192,6 +199,7 @@ export class LedgerSolver {
     );
   }
 
+  /** Handles create obligations. */
   private createObligations(
     balances: PeerBalance[],
     tieBreakOrder: ReadonlyMap<string, number>,
@@ -237,6 +245,7 @@ export class LedgerSolver {
     return obligations;
   }
 
+  /** Provides assert invariants. */
   private assertInvariants(
     input: PeerSplitInput,
     allocations: PeerAllocation[],

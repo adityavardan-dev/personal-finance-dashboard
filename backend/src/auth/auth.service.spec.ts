@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -39,11 +42,11 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
   });
 
-  it('should be defined', () => {
+  it('should be defined' /** Checks that should be defined. */, () => {
     expect(service).toBeDefined();
   });
 
-  it('signs up a new persisted user', () => {
+  it('signs up a new persisted user' /** Checks that signs up a new persisted user. */, () => {
     usersService.findByEmail.mockReturnValue(undefined);
     usersService.create.mockReturnValue({
       id: 8,
@@ -58,9 +61,15 @@ describe('AuthService', () => {
       password: 'password123',
     });
 
-    expect(usersService.normalizeEmail).toHaveBeenCalledWith(' NEW@EXAMPLE.COM ');
+    expect(usersService.normalizeEmail).toHaveBeenCalledWith(
+      ' NEW@EXAMPLE.COM ',
+    );
     expect(usersService.findByEmail).toHaveBeenCalledWith('new@example.com');
-    expect(usersService.create).toHaveBeenCalledWith('New User', 'new@example.com', 'password123');
+    expect(usersService.create).toHaveBeenCalledWith(
+      'New User',
+      'new@example.com',
+      'password123',
+    );
     expect(result).toEqual({
       message: 'Signup successful',
       email: 'new@example.com',
@@ -69,7 +78,7 @@ describe('AuthService', () => {
     expect(result).not.toHaveProperty('password');
   });
 
-  it('rejects duplicate email during signup', () => {
+  it('rejects duplicate email during signup' /** Checks that rejects duplicate email during signup. */, () => {
     usersService.findByEmail.mockReturnValue(existingUser);
 
     expect(() =>
@@ -83,7 +92,7 @@ describe('AuthService', () => {
     expect(usersService.create).not.toHaveBeenCalled();
   });
 
-  it('authenticates a persisted user and signs the persisted identity into the JWT', async () => {
+  it('authenticates a persisted user and signs the persisted identity into the JWT' /** Checks that authenticates a persisted user and signs the persisted identity into the JWT. */, async () => {
     usersService.findByEmail.mockReturnValue(existingUser);
 
     const result = await service.login({
@@ -91,7 +100,9 @@ describe('AuthService', () => {
       password: 'password123',
     });
 
-    expect(usersService.findByEmail).toHaveBeenCalledWith('existing@example.com');
+    expect(usersService.findByEmail).toHaveBeenCalledWith(
+      'existing@example.com',
+    );
     expect(jwtService.signAsync).toHaveBeenCalledWith({
       sub: existingUser.id,
       email: existingUser.email,
@@ -103,7 +114,7 @@ describe('AuthService', () => {
     });
   });
 
-  it('rejects an unknown login email', async () => {
+  it('rejects an unknown login email' /** Checks that rejects an unknown login email. */, async () => {
     usersService.findByEmail.mockReturnValue(undefined);
 
     await expect(
@@ -112,7 +123,7 @@ describe('AuthService', () => {
     expect(jwtService.signAsync).not.toHaveBeenCalled();
   });
 
-  it('rejects an invalid password', async () => {
+  it('rejects an invalid password' /** Checks that rejects an invalid password. */, async () => {
     usersService.findByEmail.mockReturnValue(existingUser);
 
     await expect(
@@ -121,7 +132,7 @@ describe('AuthService', () => {
     expect(jwtService.signAsync).not.toHaveBeenCalled();
   });
 
-  it('does not authenticate the former hardcoded admin when it is not persisted', async () => {
+  it('does not authenticate the former hardcoded admin when it is not persisted' /** Checks that does not authenticate the former hardcoded admin when it is not persisted. */, async () => {
     usersService.findByEmail.mockReturnValue(undefined);
 
     await expect(

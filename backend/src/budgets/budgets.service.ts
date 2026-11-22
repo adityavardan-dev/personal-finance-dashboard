@@ -1,3 +1,6 @@
+/**
+ * Purpose: Handles budget request routing, validation, and persistence.
+ */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -37,11 +40,15 @@ const EMPTY_BUDGET: BudgetResponse = {
 
 @Injectable()
 export class BudgetsService {
+  /** Returns get mine. */
   getMine(userId: number): BudgetResponse {
     const budget = this.readAll().find((record) => record.userId === userId);
-    return budget ? this.toResponse(budget) : { ...EMPTY_BUDGET, categoryLimits: [] };
+    return budget
+      ? this.toResponse(budget)
+      : { ...EMPTY_BUDGET, categoryLimits: [] };
   }
 
+  /** Handles upsert. */
   upsert(userId: number, dto: UpsertBudgetDto): BudgetResponse {
     if (dto.monthlyLimit === null && dto.categoryLimits.length > 0) {
       throw new BadRequestException('Category limits require a monthly budget');
@@ -77,6 +84,7 @@ export class BudgetsService {
     return this.toResponse(budget);
   }
 
+  /** Returns read all. */
   private readAll(): Budget[] {
     try {
       if (!fs.existsSync(DATA_FILE)) return [];
@@ -86,12 +94,14 @@ export class BudgetsService {
     }
   }
 
+  /** Handles write all. */
   private writeAll(budgets: Budget[]): void {
     const dir = path.dirname(DATA_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(DATA_FILE, JSON.stringify(budgets, null, 2), 'utf-8');
   }
 
+  /** Provides to response. */
   private toResponse(budget: Budget): BudgetResponse {
     return {
       monthlyLimit: budget.monthlyLimit,

@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { TransactionType } from '../transaction-type';
@@ -13,37 +16,55 @@ const validCreate = {
 };
 
 describe('expense DTO transaction type validation', () => {
-  it('accepts expense and income create types', async () => {
+  it('accepts expense and income create types' /** Checks that accepts expense and income create types. */, async () => {
     for (const type of [TransactionType.Expense, TransactionType.Income]) {
-      const errors = await validate(plainToInstance(CreateExpenseDto, { ...validCreate, type }));
+      const errors = await validate(
+        plainToInstance(CreateExpenseDto, { ...validCreate, type }),
+      );
       expect(errors).toHaveLength(0);
     }
   });
 
-  it('allows merchant to be omitted or blank', async () => {
+  it('allows merchant to be omitted or blank' /** Checks that allows merchant to be omitted or blank. */, async () => {
     const { merchant: _merchant, ...withoutMerchant } = validCreate;
-    await expect(validate(plainToInstance(CreateExpenseDto, withoutMerchant))).resolves.toHaveLength(0);
-    await expect(validate(plainToInstance(CreateExpenseDto, { ...validCreate, merchant: '' }))).resolves.toHaveLength(0);
-    await expect(validate(plainToInstance(UpdateExpenseDto, { merchant: '' }))).resolves.toHaveLength(0);
+    await expect(
+      validate(plainToInstance(CreateExpenseDto, withoutMerchant)),
+    ).resolves.toHaveLength(0);
+    await expect(
+      validate(
+        plainToInstance(CreateExpenseDto, { ...validCreate, merchant: '' }),
+      ),
+    ).resolves.toHaveLength(0);
+    await expect(
+      validate(plainToInstance(UpdateExpenseDto, { merchant: '' })),
+    ).resolves.toHaveLength(0);
   });
 
-  it('rejects a missing create type', async () => {
+  it('rejects a missing create type' /** Checks that rejects a missing create type. */, async () => {
     const { type: _type, ...withoutType } = validCreate;
-    const errors = await validate(plainToInstance(CreateExpenseDto, withoutType));
+    const errors = await validate(
+      plainToInstance(CreateExpenseDto, withoutType),
+    );
 
     expect(errors.some((error) => error.property === 'type')).toBe(true);
   });
 
-  it('rejects an unsupported create type', async () => {
-    const errors = await validate(plainToInstance(CreateExpenseDto, { ...validCreate, type: 'transfer' }));
+  it('rejects an unsupported create type' /** Checks that rejects an unsupported create type. */, async () => {
+    const errors = await validate(
+      plainToInstance(CreateExpenseDto, { ...validCreate, type: 'transfer' }),
+    );
 
     expect(errors.some((error) => error.property === 'type')).toBe(true);
   });
 
-  it('allows update type to be omitted and rejects unsupported values', async () => {
-    await expect(validate(plainToInstance(UpdateExpenseDto, { amount: 200 }))).resolves.toHaveLength(0);
+  it('allows update type to be omitted and rejects unsupported values' /** Checks that allows update type to be omitted and rejects unsupported values. */, async () => {
+    await expect(
+      validate(plainToInstance(UpdateExpenseDto, { amount: 200 })),
+    ).resolves.toHaveLength(0);
 
-    const errors = await validate(plainToInstance(UpdateExpenseDto, { type: 'transfer' }));
+    const errors = await validate(
+      plainToInstance(UpdateExpenseDto, { type: 'transfer' }),
+    );
     expect(errors.some((error) => error.property === 'type')).toBe(true);
   });
 });

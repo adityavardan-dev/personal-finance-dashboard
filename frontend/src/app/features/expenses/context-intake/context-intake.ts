@@ -18,6 +18,7 @@ import { AppLayout } from '../../../shared/app-layout/app-layout';
 import { CreateExpensePayload, ExpenseService, TransactionType } from '../expense.service';
 import { ContextIntakeSessionService } from './context-intake-session.service';
 import { createLocalId } from '../../../shared/local-id';
+import { RequestTrace } from '../../../core/request-trace';
 
 type IntakeStatus = 'idle' | 'parsing' | 'draft' | 'saving' | 'error';
 type SplitResolution = '' | 'personal' | 'split';
@@ -26,6 +27,8 @@ type DraftSaveStatus = 'draft' | 'saving' | 'saved' | 'error';
 
 interface ChatMessage {
   id: string;
+  conversationId?: string;
+  requestId?: string;
   role: ChatRole;
   text: string;
   createdAt: string;
@@ -124,6 +127,7 @@ export class ContextIntakeComponent {
   protected readonly incomeCategories = ['Salary', 'Freelance', 'Refund', 'Other'];
   protected conversationId: string = createLocalId();
   protected expiresAt = '';
+  private activeTrace: RequestTrace | null = null;
 
   constructor() {
     this.budgetStore.load();
@@ -154,30 +158,50 @@ export class ContextIntakeComponent {
   protected submitMessage(): void {
     const text = this.rawText.trim();
     if (!text || this.status() === 'parsing' || this.status() === 'saving') return;
-    this.addMessage('user', text);
+    const trace: RequestTrace = {
+      conversationId: this.conversationId,
+      requestId: createLocalId(),
+    };
+    this.addMessage('user', text, undefined, undefined, trace);
     this.rawText = '';
     this.status.set('parsing');
     this.errorMessage.set('');
+    this.persistConversation();
+    this.activeTrace = trace;
 
-    if (this.applySplitDateFollowUp(text)) return;
+    if (/^\s*(?:hi|hello|hey)(?:\s+there)?[!.,?\s]*$/i.test(text)) {
+      this.addMessage(
+        'assistant',
+        this.greetingPrompt(),
+      );
+      this.status.set(this.drafts().length ? 'draft' : 'idle');
+      this.persistConversation();
+      return;
+    }
+
+    if (this.applySplitDateFollowUp(text, trace)) return;
 
     if (this.splitMode || /\b(split|share|owes|owed|among|between)\b/i.test(text)) {
-      this.previewSplitMessage(text);
+      this.previewSplitMessage(text, trace);
       return;
     }
 
     if (this.shouldTreatAsFollowUp(text)) {
-      this.applyFollowUp(text);
+      this.applyFollowUp(text, trace);
       return;
     }
 
-    this.parserService.parseBatch(text).subscribe({
-      next: (result) => this.addParsedBatch(result),
-      error: () => this.handleParseError(),
+    this.parserService.parseBatch(text, trace).subscribe({
+      next: (result) => {
+        if (this.isActiveTurn(trace)) this.addParsedBatch(result, trace);
+      },
+      error: () => {
+        if (this.isActiveTurn(trace)) this.handleParseError(trace);
+      },
     });
   }
 
-  private previewSplitMessage(text: string): void {
+  private previewSplitMessage(text: string, trace: RequestTrace): void {
     const draft = parseSplitPrompt(text);
     if (!draft) {
       this.addMessage(
@@ -189,14 +213,18 @@ export class ContextIntakeComponent {
       return;
     }
     const service = this.peerSplits;
-    service.preview(draft.input).subscribe({
+    service.preview(draft.input, trace).subscribe({
       next: (result) => {
+        if (!this.isActiveTurn(trace)) return;
         const title =
           text.match(/\bfor\s+([A-Za-z][A-Za-z ]{1,35})/i)?.[1]?.trim() || 'Group split';
         const date =
           text.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0] ??
           (/\btoday\b/i.test(text) ? localDate() : null);
-        const id = service.addPreview(title, draft.input.participants, result, { date, category: title });
+        const id = service.addPreview(title, draft.input.participants, result, {
+          date,
+          category: title,
+        });
         this.addMessage(
           'assistant',
           'Split preview ready. Open the card to review everyone’s share.',
@@ -214,6 +242,7 @@ export class ContextIntakeComponent {
         this.persistConversation();
       },
       error: (response: { error?: { issues?: { message: string }[] } }) => {
+        if (!this.isActiveTurn(trace)) return;
         this.addMessage(
           'assistant',
           response.error?.issues?.map((issue) => issue.message).join(' ') ||
@@ -230,7 +259,7 @@ export class ContextIntakeComponent {
     return preview ? (this.peerSplits.getGroup(preview.id)?.date ?? preview.date) : null;
   }
 
-  private applySplitDateFollowUp(text: string): boolean {
+  private applySplitDateFollowUp(text: string, trace: RequestTrace): boolean {
     const date = parseSplitDateFollowUp(text);
     if (!date) return false;
     const previews = this.messages()
@@ -238,9 +267,13 @@ export class ContextIntakeComponent {
       .filter((preview) => this.peerSplits.getGroup(preview.id));
     if (!previews.length) return false;
     const missingDates = previews.filter((preview) => !this.peerSplits.getGroup(preview.id)?.date);
-    const targets = missingDates.length === 1 ? missingDates : previews.length === 1 ? previews : [];
+    const targets =
+      missingDates.length === 1 ? missingDates : previews.length === 1 ? previews : [];
     if (targets.length !== 1) {
-      this.addMessage('assistant', 'Which split should I update? Open its details and set the date there.');
+      this.addMessage(
+        'assistant',
+        'Which split should I update? Open its details and set the date there.',
+      );
     } else if (this.peerSplits.updateDate(targets[0].id, date)) {
       this.messages.update((messages) =>
         messages.map((message) =>
@@ -251,7 +284,10 @@ export class ContextIntakeComponent {
       );
       this.addMessage('assistant', `Date updated to ${date}. Review the split details.`);
     } else {
-      this.addMessage('assistant', 'I could not update that split date. Open its details to edit it.');
+      this.addMessage(
+        'assistant',
+        'I could not update that split date. Open its details to edit it.',
+      );
     }
     this.status.set(this.drafts().length ? 'draft' : 'idle');
     this.persistConversation();
@@ -345,6 +381,7 @@ export class ContextIntakeComponent {
 
   protected startNewConversation(): void {
     this.session.clear();
+    this.activeTrace = null;
     this.conversationId = createLocalId();
     this.expiresAt = '';
     this.messages.set([]);
@@ -361,7 +398,16 @@ export class ContextIntakeComponent {
     });
   }
 
-  private addParsedBatch(result: ParseBatchResult): void {
+  private addParsedBatch(result: ParseBatchResult, trace: RequestTrace): void {
+    if (result.intent === 'GREETING') {
+      this.addMessage(
+        'assistant',
+        this.greetingPrompt(),
+      );
+      this.status.set(this.drafts().length ? 'draft' : 'idle');
+      this.persistConversation();
+      return;
+    }
     const offset = this.drafts().length;
     const added = result.drafts.map((draft, index) => this.createDraft(draft, offset + index));
     this.drafts.update((drafts) => [...drafts, ...added]);
@@ -369,18 +415,21 @@ export class ContextIntakeComponent {
     const attention = added.length - ready;
     this.addMessage(
       'assistant',
-      attention
-        ? `I created ${added.length} ${this.pluralize('transaction draft', added.length)}. ${result.clarificationPrompt ?? `${attention} ${attention === 1 ? 'needs' : 'need'} attention; expand the cards or reply here to complete them.`}`
-        : `I created ${added.length} ready ${this.pluralize('transaction draft', added.length)}. Review the details before saving.`,
+      `${result.interpretationSource === 'MODEL' ? 'AI helped separate your expenses. ' : ''}${
+        attention
+          ? `I created ${added.length} ${this.pluralize('transaction draft', added.length)}. ${result.clarificationPrompt ?? `${attention} ${attention === 1 ? 'needs' : 'need'} attention; expand the cards or reply here to complete them.`}`
+          : `I created ${added.length} ready ${this.pluralize('transaction draft', added.length)}. Review the details before saving.`
+      }`,
     );
     this.status.set('draft');
     this.persistConversation();
     this.focusFirstMissingControl(result.drafts, added);
   }
 
-  private applyFollowUp(text: string): void {
-    this.parserService.parse(text).subscribe({
+  private applyFollowUp(text: string, trace: RequestTrace): void {
+    this.parserService.parse(text, trace).subscribe({
       next: (parsed) => {
+        if (!this.isActiveTurn(trace)) return;
         const targets = this.resolveTargets(text);
         if (!targets.length) {
           this.addMessage(
@@ -402,7 +451,9 @@ export class ContextIntakeComponent {
         this.status.set('draft');
         this.persistConversation();
       },
-      error: () => this.handleParseError(),
+      error: () => {
+        if (this.isActiveTurn(trace)) this.handleParseError(trace);
+      },
     });
   }
 
@@ -643,14 +694,27 @@ export class ContextIntakeComponent {
     return missing;
   }
 
-  private handleParseError(): void {
-    this.status.set(this.drafts().length ? 'draft' : 'error');
+  private handleParseError(trace: RequestTrace): void {
     this.errorMessage.set("We couldn't process that message. Your existing drafts are unchanged.");
     this.addMessage(
       'assistant',
       'I could not process that message. Try a specific instruction or edit a transaction card.',
     );
+    this.status.set(this.drafts().length ? 'draft' : 'error');
     this.persistConversation();
+  }
+
+  private isActiveTurn(trace: RequestTrace): boolean {
+    return (
+      this.conversationId === trace.conversationId &&
+      this.activeTrace?.requestId === trace.requestId
+    );
+  }
+
+  private greetingPrompt(): string {
+    return this.splitMode
+      ? 'Hi! How much did you spend today, and who are you splitting it with?'
+      : 'Hi! How much did you spend today?';
   }
 
   private createSavedSummary(drafts: IntakeDraft[]): SavedTransactionSummary {
@@ -675,11 +739,16 @@ export class ContextIntakeComponent {
     text: string,
     savedSummary?: SavedTransactionSummary,
     splitPreview?: ChatMessage['splitPreview'],
+    trace?: RequestTrace,
   ): void {
+    const messageTrace =
+      trace ?? (role === 'assistant' && this.status() === 'parsing' ? this.activeTrace : null);
     this.messages.update((messages) => [
       ...messages,
       {
         id: createLocalId(),
+        conversationId: messageTrace?.conversationId,
+        requestId: messageTrace?.requestId,
         role,
         text,
         createdAt: new Date().toISOString(),

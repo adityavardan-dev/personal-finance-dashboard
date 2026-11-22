@@ -1,4 +1,15 @@
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
+/**
+ * Purpose: Defines and validates the data shape accepted or returned by this backend feature.
+ */
+import {
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { TransactionType } from '../transaction-type';
 
 export class CreateExpenseDto {

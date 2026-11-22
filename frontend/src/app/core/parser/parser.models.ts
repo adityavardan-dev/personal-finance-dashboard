@@ -13,6 +13,8 @@ export type ParserCategory =
   | 'Other';
 
 export interface ParseResult {
+  conversationId?: string;
+  requestId?: string;
   status: ParserStatus;
   draft: {
     amount: number | null;
@@ -35,7 +37,13 @@ export interface ParseRequest {
 }
 
 export interface ParseBatchResult {
+  intent?: 'GREETING';
+  conversationId?: string;
+  requestId?: string;
   status: ParserStatus;
   drafts: ParseResult[];
   clarificationPrompt?: string;
+  modelAttempted?: boolean;
+  modelAccepted?: boolean;
+  interpretationSource?: 'LOCAL' | 'MODEL';
 }

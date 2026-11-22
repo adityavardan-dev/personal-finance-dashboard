@@ -1,3 +1,6 @@
+/**
+ * Purpose: Handles user profile and preference operations.
+ */
 import { Module } from '@nestjs/common';
 import { BudgetsModule } from '../budgets/budgets.module';
 import { UsersController } from './users.controller';

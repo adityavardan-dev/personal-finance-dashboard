@@ -1,7 +1,10 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { isAllowedOrigin } from './cors-origin';
 
 describe('isAllowedOrigin', () => {
-  it('allows requests without a browser origin', () => {
+  it('allows requests without a browser origin' /** Checks that allows requests without a browser origin. */, () => {
     expect(isAllowedOrigin(undefined)).toBe(true);
   });
 

@@ -1,10 +1,35 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { ParserService } from './parser.service';
 
 describe('ParserService', () => {
   const service = new ParserService();
   const referenceDate = new Date(2026, 10, 9, 12, 0, 0);
 
-  it('computes a split expense and requires date clarification without inventing a date', () => {
+  it.each(['Hi', 'hello!', 'HEY there.', '  hi,  '])(
+    'does not create a transaction draft for greeting "%s"',
+    (text) => {
+      expect(service.parseBatch(text, referenceDate)).toMatchObject({
+        intent: 'GREETING',
+        status: 'NEEDS_CLARIFICATION',
+        drafts: [],
+        clarificationPrompt: 'Hi! How much did you spend today?',
+      });
+    },
+  );
+
+  it('continues parsing a greeting followed by a transaction' /** Checks that continues parsing a greeting followed by a transaction. */, () => {
+    const result = service.parseBatch(
+      'Hi, I spent INR 200 on coffee today',
+      referenceDate,
+    );
+    expect(result.intent).toBeUndefined();
+    expect(result.drafts).toHaveLength(1);
+    expect(result.drafts[0].draft.amount).toBe(200);
+  });
+
+  it('computes a split expense and requires date clarification without inventing a date' /** Checks that computes a split expense and requires date clarification without inventing a date. */, () => {
     const result = service.parse(
       'Had lunch with flatmates at Meghana ₹1200 split by 3',
       referenceDate,
@@ -27,7 +52,7 @@ describe('ParserService', () => {
     });
   });
 
-  it('parses an authenticated UPI-style notification into a ready draft', () => {
+  it('parses an authenticated UPI-style notification into a ready draft' /** Checks that parses an authenticated UPI-style notification into a ready draft. */, () => {
     const result = service.parse(
       'Paid INR 1,250 to UBER on 2026-11-09',
       referenceDate,
@@ -55,7 +80,7 @@ describe('ParserService', () => {
     expect(service.parse(text, referenceDate).draft.date).toBe(expectedDate);
   });
 
-  it('supports slash split syntax and rounds the personal amount to two decimals', () => {
+  it('supports slash split syntax and rounds the personal amount to two decimals' /** Checks that supports slash split syntax and rounds the personal amount to two decimals. */, () => {
     const result = service.parse(
       'Dinner at Bistro ₹1,000 / 3 today',
       referenceDate,
@@ -66,7 +91,7 @@ describe('ParserService', () => {
     expect(result.draft.splitFactor).toBe(3);
   });
 
-  it('supports half as a split factor of two', () => {
+  it('supports half as a split factor of two' /** Checks that supports half as a split factor of two. */, () => {
     const result = service.parse(
       'Movie at PVR Rs 900 half today',
       referenceDate,
@@ -97,14 +122,14 @@ describe('ParserService', () => {
     expect(result.draft.currency).toBe(currency);
   });
 
-  it('leaves currency null for a bare amount so the app preference can apply', () => {
+  it('leaves currency null for a bare amount so the app preference can apply' /** Checks that leaves currency null for a bare amount so the app preference can apply. */, () => {
     const result = service.parse('Spent 1200 on lunch today', referenceDate);
 
     expect(result.draft.amount).toBe(1200);
     expect(result.draft.currency).toBeNull();
   });
 
-  it('parses a bare amount after a spending verb', () => {
+  it('parses a bare amount after a spending verb' /** Checks that parses a bare amount after a spending verb. */, () => {
     const result = service.parse('I spent 3000 on movies today', referenceDate);
 
     expect(result.status).toBe('READY');
@@ -117,7 +142,7 @@ describe('ParserService', () => {
     });
   });
 
-  it('maps plural snacks to Food & Dining', () => {
+  it('maps plural snacks to Food & Dining' /** Checks that maps plural snacks to Food & Dining. */, () => {
     const result = service.parse('spent 200 on snacks today', referenceDate);
 
     expect(result.draft).toMatchObject({
@@ -128,7 +153,7 @@ describe('ParserService', () => {
     expect(result.status).toBe('READY');
   });
 
-  it('requires amount clarification when currencies conflict', () => {
+  it('requires amount clarification when currencies conflict' /** Checks that requires amount clarification when currencies conflict. */, () => {
     const result = service.parse('Lunch was $100 or €100 today', referenceDate);
 
     expect(result.draft.amount).toBeNull();
@@ -136,7 +161,7 @@ describe('ParserService', () => {
     expect(result.missingFields).toEqual(['amount']);
   });
 
-  it('does not guess when category tokens are ambiguous', () => {
+  it('does not guess when category tokens are ambiguous' /** Checks that does not guess when category tokens are ambiguous. */, () => {
     const result = service.parse(
       'Paid ₹500 for lunch and an Uber today',
       referenceDate,
@@ -150,7 +175,7 @@ describe('ParserService', () => {
     );
   });
 
-  it('does not guess when multiple currency amounts are present', () => {
+  it('does not guess when multiple currency amounts are present' /** Checks that does not guess when multiple currency amounts are present. */, () => {
     const result = service.parse(
       'Food bill ₹500, paid ₹450 today',
       referenceDate,
@@ -160,14 +185,14 @@ describe('ParserService', () => {
     expect(result.missingFields).toContain('amount');
   });
 
-  it('rejects an impossible explicit date instead of normalizing it', () => {
+  it('rejects an impossible explicit date instead of normalizing it' /** Checks that rejects an impossible explicit date instead of normalizing it. */, () => {
     const result = service.parse('Lunch ₹200 on 2026-02-30', referenceDate);
 
     expect(result.draft.date).toBeNull();
     expect(result.missingFields).toEqual(['date']);
   });
 
-  it('requires clarification when explicit dates conflict', () => {
+  it('requires clarification when explicit dates conflict' /** Checks that requires clarification when explicit dates conflict. */, () => {
     const result = service.parse('Lunch ₹200 on Nov 8 or Nov 9', referenceDate);
 
     expect(result.status).toBe('NEEDS_CLARIFICATION');
@@ -178,7 +203,7 @@ describe('ParserService', () => {
     );
   });
 
-  it('requires an exact date for vague date language without inferring a split', () => {
+  it('requires an exact date for vague date language without inferring a split' /** Checks that requires an exact date for vague date language without inferring a split. */, () => {
     const result = service.parse(
       'we spent 5000 on travelling few days ago',
       referenceDate,
@@ -216,7 +241,7 @@ describe('ParserService', () => {
     },
   );
 
-  it('requires a split decision for shared-expense wording with a precise date', () => {
+  it('requires a split decision for shared-expense wording with a precise date' /** Checks that requires a split decision for shared-expense wording with a precise date. */, () => {
     const result = service.parse(
       'we spent 5000 on travelling today',
       referenceDate,
@@ -231,7 +256,7 @@ describe('ParserService', () => {
     expect(result.draft.originalAmount).toBeUndefined();
   });
 
-  it('parses currency words and an explicitly named pair without unnecessary clarification', () => {
+  it('parses currency words and an explicitly named pair without unnecessary clarification' /** Checks that parses currency words and an explicitly named pair without unnecessary clarification. */, () => {
     const result = service.parse(
       'me and Harsha spent 50 dollars at a bar today',
       referenceDate,
@@ -252,7 +277,7 @@ describe('ParserService', () => {
     });
   });
 
-  it('parses a numeric relative date and currency word as exact context', () => {
+  it('parses a numeric relative date and currency word as exact context' /** Checks that parses a numeric relative date and currency word as exact context. */, () => {
     const result = service.parse(
       'breakfast goa 10000 rupees 3 days ago',
       referenceDate,
@@ -283,7 +308,7 @@ describe('ParserService', () => {
     expect(result.missingFields).toEqual([]);
   });
 
-  it('uses a compatible precise relative date when vague month context is also present', () => {
+  it('uses a compatible precise relative date when vague month context is also present' /** Checks that uses a compatible precise relative date when vague month context is also present. */, () => {
     const result = service.parse(
       'I spent 3000 last month 30 days ago',
       new Date('2026-11-11T12:00:00+05:30'),
@@ -298,7 +323,7 @@ describe('ParserService', () => {
     expect(result.missingFields).toEqual(['category']);
   });
 
-  it('requires date clarification when precise and vague month context conflict', () => {
+  it('requires date clarification when precise and vague month context conflict' /** Checks that requires date clarification when precise and vague month context conflict. */, () => {
     const result = service.parse(
       'I spent 3000 last month 3 days ago',
       new Date('2026-11-11T12:00:00+05:30'),
@@ -309,14 +334,14 @@ describe('ParserService', () => {
     expect(result.missingFields).toEqual(['date', 'category']);
   });
 
-  it('clamps calendar-relative years to a valid local date', () => {
+  it('clamps calendar-relative years to a valid local date' /** Checks that clamps calendar-relative years to a valid local date. */, () => {
     const leapDay = new Date(2024, 1, 29, 12, 0, 0);
     const result = service.parse('breakfast 10000 rupees 1 year ago', leapDay);
 
     expect(result.draft.date).toBe('2023-02-28');
   });
 
-  it('resolves half an hour ago in the user timezone across midnight', () => {
+  it('resolves half an hour ago in the user timezone across midnight' /** Checks that resolves half an hour ago in the user timezone across midnight. */, () => {
     const result = service.parse(
       'half hour ago spent 350 on swiggy food order',
       new Date('2026-11-09T18:45:00.000Z'),
@@ -351,7 +376,7 @@ describe('ParserService', () => {
     expect(result.draft.date).toBe(expectedDate);
   });
 
-  it('rejects an invalid user timezone', () => {
+  it('rejects an invalid user timezone' /** Checks that rejects an invalid user timezone. */, () => {
     expect(() =>
       service.parse('Lunch 200 today', referenceDate, 'Mars/Olympus'),
     ).toThrow('Unsupported timeZone');
@@ -384,7 +409,7 @@ describe('ParserService', () => {
     expect(service.parse(text, referenceDate).draft.category).toBe(category);
   });
 
-  it('keeps the parser non-destructive by returning only a draft', () => {
+  it('keeps the parser non-destructive by returning only a draft' /** Checks that keeps the parser non-destructive by returning only a draft. */, () => {
     const result = service.parse('Lunch ₹400 today', referenceDate);
 
     expect(result.draft).not.toHaveProperty('id');
@@ -392,7 +417,7 @@ describe('ParserService', () => {
     expect(result.draft).not.toHaveProperty('createdAt');
   });
 
-  it('creates separate drafts for repeated transaction clauses', () => {
+  it('creates separate drafts for repeated transaction clauses' /** Checks that creates separate drafts for repeated transaction clauses. */, () => {
     const result = service.parseBatch(
       'spent 350 on food, spent 500 on petrol and spent 50 on sweets today',
       referenceDate,
@@ -413,7 +438,7 @@ describe('ParserService', () => {
     ).toBe(true);
   });
 
-  it('applies one precise trailing date to every draft in a batch', () => {
+  it('applies one precise trailing date to every draft in a batch' /** Checks that applies one precise trailing date to every draft in a batch. */, () => {
     const result = service.parseBatch(
       'spent 350 on food, spent 500 on petrol and spent 50 on sweets yesterday',
       referenceDate,
@@ -425,7 +450,7 @@ describe('ParserService', () => {
     expect(result.drafts.every((draft) => draft.status === 'READY')).toBe(true);
   });
 
-  it('keeps all batch drafts in clarification when the shared date is absent', () => {
+  it('keeps all batch drafts in clarification when the shared date is absent' /** Checks that keeps all batch drafts in clarification when the shared date is absent. */, () => {
     const result = service.parseBatch(
       'spent 350 on food, spent 500 on petrol and spent 50 on sweets',
       referenceDate,
@@ -438,7 +463,7 @@ describe('ParserService', () => {
     ).toBe(true);
   });
 
-  it('inherits the expense verb for a shortened third clause', () => {
+  it('inherits the expense verb for a shortened third clause' /** Checks that inherits the expense verb for a shortened third clause. */, () => {
     const result = service.parseBatch(
       'I spent 400 on petrol today, spent 1000 on food orders yesterday and 500 on movie tickets 3 days ago',
       referenceDate,
@@ -463,7 +488,7 @@ describe('ParserService', () => {
     );
   });
 
-  it('separates repeated transaction verbs when punctuation is missing', () => {
+  it('separates repeated transaction verbs when punctuation is missing' /** Checks that separates repeated transaction verbs when punctuation is missing. */, () => {
     const result = service.parseBatch(
       'spent 400 on petrol today spent 1000 on food yesterday spent 500 on movies 3 days ago',
       referenceDate,
@@ -475,7 +500,7 @@ describe('ParserService', () => {
     ]);
   });
 
-  it('normalizes curated misspellings without changing the original notes', () => {
+  it('normalizes curated misspellings without changing the original notes' /** Checks that normalizes curated misspellings without changing the original notes. */, () => {
     const result = service.parseBatch(
       'spnet 400 on petorl todya and 500 on moveis yestday',
       referenceDate,
@@ -496,7 +521,7 @@ describe('ParserService', () => {
     });
   });
 
-  it('does not split a comma-formatted amount', () => {
+  it('does not split a comma-formatted amount' /** Checks that does not split a comma-formatted amount. */, () => {
     const result = service.parseBatch(
       'spent 1,200 on food today',
       referenceDate,
@@ -506,7 +531,7 @@ describe('ParserService', () => {
     expect(result.drafts[0].draft.amount).toBe(1200);
   });
 
-  it('requests boundaries when several amounts cannot be separated safely', () => {
+  it('requests boundaries when several amounts cannot be separated safely' /** Checks that requests boundaries when several amounts cannot be separated safely. */, () => {
     const result = service.parseBatch(
       '400 petrol 1000 food 500 movies',
       referenceDate,
