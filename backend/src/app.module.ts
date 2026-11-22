@@ -9,9 +9,11 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { BudgetsModule } from './budgets/budgets.module';
 import { ParserModule } from './parser/parser.module';
 import { PeerSplitsModule } from './peer-splits/peer-splits.module';
+import { SupabaseModule } from './supabase/supabase.module';
 
 @Module({
   imports: [
+    SupabaseModule,
     AuthModule,
     ExpensesModule,
     BudgetsModule,

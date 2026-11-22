@@ -1,119 +1,55 @@
-/**
- * Purpose: Handles user profile and preference operations.
- */
+/** Reads the authenticated user's profile and preferences from Supabase. */
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { BudgetsService } from '../budgets/budgets.service';
 import { CurrencyCode } from '../budgets/currency-code';
-import * as fs from 'fs';
-import * as path from 'path';
-
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  password: string;
-}
-
-const DATA_FILE = path.join(process.cwd(), 'data', 'users.json');
+import { SupabaseService } from '../supabase/supabase.service';
 
 export interface UserPublicProfile {
-  id: number;
+  id: string;
   username: string;
   email: string;
-  preferences: { currency: CurrencyCode; theme: 'system' };
+  preferences: { currency: CurrencyCode; theme: 'system' | 'light' | 'dark' };
+}
+
+interface ProfileRow {
+  id: string;
+  username: string;
+  email: string;
+  user_preferences: Array<{ currency: CurrencyCode; theme: 'system' | 'light' | 'dark' }>;
 }
 
 @Injectable()
 export class UsersService {
-  /** Creates this class and receives its required dependencies. */
-  constructor(private readonly budgetsService: BudgetsService) {}
+  constructor(private readonly supabase: SupabaseService) {}
 
-  /** Returns read all. */
-  private readAll(): User[] {
-    try {
-      if (!fs.existsSync(DATA_FILE)) return [];
-      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      return JSON.parse(raw) as User[];
-    } catch {
-      return [];
-    }
-  }
-
-  /** Handles write all. */
-  private writeAll(users: User[]): void {
-    const dir = path.dirname(DATA_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(DATA_FILE, JSON.stringify(users, null, 2), 'utf-8');
-  }
-
-  /** Returns find by email. */
-  findByEmail(email: string): User | undefined {
-    const normalizedEmail = this.normalizeEmail(email);
-    return this.readAll().find((user) => user.email === normalizedEmail);
-  }
-
-  /** Returns find by id. */
-  findById(id: number): User | undefined {
-    return this.readAll().find((user) => user.id === id);
-  }
-
-  /** Handles create. */
-  create(username: string, email: string, password: string): User {
-    const users = this.readAll();
-    const normalizedEmail = this.normalizeEmail(email);
-
-    const user: User = {
-      id: this.generateId(users),
-      username: username.trim(),
-      email: normalizedEmail,
-      password,
+  /** Returns the RLS-protected profile for the current Supabase user. */
+  async getPublicProfile(id: string, accessToken: string): Promise<UserPublicProfile> {
+    const rows = await this.supabase.data<ProfileRow[]>(
+      accessToken,
+      `profiles?id=eq.${encodeURIComponent(id)}&select=id,username,email,user_preferences(currency,theme)`,
+    );
+    const profile = rows[0];
+    if (!profile) throw new NotFoundException('User not found');
+    const preferences = profile.user_preferences[0] ?? {
+      currency: CurrencyCode.INR,
+      theme: 'system' as const,
     };
-
-    users.push(user);
-    this.writeAll(users);
-    return user;
+    return { id: profile.id, username: profile.username, email: profile.email, preferences };
   }
 
-  /** Returns get public profile. */
-  getPublicProfile(id: number): UserPublicProfile {
-    const user = this.findById(id);
-    if (!user) throw new NotFoundException('User not found');
-    const budget = this.budgetsService.getMine(id);
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      preferences: { currency: budget.currency, theme: 'system' },
-    };
-  }
-
-  /** Handles update preferences. */
-  updatePreferences(id: number, currency: CurrencyCode) {
-    const user = this.findById(id);
-    if (!user) throw new NotFoundException('User not found');
-    const budget = this.budgetsService.getMine(id);
-    this.budgetsService.upsert(id, {
-      monthlyLimit: budget.monthlyLimit,
-      categoryLimits: budget.categoryLimits,
-      currency,
-    });
-    return { preferences: { currency, theme: 'system' as const } };
-  }
-
-  /** Handles normalize email. */
-  normalizeEmail(email: string): string {
-    return email.trim().toLowerCase();
-  }
-
-  /** Provides generate id. */
-  private generateId(users: User[]): number {
-    const ids = new Set(users.map((user) => user.id));
-    let id = users.length + 1;
-    while (ids.has(id)) {
-      id += 1;
-    }
-    return id;
+  /** Updates only the current user's preference row through RLS. */
+  async updatePreferences(id: string, accessToken: string, currency: CurrencyCode) {
+    const rows = await this.supabase.data<
+      Array<{ currency: CurrencyCode; theme: 'system' | 'light' | 'dark' }>
+    >(
+      accessToken,
+      `user_preferences?user_id=eq.${encodeURIComponent(id)}&select=currency,theme`,
+      {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ currency }),
+      },
+    );
+    if (!rows[0]) throw new NotFoundException('User preferences not found');
+    return { preferences: rows[0] };
   }
 }

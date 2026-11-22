@@ -8,10 +8,17 @@ import { join } from 'node:path';
 import { loadEnvFile } from 'node:process';
 import { isAllowedOrigin } from './cors-origin';
 
-try {
-  loadEnvFile(join(__dirname, '..', '..', '.env'));
-} catch (error) {
-  if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+for (const envPath of [
+  join(process.cwd(), '.env'),
+  join(process.cwd(), '.env.local'),
+  join(__dirname, '..', '..', '.env'),
+  join(__dirname, '..', '..', '.env.local'),
+]) {
+  try {
+    loadEnvFile(envPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
 }
 
 /** Handles bootstrap. */

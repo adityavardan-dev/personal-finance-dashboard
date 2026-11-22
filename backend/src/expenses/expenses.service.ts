@@ -1,19 +1,17 @@
-/**
- * Purpose: Handles expense request routing, validation, and persistence.
- */
+/** Persists personal expense records in Supabase using authenticated RLS requests. */
 import { Injectable, NotFoundException } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
-import { randomUUID } from 'crypto';
+import { CurrencyCode } from '../budgets/currency-code';
+import { SupabaseService } from '../supabase/supabase.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { TransactionType } from './transaction-type';
 
 export interface Expense {
   id: string;
-  userId: number;
+  userId: string;
   type: TransactionType;
   amount: number;
+  currency: CurrencyCode;
   category: string;
   merchant: string;
   date: string;
@@ -21,120 +19,133 @@ export interface Expense {
   createdAt: string;
 }
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'expenses.json');
+interface ExpenseRow {
+  id: string;
+  user_id: string;
+  type: TransactionType;
+  amount_minor: number;
+  currency: CurrencyCode;
+  category: string;
+  merchant: string;
+  transaction_date: string;
+  description: string | null;
+  created_at: string;
+}
 
 @Injectable()
 export class ExpensesService {
-  /** Returns read all. */
-  private readAll(): Expense[] {
-    try {
-      if (!fs.existsSync(DATA_FILE)) return [];
-      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      const expenses = JSON.parse(raw) as Array<
-        Omit<Expense, 'type'> & { type?: TransactionType }
-      >;
-      return expenses.map((expense) => ({
-        ...expense,
-        type: expense.type ?? TransactionType.Expense,
-      }));
-    } catch {
-      return [];
-    }
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async create(
+    userId: string,
+    accessToken: string,
+    dto: CreateExpenseDto,
+  ): Promise<Expense> {
+    return (await this.createBatch(userId, accessToken, [dto]))[0];
   }
 
-  /** Handles write all. */
-  private writeAll(expenses: Expense[]): void {
-    const dir = path.dirname(DATA_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(DATA_FILE, JSON.stringify(expenses, null, 2), 'utf-8');
-  }
-
-  /** Handles create. */
-  create(userId: number, dto: CreateExpenseDto): Expense {
-    const expenses = this.readAll();
-    const expense: Expense = {
-      id: randomUUID(),
-      userId,
-      type: dto.type,
-      amount: dto.amount,
-      category: dto.category,
-      merchant: dto.merchant?.trim() ?? '',
-      date: dto.date,
-      note: dto.note,
-      createdAt: new Date().toISOString(),
-    };
-    expenses.push(expense);
-    this.writeAll(expenses);
-    return expense;
-  }
-
-  /** Handles create batch. */
-  createBatch(userId: number, dtos: CreateExpenseDto[]): Expense[] {
-    const expenses = this.readAll();
-    const createdAt = new Date().toISOString();
-    const created = dtos.map((dto) => ({
-      id: randomUUID(),
-      userId,
-      type: dto.type,
-      amount: dto.amount,
-      category: dto.category,
-      merchant: dto.merchant?.trim() ?? '',
-      date: dto.date,
-      note: dto.note,
-      createdAt,
-    }));
-    expenses.push(...created);
-    this.writeAll(expenses);
-    return created;
-  }
-
-  /** Returns find by user. */
-  findByUser(userId: number): Expense[] {
-    return this.readAll().filter((e) => e.userId === userId);
-  }
-
-  /** Returns find one. */
-  findOne(userId: number, id: string): Expense {
-    const expense = this.readAll().find(
-      (e) => e.id === id && e.userId === userId,
+  /** Inserts a batch atomically through one PostgREST request. */
+  async createBatch(
+    userId: string,
+    accessToken: string,
+    dtos: CreateExpenseDto[],
+  ): Promise<Expense[]> {
+    const currency = await this.currency(accessToken, userId);
+    const rows = await this.supabase.data<ExpenseRow[]>(
+      accessToken,
+      'expenses?select=*',
+      {
+        method: 'POST',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify(
+          dtos.map((dto) => ({
+            user_id: userId,
+            type: dto.type,
+            amount_minor: toMinor(dto.amount),
+            currency,
+            category: dto.category.trim(),
+            merchant: dto.merchant?.trim() ?? '',
+            transaction_date: dto.date,
+            description: dto.note?.trim() || null,
+          })),
+        ),
+      },
     );
-    if (!expense) throw new NotFoundException(`Expense ${id} not found`);
-    return expense;
+    return rows.map(toExpense);
   }
 
-  /** Handles update. */
-  update(userId: number, id: string, dto: UpdateExpenseDto): Expense {
-    const expenses = this.readAll();
-    const index = expenses.findIndex((e) => e.id === id && e.userId === userId);
-    if (index === -1) throw new NotFoundException(`Expense ${id} not found`);
-
-    const existing = expenses[index];
-    const updated: Expense = {
-      id: existing.id,
-      userId: existing.userId,
-      createdAt: existing.createdAt,
-      type: dto.type ?? existing.type,
-      amount: dto.amount ?? existing.amount,
-      category: dto.category ?? existing.category,
-      merchant: dto.merchant ?? existing.merchant,
-      date: dto.date ?? existing.date,
-      note: dto.note !== undefined ? dto.note : existing.note,
-    };
-    expenses[index] = updated;
-    this.writeAll(expenses);
-    return updated;
+  async findByUser(userId: string, accessToken: string): Promise<Expense[]> {
+    const rows = await this.supabase.data<ExpenseRow[]>(
+      accessToken,
+      `expenses?user_id=eq.${encodeURIComponent(userId)}&select=*&order=transaction_date.desc,created_at.desc`,
+    );
+    return rows.map(toExpense);
   }
 
-  /** Handles remove. */
-  remove(userId: number, id: string): Expense {
-    const expenses = this.readAll();
-    const index = expenses.findIndex((e) => e.id === id && e.userId === userId);
-    if (index === -1) throw new NotFoundException(`Expense ${id} not found`);
+  async findOne(userId: string, accessToken: string, id: string): Promise<Expense> {
+    const rows = await this.supabase.data<ExpenseRow[]>(
+      accessToken,
+      `expenses?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(userId)}&select=*`,
+    );
+    if (!rows[0]) throw new NotFoundException(`Expense ${id} not found`);
+    return toExpense(rows[0]);
+  }
 
-    const [removed] = expenses.splice(index, 1);
-    this.writeAll(expenses);
-    return removed;
+  async update(
+    userId: string,
+    accessToken: string,
+    id: string,
+    dto: UpdateExpenseDto,
+  ): Promise<Expense> {
+    const body: Record<string, unknown> = {};
+    if (dto.type !== undefined) body.type = dto.type;
+    if (dto.amount !== undefined) body.amount_minor = toMinor(dto.amount);
+    if (dto.category !== undefined) body.category = dto.category.trim();
+    if (dto.merchant !== undefined) body.merchant = dto.merchant.trim();
+    if (dto.date !== undefined) body.transaction_date = dto.date;
+    if (dto.note !== undefined) body.description = dto.note.trim() || null;
+    const rows = await this.supabase.data<ExpenseRow[]>(
+      accessToken,
+      `expenses?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(userId)}&select=*`,
+      {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!rows[0]) throw new NotFoundException(`Expense ${id} not found`);
+    return toExpense(rows[0]);
+  }
+
+  async remove(userId: string, accessToken: string, id: string): Promise<Expense> {
+    const rows = await this.supabase.data<ExpenseRow[]>(
+      accessToken,
+      `expenses?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(userId)}&select=*`,
+      { method: 'DELETE', headers: { Prefer: 'return=representation' } },
+    );
+    if (!rows[0]) throw new NotFoundException(`Expense ${id} not found`);
+    return toExpense(rows[0]);
+  }
+
+  private async currency(accessToken: string, userId: string): Promise<CurrencyCode> {
+    const rows = await this.supabase.data<Array<{ currency: CurrencyCode }>>(
+      accessToken,
+      `user_preferences?user_id=eq.${encodeURIComponent(userId)}&select=currency`,
+    );
+    return rows[0]?.currency ?? CurrencyCode.INR;
   }
 }
+
+const toMinor = (amount: number) => Math.round((amount + Number.EPSILON) * 100);
+const toExpense = (row: ExpenseRow): Expense => ({
+  id: row.id,
+  userId: row.user_id,
+  type: row.type,
+  amount: row.amount_minor / 100,
+  currency: row.currency,
+  category: row.category,
+  merchant: row.merchant,
+  date: row.transaction_date,
+  ...(row.description ? { note: row.description } : {}),
+  createdAt: row.created_at,
+});

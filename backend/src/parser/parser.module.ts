@@ -7,6 +7,11 @@ import { ParserService } from './parser.service';
 import { IntentService } from './intent.service';
 import { CloudflareIntentSegmenter } from './cloudflare-intent-segmenter';
 import { INTENT_SEGMENTER } from './intent-segmenter';
+import { CloudflareSplitInterpreter } from './cloudflare-split-interpreter';
+import { SplitIntentService } from './split-intent.service';
+import { SplitFollowUpService } from './split-follow-up.service';
+import { CloudflarePersonalFollowUp } from './cloudflare-personal-follow-up';
+import { PersonalFollowUpService } from './personal-follow-up.service';
 
 @Module({
   controllers: [ParserController],
@@ -14,6 +19,11 @@ import { INTENT_SEGMENTER } from './intent-segmenter';
     ParserService,
     IntentService,
     CloudflareIntentSegmenter,
+    CloudflareSplitInterpreter,
+    SplitIntentService,
+    SplitFollowUpService,
+    CloudflarePersonalFollowUp,
+    PersonalFollowUpService,
     { provide: INTENT_SEGMENTER, useExisting: CloudflareIntentSegmenter },
   ],
   exports: [ParserService],

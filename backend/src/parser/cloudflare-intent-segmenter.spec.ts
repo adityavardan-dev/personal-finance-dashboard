@@ -54,6 +54,7 @@ describe('CloudflareIntentSegmenter', () => {
     const request = JSON.parse(requestBody) as {
       model: string;
       response_format: { type: string; json_schema: { type: string } };
+      messages: Array<{ role: string; content: string }>;
     };
     expect(request).toMatchObject({
       model: '@cf/google/gemma-4-26b-a4b-it',
@@ -65,6 +66,8 @@ describe('CloudflareIntentSegmenter', () => {
     expect(fetchMock.mock.calls[0][1]?.headers).toEqual(
       expect.objectContaining({ Authorization: 'Bearer secret-token' }),
     );
+    expect(request.messages[0].content).toContain('You are PENNY');
+    expect(request.messages[0].content).toContain('You extract transaction boundaries');
   });
 
   it('uses the local parser when Cloudflare is not configured' /** Checks that uses the local parser when Cloudflare is not configured. */, async () => {

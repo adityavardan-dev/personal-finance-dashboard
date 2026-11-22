@@ -10,13 +10,14 @@ describe('ExpensesController', () => {
   let controller: ExpensesController;
   let service: jest.Mocked<ExpensesService>;
 
-  const mockRequest = { user: { userId: 1, email: 'admin@test.com' } };
+  const mockRequest = { user: { userId: 'user-1', email: 'admin@test.com', accessToken: 'token-1' } };
 
   const mockExpense = {
     id: 'uuid-1',
-    userId: 1,
+    userId: 'user-1',
     type: 'expense',
     amount: 500,
+    currency: 'INR',
     category: 'Food & Dining',
     merchant: 'Swiggy',
     date: '2026-09-17',
@@ -61,7 +62,7 @@ describe('ExpensesController', () => {
       const result = controller.create(mockRequest as any, dto as any);
 
       expect(result).toEqual(mockExpense);
-      expect(service.create).toHaveBeenCalledWith(1, dto);
+      expect(service.create).toHaveBeenCalledWith('user-1', 'token-1', dto);
     });
 
     it('passes the userId from the JWT token — not from the request body' /** Checks that passes the userId from the JWT token — not from the request body. */, () => {
@@ -73,12 +74,12 @@ describe('ExpensesController', () => {
         date: '2026-09-17',
       };
       const reqWithDifferentUser = {
-        user: { userId: 42, email: 'other@test.com' },
+        user: { userId: 'user-42', email: 'other@test.com', accessToken: 'token-42' },
       };
 
       controller.create(reqWithDifferentUser as any, dto as any);
 
-      expect(service.create).toHaveBeenCalledWith(42, dto);
+      expect(service.create).toHaveBeenCalledWith('user-42', 'token-42', dto);
     });
   });
 
@@ -97,7 +98,7 @@ describe('ExpensesController', () => {
       expect(
         controller.createBatch(mockRequest as any, { transactions } as any),
       ).toEqual([mockExpense]);
-      expect(service.createBatch).toHaveBeenCalledWith(1, transactions);
+      expect(service.createBatch).toHaveBeenCalledWith('user-1', 'token-1', transactions);
     });
   });
 
@@ -106,7 +107,7 @@ describe('ExpensesController', () => {
       const result = controller.findAll(mockRequest as any);
 
       expect(result).toEqual([mockExpense]);
-      expect(service.findByUser).toHaveBeenCalledWith(1);
+      expect(service.findByUser).toHaveBeenCalledWith('user-1', 'token-1');
     });
   });
 
@@ -115,13 +116,13 @@ describe('ExpensesController', () => {
       const result = controller.findOne(mockRequest as any, 'uuid-1');
 
       expect(result).toEqual(mockExpense);
-      expect(service.findOne).toHaveBeenCalledWith(1, 'uuid-1');
+      expect(service.findOne).toHaveBeenCalledWith('user-1', 'token-1', 'uuid-1');
     });
 
     it('passes the userId from the JWT token' /** Checks that passes the userId from the JWT token. */, () => {
-      controller.findOne({ user: { userId: 42 } } as any, 'uuid-1');
+      controller.findOne({ user: { userId: 'user-42', accessToken: 'token-42' } } as any, 'uuid-1');
 
-      expect(service.findOne).toHaveBeenCalledWith(42, 'uuid-1');
+      expect(service.findOne).toHaveBeenCalledWith('user-42', 'token-42', 'uuid-1');
     });
   });
 
@@ -135,13 +136,13 @@ describe('ExpensesController', () => {
       );
 
       expect(result).toEqual(mockExpense);
-      expect(service.update).toHaveBeenCalledWith(1, 'uuid-1', dto);
+      expect(service.update).toHaveBeenCalledWith('user-1', 'token-1', 'uuid-1', dto);
     });
 
     it('passes the userId from the JWT token — not the body' /** Checks that passes the userId from the JWT token — not the body. */, () => {
-      controller.update({ user: { userId: 7 } } as any, 'uuid-1', {} as any);
+      controller.update({ user: { userId: 'user-7', accessToken: 'token-7' } } as any, 'uuid-1', {} as any);
 
-      expect(service.update).toHaveBeenCalledWith(7, 'uuid-1', {});
+      expect(service.update).toHaveBeenCalledWith('user-7', 'token-7', 'uuid-1', {});
     });
   });
 
@@ -150,13 +151,13 @@ describe('ExpensesController', () => {
       const result = controller.remove(mockRequest as any, 'uuid-1');
 
       expect(result).toEqual(mockExpense);
-      expect(service.remove).toHaveBeenCalledWith(1, 'uuid-1');
+      expect(service.remove).toHaveBeenCalledWith('user-1', 'token-1', 'uuid-1');
     });
 
     it('passes the userId from the JWT token' /** Checks that passes the userId from the JWT token. */, () => {
-      controller.remove({ user: { userId: 5 } } as any, 'uuid-1');
+      controller.remove({ user: { userId: 'user-5', accessToken: 'token-5' } } as any, 'uuid-1');
 
-      expect(service.remove).toHaveBeenCalledWith(5, 'uuid-1');
+      expect(service.remove).toHaveBeenCalledWith('user-5', 'token-5', 'uuid-1');
     });
   });
 

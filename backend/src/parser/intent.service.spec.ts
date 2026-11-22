@@ -3,6 +3,7 @@
  */
 import { IntentService } from './intent.service';
 import { ParserService } from './parser.service';
+import type { PersonalFollowUpService } from './personal-follow-up.service';
 
 describe('IntentService', () => {
   const parser = new ParserService();
@@ -53,6 +54,23 @@ describe('IntentService', () => {
       modelAccepted: false,
       interpretationSource: 'LOCAL',
     });
+  });
+
+  it('uses PENNY to fill a missing field on a single first-turn draft', async () => {
+    const model = { isConfigured: jest.fn(), segment: jest.fn() };
+    const completion = { analyze: jest.fn().mockResolvedValue({ updates: [{ ordinal: 1, category: 'Food & Dining' }], modelAttempted: true }) };
+    const service = new IntentService(parser, model, completion as unknown as PersonalFollowUpService);
+    const result = await service.analyze('spent 240 at CloudCafe today', referenceDate, 'Asia/Kolkata');
+    expect(completion.analyze).toHaveBeenCalledWith(expect.any(String), expect.any(Array), expect.any(Object), referenceDate, 'Asia/Kolkata', 'FILL_MISSING');
+    expect(result).toMatchObject({ status: 'READY', modelAttempted: true, modelAccepted: true, interpretationSource: 'MODEL', drafts: [{ draft: { category: 'Food & Dining' } }] });
+  });
+
+  it('does not let model completion overwrite facts already parsed locally', async () => {
+    const model = { isConfigured: jest.fn(), segment: jest.fn() };
+    const completion = { analyze: jest.fn().mockResolvedValue({ updates: [{ ordinal: 1, amount: 999 }], modelAttempted: true }) };
+    const service = new IntentService(parser, model, completion as unknown as PersonalFollowUpService);
+    const result = await service.analyze('spent 240 at CloudCafe today', referenceDate, 'Asia/Kolkata');
+    expect(result).toMatchObject({ modelAttempted: true, modelAccepted: false, drafts: [{ draft: { amount: 240, category: null } }] });
   });
 
   it('rejects model output that drops part of the original message' /** Checks that rejects model output that drops part of the original message. */, async () => {

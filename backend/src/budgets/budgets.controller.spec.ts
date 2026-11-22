@@ -24,8 +24,8 @@ describe('BudgetsController', () => {
   });
 
   it('gets the budget using JWT user identity' /** Checks that gets the budget using JWT user identity. */, () => {
-    controller.getMine({ user: { userId: 42 } } as any);
-    expect(service.getMine).toHaveBeenCalledWith(42);
+    controller.getMine({ user: { userId: 'user-42', accessToken: 'token-42' } } as any);
+    expect(service.getMine).toHaveBeenCalledWith('user-42', 'token-42');
   });
 
   it('upserts the budget using JWT user identity' /** Checks that upserts the budget using JWT user identity. */, () => {
@@ -34,8 +34,8 @@ describe('BudgetsController', () => {
       categoryLimits: [],
       currency: CurrencyCode.INR,
     };
-    controller.upsert({ user: { userId: 42 } } as any, dto);
-    expect(service.upsert).toHaveBeenCalledWith(42, dto);
+    controller.upsert({ user: { userId: 'user-42', accessToken: 'token-42' } } as any, dto);
+    expect(service.upsert).toHaveBeenCalledWith('user-42', 'token-42', dto);
   });
 
   it('is protected at controller level' /** Checks that is protected at controller level. */, () => {

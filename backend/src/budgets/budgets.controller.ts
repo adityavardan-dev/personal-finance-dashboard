@@ -15,12 +15,12 @@ export class BudgetsController {
   /** Returns get mine. */
   @Get('me')
   getMine(@Request() req: any) {
-    return this.budgetsService.getMine(req.user.userId as number);
+    return this.budgetsService.getMine(req.user.userId, req.user.accessToken);
   }
 
   /** Handles upsert. */
   @Put('me')
   upsert(@Request() req: any, @Body() dto: UpsertBudgetDto) {
-    return this.budgetsService.upsert(req.user.userId as number, dto);
+    return this.budgetsService.upsert(req.user.userId, req.user.accessToken, dto);
   }
 }

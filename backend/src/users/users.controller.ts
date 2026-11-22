@@ -15,7 +15,7 @@ export class UsersController {
   /** Returns get mine. */
   @Get('me')
   getMine(@Request() req: any) {
-    return this.usersService.getPublicProfile(req.user.userId as number);
+    return this.usersService.getPublicProfile(req.user.userId, req.user.accessToken);
   }
 
   /** Handles update preferences. */
@@ -25,7 +25,8 @@ export class UsersController {
     @Body() dto: UpdateUserPreferencesDto,
   ) {
     return this.usersService.updatePreferences(
-      req.user.userId as number,
+      req.user.userId,
+      req.user.accessToken,
       dto.currency,
     );
   }

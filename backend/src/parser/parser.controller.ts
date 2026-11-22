@@ -16,6 +16,9 @@ import type { ParseBatchResultDto } from './dto/parse-batch-result.dto';
 import type { ParseResultDto } from './dto/parse-result.dto';
 import { IntentService } from './intent.service';
 import { ParserService } from './parser.service';
+import { SplitIntentService } from './split-intent.service';
+import { SplitFollowUpService } from './split-follow-up.service';
+import { PersonalFollowUpService } from './personal-follow-up.service';
 
 @Controller('parser')
 @UseGuards(JwtAuthGuard)
@@ -25,6 +28,9 @@ export class ParserController {
   constructor(
     private readonly parserService: ParserService,
     private readonly intentService: IntentService,
+    private readonly splitIntentService: SplitIntentService,
+    private readonly splitFollowUpService: SplitFollowUpService,
+    private readonly personalFollowUpService: PersonalFollowUpService,
   ) {}
 
   /** Handles parse. */
@@ -65,5 +71,55 @@ export class ParserController {
       trace,
     );
     return { ...result, ...trace };
+  }
+
+  /** Extracts peer split amounts and group sizes for review. */
+  @Post('split-intent')
+  async splitIntent(
+    @Body() request: ParseRequestDto,
+    @Headers('x-conversation-id') conversationId?: string,
+    @Headers('x-request-id') requestId?: string,
+  ) {
+    const trace = readRequestTrace(conversationId, requestId);
+    return {
+      ...(await this.splitIntentService.analyze(
+        request.text,
+        trace,
+        request.referenceTimestamp
+          ? new Date(request.referenceTimestamp)
+          : new Date(),
+        request.timeZone,
+      )),
+      ...trace,
+    };
+  }
+
+  /** Interprets participant names for existing split cards in this conversation. */
+  @Post('split-follow-up')
+  async splitFollowUp(
+    @Body() request: { text: unknown; pendingSplits: unknown },
+    @Headers('x-conversation-id') conversationId?: string,
+    @Headers('x-request-id') requestId?: string,
+  ) {
+    const trace = readRequestTrace(conversationId, requestId);
+    return {
+      ...(await this.splitFollowUpService.analyze(request?.text, request?.pendingSplits, trace)),
+      ...trace,
+    };
+  }
+
+  /** Interprets edits to unsaved personal drafts supplied by the current conversation. */
+  @Post('personal-follow-up')
+  async personalFollowUp(
+    @Body() request: { text: unknown; drafts: unknown; referenceTimestamp?: string; timeZone?: string },
+    @Headers('x-conversation-id') conversationId?: string,
+    @Headers('x-request-id') requestId?: string,
+  ) {
+    const trace = readRequestTrace(conversationId, requestId);
+    return {
+      ...(await this.personalFollowUpService.analyze(request?.text, request?.drafts, trace,
+        request.referenceTimestamp ? new Date(request.referenceTimestamp) : new Date(), request.timeZone)),
+      ...trace,
+    };
   }
 }

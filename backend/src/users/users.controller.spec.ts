@@ -24,16 +24,17 @@ describe('UsersController', () => {
   });
 
   it('gets profile using JWT user identity' /** Checks that gets profile using JWT user identity. */, () => {
-    controller.getMine({ user: { userId: 42 } } as any);
-    expect(service.getPublicProfile).toHaveBeenCalledWith(42);
+    controller.getMine({ user: { userId: 'user-42', accessToken: 'token-42' } } as any);
+    expect(service.getPublicProfile).toHaveBeenCalledWith('user-42', 'token-42');
   });
 
   it('updates preferences using JWT user identity' /** Checks that updates preferences using JWT user identity. */, () => {
-    controller.updatePreferences({ user: { userId: 42 } } as any, {
+    controller.updatePreferences({ user: { userId: 'user-42', accessToken: 'token-42' } } as any, {
       currency: CurrencyCode.EUR,
     });
     expect(service.updatePreferences).toHaveBeenCalledWith(
-      42,
+      'user-42',
+      'token-42',
       CurrencyCode.EUR,
     );
   });

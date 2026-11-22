@@ -9,6 +9,28 @@ import { LedgerSolver } from './ledger-solver';
 describe('LedgerSolver', () => {
   const solver = new LedgerSolver();
 
+  it('calculates an equal share paid by a peer and a full reimbursement paid by self', () => {
+    const shared = solver.solve({
+      totalAmountMinor: 50_000,
+      currency: CurrencyCode.INR,
+      participants: [{ id: 'self', displayName: 'You' }, { id: 'harsha', displayName: 'Harsha' }],
+      contributions: [{ participantId: 'harsha', amountMinor: 50_000 }],
+      allocationRules: [{ kind: 'EQUAL_REMAINDER', participantIds: ['self', 'harsha'] }],
+    });
+    const repayment = solver.solve({
+      totalAmountMinor: 30_000,
+      currency: CurrencyCode.INR,
+      participants: [{ id: 'self', displayName: 'You' }, { id: 'katty', displayName: 'Katty' }],
+      contributions: [{ participantId: 'self', amountMinor: 30_000 }],
+      allocationRules: [
+        { kind: 'FIXED_AMOUNT', participantId: 'katty', amountMinor: 30_000 },
+        { kind: 'EQUAL_REMAINDER', participantIds: ['self'] },
+      ],
+    });
+    expect(shared.obligations).toEqual([{ fromParticipantId: 'self', toParticipantId: 'harsha', amountMinor: 25_000 }]);
+    expect(repayment.obligations).toEqual([{ fromParticipantId: 'katty', toParticipantId: 'self', amountMinor: 30_000 }]);
+  });
+
   it('solves a fixed share plus equal remainder and creates two-way obligations' /** Checks that solves a fixed share plus equal remainder and creates two-way obligations. */, () => {
     const result = solver.solve({
       totalAmountMinor: 180_000,

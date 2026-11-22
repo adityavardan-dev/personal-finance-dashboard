@@ -2,8 +2,9 @@ import { DecimalPipe, DOCUMENT } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { PeerSplitsService } from '../../peer-splits/peer-splits.service';
+import { PeerSplitsService, type SplitInput } from '../../peer-splits/peer-splits.service';
 import { parseSplitPrompt } from '../../peer-splits/prompt-parser';
+import { type PendingSplit } from '../../peer-splits/counted-split-parser';
 import { localDate, parseSplitDateFollowUp } from '../../peer-splits/split-date';
 import { BudgetStore } from '../../../core/budget/budget.store';
 import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store';
@@ -79,6 +80,9 @@ interface IntakeDraft {
 interface ConversationSnapshot {
   messages: ChatMessage[];
   drafts: IntakeDraft[];
+  pendingSplits?: PendingSplit[];
+  awaitingSplitDetails?: boolean;
+  unresolvedSplitMessages?: string[];
 }
 
 @Component({
@@ -101,6 +105,7 @@ export class ContextIntakeComponent {
   protected readonly status = signal<IntakeStatus>('idle');
   protected readonly messages = signal<ChatMessage[]>([]);
   protected readonly drafts = signal<IntakeDraft[]>([]);
+  protected readonly pendingSplits = signal<PendingSplit[]>([]);
   protected readonly errorMessage = signal('');
   protected readonly applicationCurrency = computed(() => this.budgetStore.currency());
   protected readonly readyCount = computed(
@@ -128,6 +133,8 @@ export class ContextIntakeComponent {
   protected conversationId: string = createLocalId();
   protected expiresAt = '';
   private activeTrace: RequestTrace | null = null;
+  private awaitingSplitDetails = false;
+  private unresolvedSplitMessages: string[] = [];
 
   constructor() {
     this.budgetStore.load();
@@ -139,6 +146,9 @@ export class ContextIntakeComponent {
       const activeDrafts = cached.value.drafts.filter((draft) => draft.saveStatus !== 'saved');
       this.messages.set(cached.value.messages);
       this.drafts.set(activeDrafts);
+      this.pendingSplits.set(cached.value.pendingSplits ?? []);
+      this.awaitingSplitDetails = cached.value.awaitingSplitDetails ?? false;
+      this.unresolvedSplitMessages = cached.value.unresolvedSplitMessages ?? [];
       if (savedDrafts.length) {
         this.addMessage(
           'assistant',
@@ -170,10 +180,7 @@ export class ContextIntakeComponent {
     this.activeTrace = trace;
 
     if (/^\s*(?:hi|hello|hey)(?:\s+there)?[!.,?\s]*$/i.test(text)) {
-      this.addMessage(
-        'assistant',
-        this.greetingPrompt(),
-      );
+      this.addMessage('assistant', this.greetingPrompt());
       this.status.set(this.drafts().length ? 'draft' : 'idle');
       this.persistConversation();
       return;
@@ -181,7 +188,19 @@ export class ContextIntakeComponent {
 
     if (this.applySplitDateFollowUp(text, trace)) return;
 
-    if (this.splitMode || /\b(split|share|owes|owed|among|between)\b/i.test(text)) {
+    const startsNewExpense = /^(?:i\s+)?(?:paid|spent|need\s+to\s+split|split|share)\b/i.test(text)
+      && /\b\d[\d,]*(?:\.\d+)?\b/.test(text)
+      && !/^(?:split|expense)\s+\d+\s*[:\-]/i.test(text);
+    const referencesPendingSplit = this.pendingSplits().some((item) => {
+      const lower = text.toLowerCase();
+      return lower.includes(`split ${item.ordinal}`) || lower.includes(`expense ${item.ordinal}`);
+    });
+    if (this.pendingSplits().length && (!startsNewExpense || referencesPendingSplit)) {
+      this.applyPendingSplitFollowUp(text, trace);
+      return;
+    }
+
+    if (this.awaitingSplitDetails || this.splitMode || /\b(split|share|owes|owed|among|between)\b/i.test(text)) {
       this.previewSplitMessage(text, trace);
       return;
     }
@@ -202,20 +221,67 @@ export class ContextIntakeComponent {
   }
 
   private previewSplitMessage(text: string, trace: RequestTrace): void {
-    const draft = parseSplitPrompt(text);
-    if (!draft) {
-      this.addMessage(
-        'assistant',
-        'I need the total and the people by name to make a peer split. Try “I paid INR 1200 with Harsha and Jaswanth, split equally”, or use the manual split form.',
-      );
+    const interpretationText = this.awaitingSplitDetails
+      ? [...this.unresolvedSplitMessages, text].join(' ')
+      : text;
+    if (interpretationText.length > 4000) {
+      this.addMessage('assistant', 'This split needs a fresh description. Please restate the total, participants, and who paid in one message.');
+      this.unresolvedSplitMessages = [];
+      this.awaitingSplitDetails = false;
       this.status.set('idle');
       this.persistConversation();
+      return;
+    }
+    const draft = parseSplitPrompt(interpretationText);
+    if (!draft) {
+      this.parserService.interpretSplit(interpretationText, trace).subscribe({
+        next: (result) => {
+          if (!this.isActiveTurn(trace)) return;
+          if (result.drafts.length) {
+            this.awaitingSplitDetails = false;
+            this.unresolvedSplitMessages = [];
+            const nextOrdinal = Math.max(0, ...this.pendingSplits().map((item) => item.ordinal));
+            const newDrafts: PendingSplit[] = result.drafts.map((item, index) => ({
+                ...item,
+                ordinal: nextOrdinal + index + 1,
+                id: createLocalId(),
+                names: item.names?.join(', ') ?? '',
+                paidBy: item.paidBy ?? '',
+              }));
+            this.pendingSplits.update((current) => [...current, ...newDrafts]);
+            const ready = newDrafts.filter((item) => item.names.split(/\s*,\s*/).filter(Boolean).length === item.peopleCount && item.paidBy);
+            this.addMessage(
+              'assistant',
+              ready.length === newDrafts.length
+                ? `I found ${newDrafts.length} split expenses and am creating their previews for review.`
+                : `I found ${newDrafts.length} split expenses. Review the cards below and add any missing names or payer. You can also reply: expense 1: You, Alice, Bob; paid by You.`,
+            );
+            this.status.set('draft');
+            for (const item of ready) this.previewPendingSplit(item, trace);
+          } else {
+            this.awaitingSplitDetails = true;
+            this.unresolvedSplitMessages.push(text);
+            this.addMessage(
+              'assistant',
+              result.clarificationPrompt ??
+                'Tell me each expense amount and how many people share it.',
+            );
+            this.status.set('idle');
+          }
+          this.persistConversation();
+        },
+        error: () => {
+          if (this.isActiveTurn(trace)) this.handleParseError(trace);
+        },
+      });
       return;
     }
     const service = this.peerSplits;
     service.preview(draft.input, trace).subscribe({
       next: (result) => {
         if (!this.isActiveTurn(trace)) return;
+        this.awaitingSplitDetails = false;
+        this.unresolvedSplitMessages = [];
         const title =
           text.match(/\bfor\s+([A-Za-z][A-Za-z ]{1,35})/i)?.[1]?.trim() || 'Group split';
         const date =
@@ -252,6 +318,121 @@ export class ContextIntakeComponent {
         this.persistConversation();
       },
     });
+  }
+
+  private applyPendingSplitFollowUp(text: string, trace: RequestTrace): void {
+    this.parserService.interpretSplitFollowUp(text, this.pendingSplits(), trace).subscribe({
+      next: (result) => {
+        if (!this.isActiveTurn(trace)) return;
+        const known = new Map(this.pendingSplits().map((item) => [item.ordinal, item]));
+        if (result.updates.some((update) => !known.has(update.ordinal) || (update.names && (!update.names.length || update.names.length > (update.peopleCount ?? known.get(update.ordinal)?.peopleCount ?? 0))) || (update.amountMinor !== undefined && (!Number.isSafeInteger(update.amountMinor) || update.amountMinor <= 0)))) {
+          this.handleParseError(trace);
+          return;
+        }
+        const updates = new Map(result.updates.map((update) => [update.ordinal, update]));
+        this.pendingSplits.update((items) => items.map((item) => {
+          const update = updates.get(item.ordinal);
+          if (!update) return item;
+          const names = update.names ?? item.names.split(/\s*,\s*|\s+and\s+/i).filter(Boolean);
+          return { ...item,
+            amountMinor: update.amountMinor ?? item.amountMinor,
+            peopleCount: update.peopleCount ?? item.peopleCount,
+            names: update.names ? update.names.join(', ') : item.names,
+            paidBy: update.paidBy ?? (names.some((name) => name.toLowerCase() === item.paidBy.toLowerCase()) ? item.paidBy : ''),
+          };
+        }));
+        const incomplete = result.updates.map((update) => ({ ordinal: update.ordinal, remaining: (update.peopleCount ?? known.get(update.ordinal)?.peopleCount ?? 0) - (update.names?.length ?? known.get(update.ordinal)?.names.split(/\s*,\s*|\s+and\s+/i).filter(Boolean).length ?? 0) })).filter((item) => item.remaining > 0);
+        this.addMessage('assistant', result.updates.length
+          ? `Updated ${result.updates.map((update) => `split ${update.ordinal}`).join(' and ')}. ${incomplete.map((item) => `Split ${item.ordinal} still needs ${item.remaining} ${this.pluralize('name', item.remaining)}.`).join(' ')} Add who paid before creating each preview.`
+          : result.clarificationPrompt ?? 'Tell me which split each participant belongs to.');
+        this.status.set('draft');
+        this.persistConversation();
+      },
+      error: () => {
+        if (this.isActiveTurn(trace)) this.handleParseError(trace);
+      },
+    });
+  }
+
+  protected previewPendingSplit(draft: PendingSplit, trace?: RequestTrace): void {
+    const names = draft.names
+      .split(/\s*,\s*|\s+and\s+/i)
+      .map((name) => name.trim())
+      .filter(Boolean);
+    if (
+      names.length !== draft.peopleCount ||
+      new Set(names.map((name) => name.toLowerCase())).size !== names.length
+    ) {
+      this.errorMessage.set(
+        `Expense ${draft.ordinal} needs ${draft.peopleCount} distinct participant names, including you if you shared it.`,
+      );
+      return;
+    }
+    const payerIndex = names.findIndex(
+      (name) => name.toLowerCase() === draft.paidBy.trim().toLowerCase(),
+    );
+    if (payerIndex < 0) {
+      this.errorMessage.set(`Choose who paid expense ${draft.ordinal} from its participant names.`);
+      return;
+    }
+    this.errorMessage.set('');
+    const participants = names.map((name, index) => ({
+      id: /^you$/i.test(name) ? 'self' : `person-${index}`,
+      displayName: name,
+    }));
+    const beneficiaryIndex = draft.allocationKind === 'FULL_TO_OTHER'
+      ? names.findIndex((name) => name.toLowerCase() === draft.beneficiary?.trim().toLowerCase())
+      : -1;
+    if (draft.allocationKind === 'FULL_TO_OTHER' && (beneficiaryIndex < 0 || beneficiaryIndex === payerIndex)) {
+      this.errorMessage.set(`Choose who owes the full amount for expense ${draft.ordinal}.`);
+      return;
+    }
+    const input: SplitInput = {
+      totalAmountMinor: draft.amountMinor,
+      currency: draft.currency,
+      participants,
+      contributions: [
+        { participantId: participants[payerIndex].id, amountMinor: draft.amountMinor },
+      ],
+      allocationRules: beneficiaryIndex >= 0
+        ? [
+            { kind: 'FIXED_AMOUNT', participantId: participants[beneficiaryIndex].id, amountMinor: draft.amountMinor },
+            { kind: 'EQUAL_REMAINDER', participantIds: participants.filter((_, index) => index !== beneficiaryIndex).map((person) => person.id) },
+          ]
+        : [{ kind: 'EQUAL_REMAINDER', participantIds: participants.map((person) => person.id) }],
+    };
+    this.peerSplits.preview(input, trace).subscribe({
+      next: (result) => {
+        const id = this.peerSplits.addPreview(`Expense ${draft.ordinal}`, participants, result, {
+          date: draft.date,
+          category: 'Group split',
+        });
+        this.pendingSplits.update((items) => items.filter((item) => item.id !== draft.id));
+        this.addMessage(
+          'assistant',
+          `Split preview ready for expense ${draft.ordinal}.`,
+          undefined,
+          {
+            id,
+            totalAmountMinor: result.totalAmountMinor,
+            currency: result.currency,
+            people: participants.length,
+            date: draft.date,
+            title: `Expense ${draft.ordinal}`,
+          },
+        );
+        this.persistConversation();
+      },
+      error: () =>
+        this.errorMessage.set(
+          `Could not preview expense ${draft.ordinal}. Check its participants and payer.`,
+        ),
+    });
+  }
+
+  protected touchPendingSplits(): void {
+    this.pendingSplits.update((items) => [...items]);
+    this.persistConversation();
   }
 
   protected splitPreviewDate(message: ChatMessage): string | null {
@@ -386,6 +567,9 @@ export class ContextIntakeComponent {
     this.expiresAt = '';
     this.messages.set([]);
     this.drafts.set([]);
+    this.pendingSplits.set([]);
+    this.awaitingSplitDetails = false;
+    this.unresolvedSplitMessages = [];
     this.errorMessage.set('');
     this.rawText = '';
     this.status.set('idle');
@@ -400,10 +584,7 @@ export class ContextIntakeComponent {
 
   private addParsedBatch(result: ParseBatchResult, trace: RequestTrace): void {
     if (result.intent === 'GREETING') {
-      this.addMessage(
-        'assistant',
-        this.greetingPrompt(),
-      );
+      this.addMessage('assistant', this.greetingPrompt());
       this.status.set(this.drafts().length ? 'draft' : 'idle');
       this.persistConversation();
       return;
@@ -427,28 +608,85 @@ export class ContextIntakeComponent {
   }
 
   private applyFollowUp(text: string, trace: RequestTrace): void {
+    if (/\b(?:delete|remove|discard)\b/i.test(text)) {
+      this.applyPersonalModelFollowUp(text, trace);
+      return;
+    }
     this.parserService.parse(text, trace).subscribe({
       next: (parsed) => {
         if (!this.isActiveTurn(trace)) return;
         const targets = this.resolveTargets(text);
         if (!targets.length) {
-          this.addMessage(
-            'assistant',
-            'I could not identify which transaction to update. Try “transaction 2”, “use yesterday for all”, or expand a card and edit it.',
-          );
+          this.applyPersonalModelFollowUp(text, trace);
+          return;
+        }
+        const changed = this.patchTargets(targets, text, parsed);
+        if (!changed) {
+          this.applyPersonalModelFollowUp(text, trace);
+          return;
+        }
+        this.drafts.update((drafts) => [...drafts]);
+        this.addMessage(
+          'assistant',
+          `${changed} ${this.pluralize('transaction', changed)} updated. Review the cards before saving.`,
+        );
+        this.status.set('draft');
+        this.persistConversation();
+      },
+      error: () => {
+        if (this.isActiveTurn(trace)) this.applyPersonalModelFollowUp(text, trace);
+      },
+    });
+  }
+
+  /** Asks PENNY to map an unresolved personal follow-up to the unsaved drafts. */
+  private applyPersonalModelFollowUp(text: string, trace: RequestTrace): void {
+    this.parserService.interpretPersonalFollowUp(text, this.drafts(), trace).subscribe({
+      next: (result) => {
+        if (!this.isActiveTurn(trace)) return;
+        if (!result.updates.length) {
+          this.addMessage('assistant', result.clarificationPrompt ?? 'Tell me which transaction to change and the new value.');
           this.status.set('draft');
           this.persistConversation();
           return;
         }
-        const changed = this.patchTargets(targets, text, parsed);
-        this.drafts.update((drafts) => [...drafts]);
-        this.addMessage(
-          'assistant',
-          changed
-            ? `${changed} ${this.pluralize('transaction', changed)} updated. Review the cards before saving.`
-            : 'I could not apply that change safely. Try “use yesterday for all”, “change transaction 2 to 600”, or edit the card directly.',
-        );
-        this.status.set('draft');
+        const updates = new Map(result.updates.map((update) => [update.ordinal, update]));
+        if (updates.size !== result.updates.length || [...updates.keys()].some((ordinal) => !this.drafts()[ordinal - 1])) {
+          this.handleParseError(trace);
+          return;
+        }
+        this.drafts.update((drafts) => drafts.map((draft, index) => {
+          const update = updates.get(index + 1);
+          if (!update) return draft;
+          if (update.delete) return null;
+          const changed = { ...draft, expanded: true };
+          if (update.amount !== undefined) {
+            changed.originalAmount = update.amount;
+            changed.amount = String(update.amount);
+          }
+          if (update.date !== undefined) changed.date = update.date;
+          if (update.category !== undefined) changed.category = this.mapCategory(update.category, draft.note).category;
+          if (update.merchant !== undefined) changed.merchant = update.merchant;
+          if (update.splitResolution !== undefined) changed.splitResolution = update.splitResolution;
+          if (update.splitFactor !== undefined) {
+            changed.splitFactor = String(update.splitFactor);
+            changed.splitResolution = 'split';
+          }
+          if (changed.splitResolution === 'split' && changed.originalAmount !== null && Number(changed.splitFactor) >= 2) {
+            changed.amount = String(this.roundMoney(changed.originalAmount / Number(changed.splitFactor)));
+          }
+          if (changed.splitResolution === 'personal') {
+            changed.splitFactor = '';
+            if (changed.originalAmount !== null) changed.amount = String(changed.originalAmount);
+          }
+          return changed;
+        }).filter((draft): draft is IntakeDraft => draft !== null));
+        const removed = result.updates.filter((update) => update.delete).length;
+        const edited = result.updates.length - removed;
+        this.addMessage('assistant', removed && !edited
+          ? `${removed} unsaved ${this.pluralize('transaction draft', removed)} removed with PENNY.`
+          : `${edited} ${this.pluralize('transaction', edited)} updated and ${removed} ${this.pluralize('draft', removed)} removed with PENNY. Review the cards before saving.`);
+        this.status.set(this.drafts().length ? 'draft' : 'idle');
         this.persistConversation();
       },
       error: () => {
@@ -578,9 +816,10 @@ export class ContextIntakeComponent {
     if (!this.drafts().some((draft) => draft.saveStatus !== 'saved')) return false;
     if (/\b(?:for all|all transactions|transaction\s+\d+)\b/i.test(text)) return true;
     if (/^(?:use|set|change|make|split|already|my|personal)\b/i.test(text)) return true;
-    const needingAttention = this.drafts().some((draft) => this.missingLabels(draft).length > 0);
+    const lower = text.toLowerCase();
+    if (['actually', 'correction', 'instead', 'not '].some((word) => lower.includes(word))) return true;
     const newTransaction = /\b(?:spent|paid|received|earned|debited|credited)\b/i.test(text);
-    return needingAttention && !newTransaction;
+    return !newTransaction;
   }
 
   private saveDrafts(drafts: IntakeDraft[]): void {
@@ -713,8 +952,8 @@ export class ContextIntakeComponent {
 
   private greetingPrompt(): string {
     return this.splitMode
-      ? 'Hi! How much did you spend today, and who are you splitting it with?'
-      : 'Hi! How much did you spend today?';
+      ? "Hi, I'm PENNY. How much did you spend today, and who are you splitting it with?"
+      : "Hi, I'm PENNY. How much did you spend today?";
   }
 
   private createSavedSummary(drafts: IntakeDraft[]): SavedTransactionSummary {
@@ -762,6 +1001,9 @@ export class ContextIntakeComponent {
     const cached = this.session.save<ConversationSnapshot>(this.conversationId, {
       messages: this.messages(),
       drafts: this.drafts(),
+      pendingSplits: this.pendingSplits(),
+      awaitingSplitDetails: this.awaitingSplitDetails,
+      unresolvedSplitMessages: this.unresolvedSplitMessages,
     });
     this.expiresAt = cached?.expiresAt ?? '';
   }

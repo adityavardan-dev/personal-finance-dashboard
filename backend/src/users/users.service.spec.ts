@@ -1,196 +1,34 @@
-/**
- * Purpose: Tests the behavior of the related backend feature.
- */
+/** Verifies profile and preference mapping through the Supabase Data API. */
 import { NotFoundException } from '@nestjs/common';
-import * as fs from 'fs';
 import { CurrencyCode } from '../budgets/currency-code';
+import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from './users.service';
 
-jest.mock('fs', () => ({
-  existsSync: jest.fn(),
-  readFileSync: jest.fn(),
-  writeFileSync: jest.fn(),
-  mkdirSync: jest.fn(),
-}));
-
 describe('UsersService', () => {
-  let service: UsersService;
-  const existsMock = jest.mocked(fs.existsSync);
-  const readMock = jest.mocked(fs.readFileSync);
-  const writeMock = jest.mocked(fs.writeFileSync);
-  const mkdirMock = jest.mocked(fs.mkdirSync);
-  const budgetsService = {
-    getMine: jest.fn(),
-    upsert: jest.fn(),
-  };
+  const supabase = { data: jest.fn() };
+  const service = new UsersService(supabase as unknown as SupabaseService);
 
-  beforeEach(() => {
-    budgetsService.getMine.mockReturnValue({
-      monthlyLimit: 30000,
-      categoryLimits: [{ category: 'Food', limit: 5000 }],
-      currency: CurrencyCode.INR,
-      createdAt: 'a',
-      updatedAt: 'a',
-    });
-    budgetsService.upsert.mockReset();
-    service = new UsersService(budgetsService as any);
-    existsMock.mockReturnValue(false);
-    readMock.mockReturnValue('[]');
-    writeMock.mockImplementation(() => undefined);
-    mkdirMock.mockImplementation(() => undefined as never);
-  });
+  beforeEach(() => jest.clearAllMocks());
 
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
-
-  it('should be defined' /** Checks that should be defined. */, () => {
-    expect(service).toBeDefined();
-  });
-
-  it('returns an empty list when the store does not exist' /** Checks that returns an empty list when the store does not exist. */, () => {
-    expect(service.findByEmail('missing@example.com')).toBeUndefined();
-    expect(existsMock).toHaveBeenCalled();
-    expect(readMock).not.toHaveBeenCalled();
-  });
-
-  it('creates and persists a user with normalized email and trimmed username' /** Checks that creates and persists a user with normalized email and trimmed username. */, () => {
-    const user = service.create(
-      '  Test User  ',
-      ' TEST@Example.COM ',
-      'password123',
-    );
-
-    expect(user).toEqual({
-      id: 1,
-      username: 'Test User',
-      email: 'test@example.com',
-      password: 'password123',
-    });
-    expect(mkdirMock).toHaveBeenCalled();
-    expect(writeMock).toHaveBeenCalledWith(
-      expect.stringContaining('data'),
-      JSON.stringify([user], null, 2),
-      'utf-8',
-    );
-  });
-
-  it('finds users by normalized email' /** Checks that finds users by normalized email. */, () => {
-    existsMock.mockReturnValue(true);
-    readMock.mockReturnValue(
-      JSON.stringify([
-        {
-          id: 3,
-          username: 'Test User',
-          email: 'test@example.com',
-          password: 'password123',
-        },
-      ]),
-    );
-
-    expect(service.findByEmail(' TEST@EXAMPLE.COM ')).toEqual({
-      id: 3,
-      username: 'Test User',
-      email: 'test@example.com',
-      password: 'password123',
+  it('returns the current RLS-protected profile', async () => {
+    supabase.data.mockResolvedValue([{
+      id: 'user-1', username: 'Aditya', email: 'a@example.com',
+      user_preferences: [{ currency: CurrencyCode.INR, theme: 'system' }],
+    }]);
+    await expect(service.getPublicProfile('user-1', 'token')).resolves.toMatchObject({
+      id: 'user-1', username: 'Aditya', preferences: { currency: CurrencyCode.INR },
     });
   });
 
-  it('finds a user by id' /** Checks that finds a user by id. */, () => {
-    existsMock.mockReturnValue(true);
-    readMock.mockReturnValue(
-      JSON.stringify([
-        {
-          id: 3,
-          username: 'Test User',
-          email: 'test@example.com',
-          password: 'password123',
-        },
-      ]),
-    );
-
-    expect(service.findById(3)?.email).toBe('test@example.com');
-    expect(service.findById(99)).toBeUndefined();
+  it('rejects a profile hidden or missing under RLS', async () => {
+    supabase.data.mockResolvedValue([]);
+    await expect(service.getPublicProfile('user-1', 'token')).rejects.toThrow(NotFoundException);
   });
 
-  it('generates an unused sequential id' /** Checks that generates an unused sequential id. */, () => {
-    existsMock.mockReturnValue(true);
-    readMock.mockReturnValue(
-      JSON.stringify([
-        {
-          id: 1,
-          username: 'One',
-          email: 'one@example.com',
-          password: 'password123',
-        },
-        {
-          id: 3,
-          username: 'Three',
-          email: 'three@example.com',
-          password: 'password123',
-        },
-      ]),
-    );
-
-    const user = service.create('Two', 'two@example.com', 'password123');
-    expect(user.id).toBe(4);
-  });
-
-  it('recovers from malformed persisted data as an empty store' /** Checks that recovers from malformed persisted data as an empty store. */, () => {
-    existsMock.mockReturnValue(true);
-    readMock.mockReturnValue('{invalid-json');
-
-    expect(service.findByEmail('missing@example.com')).toBeUndefined();
-  });
-
-  it('returns a password-safe public profile with canonical preferences' /** Checks that returns a password-safe public profile with canonical preferences. */, () => {
-    existsMock.mockReturnValue(true);
-    readMock.mockReturnValue(
-      JSON.stringify([
-        {
-          id: 3,
-          username: 'River Stone',
-          email: 'river@example.com',
-          password: 'password123',
-        },
-      ]),
-    );
-
-    const profile = service.getPublicProfile(3);
-
-    expect(profile).toEqual({
-      id: 3,
-      username: 'River Stone',
-      email: 'river@example.com',
-      preferences: { currency: CurrencyCode.INR, theme: 'system' },
+  it('updates the authenticated user preference', async () => {
+    supabase.data.mockResolvedValue([{ currency: CurrencyCode.EUR, theme: 'system' }]);
+    await expect(service.updatePreferences('user-1', 'token', CurrencyCode.EUR)).resolves.toEqual({
+      preferences: { currency: CurrencyCode.EUR, theme: 'system' },
     });
-    expect(profile).not.toHaveProperty('password');
-  });
-
-  it('updates currency while preserving existing budget limits' /** Checks that updates currency while preserving existing budget limits. */, () => {
-    existsMock.mockReturnValue(true);
-    readMock.mockReturnValue(
-      JSON.stringify([
-        {
-          id: 3,
-          username: 'River Stone',
-          email: 'river@example.com',
-          password: 'password123',
-        },
-      ]),
-    );
-
-    expect(service.updatePreferences(3, CurrencyCode.USD)).toEqual({
-      preferences: { currency: CurrencyCode.USD, theme: 'system' },
-    });
-    expect(budgetsService.upsert).toHaveBeenCalledWith(3, {
-      monthlyLimit: 30000,
-      categoryLimits: [{ category: 'Food', limit: 5000 }],
-      currency: CurrencyCode.USD,
-    });
-  });
-
-  it('rejects a missing current user' /** Checks that rejects a missing current user. */, () => {
-    expect(() => service.getPublicProfile(99)).toThrow(NotFoundException);
   });
 });

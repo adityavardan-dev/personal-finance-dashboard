@@ -3,6 +3,7 @@
  */
 import { Injectable } from '@nestjs/common';
 import type { IntentSegmenter } from './intent-segmenter';
+import { loadPennyGuidance } from './penny-guidance';
 
 const DEFAULT_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
@@ -26,7 +27,8 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
   isConfigured(): boolean {
     return Boolean(
       process.env.CLOUDFLARE_ACCOUNT_ID?.trim() &&
-      process.env.CLOUDFLARE_AI_API_TOKEN?.trim(),
+      process.env.CLOUDFLARE_AI_API_TOKEN?.trim() &&
+      loadPennyGuidance(),
     );
   }
 
@@ -34,7 +36,8 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
   async segment(text: string): Promise<string[] | null> {
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
     const apiToken = process.env.CLOUDFLARE_AI_API_TOKEN?.trim();
-    if (!accountId || !apiToken) return null;
+    const guidance = loadPennyGuidance();
+    if (!accountId || !apiToken || !guidance) return null;
 
     const model = process.env.CLOUDFLARE_AI_MODEL?.trim() || DEFAULT_MODEL;
     const endpoint = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1/chat/completions`;
@@ -61,6 +64,7 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
             {
               role: 'system',
               content:
+                `${guidance}\n\nTask: ` +
                 'You extract transaction boundaries. Each segment MUST be one exact, contiguous substring copied from the user text. Each segment MUST keep a description together with its numeric amount. Never return a bare description, a bare amount, or a date by itself. Preserve original capitalization, spelling, currency, dates, and order. Do not invent, rewrite, or calculate facts. Example input: Coffee ₹180 metro ₹70 today. Correct output: {"segments":["Coffee ₹180","metro ₹70 today"]}. Return JSON matching the schema.',
             },
             { role: 'user', content: text },

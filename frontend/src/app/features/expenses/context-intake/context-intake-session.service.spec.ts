@@ -32,12 +32,24 @@ describe('ContextIntakeSessionService', () => {
     expect(sessionStorage.getItem('xpense:intake:index:42')).toBe('conversation-one');
   });
 
-  it('uses a thirty-minute inactivity window', () => {
+  it('uses a five-minute inactivity window', () => {
     const cached = service.save('conversation-two', {});
 
     expect(Date.parse(cached!.expiresAt) - Date.parse(cached!.lastActivityAt)).toBe(
       INTAKE_SESSION_TTL_MS,
     );
+  });
+
+  it('expires a conversation saved under the old thirty-minute window after five minutes', () => {
+    service.save('conversation-old', { drafts: [1] });
+    const key = 'xpense:intake:42:conversation-old';
+    const cached = JSON.parse(sessionStorage.getItem(key)!);
+    cached.lastActivityAt = new Date(Date.now() - INTAKE_SESSION_TTL_MS - 1).toISOString();
+    cached.expiresAt = new Date(Date.now() + 25 * 60 * 1000).toISOString();
+    sessionStorage.setItem(key, JSON.stringify(cached));
+
+    expect(service.load()).toBeNull();
+    expect(sessionStorage.getItem('xpense:intake:index:42')).toBeNull();
   });
 
   it('removes the current conversation', () => {

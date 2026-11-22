@@ -6,6 +6,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ParserController } from './parser.controller';
 import { IntentService } from './intent.service';
 import { ParserService } from './parser.service';
+import { SplitIntentService } from './split-intent.service';
+import { SplitFollowUpService } from './split-follow-up.service';
+import { PersonalFollowUpService } from './personal-follow-up.service';
 
 describe('ParserController', () => {
   let controller: ParserController;
@@ -50,6 +53,18 @@ describe('ParserController', () => {
       providers: [
         { provide: ParserService, useValue: service },
         { provide: IntentService, useValue: intent },
+        {
+          provide: SplitIntentService,
+          useValue: { analyze: jest.fn().mockResolvedValue({ drafts: [] }) },
+        },
+        {
+          provide: SplitFollowUpService,
+          useValue: { analyze: jest.fn().mockResolvedValue({ updates: [] }) },
+        },
+        {
+          provide: PersonalFollowUpService,
+          useValue: { analyze: jest.fn().mockResolvedValue({ updates: [] }) },
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)

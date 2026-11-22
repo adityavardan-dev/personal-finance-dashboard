@@ -73,7 +73,7 @@ export class SignupComponent {
       next: () => {
         this.signupForm.enable({ emitEvent: false });
         this.isSubmitting = false;
-        this.successMessage = 'Your account is ready. Redirecting you to sign in…';
+        this.successMessage = 'Check your email to confirm your account. Redirecting you to sign in…';
         setTimeout(() => void this.router.navigate(['/login']), 900);
       },
       error: (error: { error?: { message?: string | string[] } }) => {
