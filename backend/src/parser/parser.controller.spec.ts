@@ -88,6 +88,7 @@ describe('ParserController', () => {
       expect.any(Date),
       undefined,
       { conversationId, requestId },
+      undefined,
     );
     expect(result).toMatchObject({ conversationId, requestId });
   });

@@ -34,13 +34,14 @@ export class SplitIntentService {
     trace: RequestTrace,
     referenceDate = new Date(),
     timeZone?: string,
+    accessToken?: string,
   ): Promise<SplitIntentResult> {
     const local = this.extractLocal(text, referenceDate, timeZone);
     if (local.length) return this.result(local, false, false, 'LOCAL', trace);
     if (!this.model.isConfigured())
       return this.result([], false, false, 'LOCAL', trace);
 
-    const proposed = await this.model.interpret(text);
+    const proposed = await this.model.interpret(text, trace, accessToken);
     const candidates =
       proposed?.map((item, index) => {
         const amount = Number(item.amount.replace(/,/g, ''));

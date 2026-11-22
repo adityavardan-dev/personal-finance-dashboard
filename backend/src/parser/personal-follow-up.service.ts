@@ -23,7 +23,7 @@ export class PersonalFollowUpService {
   constructor(private readonly parser: ParserService, private readonly model: CloudflarePersonalFollowUp) {}
 
   /** Interprets a follow-up against the current draft snapshot, without storing it. */
-  async analyze(text: unknown, drafts: unknown, trace: RequestTrace, referenceDate = new Date(), timeZone?: string, mode: 'EDIT' | 'FILL_MISSING' = 'EDIT') {
+  async analyze(text: unknown, drafts: unknown, trace: RequestTrace, referenceDate = new Date(), timeZone?: string, mode: 'EDIT' | 'FILL_MISSING' = 'EDIT', accessToken?: string) {
     if (typeof text !== 'string' || !text.trim() || text.length > 4000) throw new BadRequestException('A follow-up message is required.');
     if (Number.isNaN(referenceDate.getTime())) throw new BadRequestException('Invalid reference time.');
     if (!Array.isArray(drafts) || !drafts.length || drafts.length > 20 || !drafts.every((item: unknown) =>
@@ -36,7 +36,7 @@ export class PersonalFollowUpService {
     const context = drafts as PersonalDraftContext[];
     if (new Set(context.map((item) => item.ordinal)).size !== context.length) throw new BadRequestException('Draft numbers must be unique.');
     if (!this.model.isConfigured()) return this.result([], false, false, trace);
-    const proposals = await this.model.interpret(text, context, referenceDate.toISOString(), timeZone, mode);
+    const proposals = await this.model.interpret(text, context, referenceDate.toISOString(), timeZone, mode, trace, accessToken);
     let localDate: string | null = null;
     try { localDate = this.parser.parse(text, referenceDate, timeZone).draft.date; } catch { /* Invalid temporal language cannot ground a date edit. */ }
     const updates = proposals && this.validate(proposals, text, context, localDate, mode);

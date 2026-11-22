@@ -24,6 +24,7 @@ export class IntentService {
     referenceDate = new Date(),
     timeZone?: string,
     trace?: RequestTrace,
+    accessToken?: string,
   ): Promise<ParseBatchResultDto> {
     const local = this.parser.parseBatch(text, referenceDate, timeZone);
     const localResult: ParseBatchResultDto = {
@@ -48,7 +49,7 @@ export class IntentService {
           note: draft.notes.slice(0, 500),
           splitResolution: local.drafts[0].missingFields.includes('split') ? '' : 'personal',
           splitFactor: draft.splitFactor ?? null,
-        }], trace ?? { conversationId: '', requestId: '' }, referenceDate, timeZone, 'FILL_MISSING');
+        }], trace ?? { conversationId: '', requestId: '' }, referenceDate, timeZone, 'FILL_MISSING', accessToken);
         if (completion.updates.length === 1) {
           const update = completion.updates[0];
           const filled = {
@@ -88,7 +89,7 @@ export class IntentService {
       return localResult;
     }
 
-    const segments = await this.model.segment(text);
+    const segments = await this.model.segment(text, trace, accessToken);
     const attemptedResult: ParseBatchResultDto = {
       ...localResult,
       modelAttempted: true,

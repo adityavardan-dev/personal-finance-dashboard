@@ -16,7 +16,15 @@ describe('PersonalFollowUpService', () => {
     const service = new PersonalFollowUpService(parser, model as unknown as CloudflarePersonalFollowUp);
     const result = await service.analyze('Make the Cafe amount 420 at New Cafe', drafts, trace);
     expect(result).toMatchObject({ modelAttempted: true, modelAccepted: true, updates: [{ ordinal: 1, amount: 420, merchant: 'New Cafe' }] });
-    expect(model.interpret).toHaveBeenCalledWith(expect.any(String), drafts, expect.any(String), undefined, 'EDIT');
+    expect(model.interpret).toHaveBeenCalledWith(
+      expect.any(String),
+      drafts,
+      expect.any(String),
+      undefined,
+      'EDIT',
+      trace,
+      undefined,
+    );
   });
 
   it('rejects invented values and unknown targets', async () => {

@@ -7,6 +7,7 @@ import {
   Headers,
   Logger,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -19,6 +20,10 @@ import { ParserService } from './parser.service';
 import { SplitIntentService } from './split-intent.service';
 import { SplitFollowUpService } from './split-follow-up.service';
 import { PersonalFollowUpService } from './personal-follow-up.service';
+
+interface AuthenticatedParserRequest {
+  user?: { accessToken: string };
+}
 
 @Controller('parser')
 @UseGuards(JwtAuthGuard)
@@ -60,6 +65,7 @@ export class ParserController {
     @Body() request: ParseRequestDto,
     @Headers('x-conversation-id') conversationId?: string,
     @Headers('x-request-id') requestId?: string,
+    @Req() httpRequest?: AuthenticatedParserRequest,
   ): Promise<ParseBatchResultDto> {
     const trace = readRequestTrace(conversationId, requestId);
     const result = await this.intentService.analyze(
@@ -69,6 +75,7 @@ export class ParserController {
         : new Date(),
       request.timeZone,
       trace,
+      httpRequest?.user?.accessToken,
     );
     return { ...result, ...trace };
   }
@@ -79,6 +86,7 @@ export class ParserController {
     @Body() request: ParseRequestDto,
     @Headers('x-conversation-id') conversationId?: string,
     @Headers('x-request-id') requestId?: string,
+    @Req() httpRequest?: AuthenticatedParserRequest,
   ) {
     const trace = readRequestTrace(conversationId, requestId);
     return {
@@ -89,6 +97,7 @@ export class ParserController {
           ? new Date(request.referenceTimestamp)
           : new Date(),
         request.timeZone,
+        httpRequest?.user?.accessToken,
       )),
       ...trace,
     };
@@ -100,10 +109,11 @@ export class ParserController {
     @Body() request: { text: unknown; pendingSplits: unknown },
     @Headers('x-conversation-id') conversationId?: string,
     @Headers('x-request-id') requestId?: string,
+    @Req() httpRequest?: AuthenticatedParserRequest,
   ) {
     const trace = readRequestTrace(conversationId, requestId);
     return {
-      ...(await this.splitFollowUpService.analyze(request?.text, request?.pendingSplits, trace)),
+      ...(await this.splitFollowUpService.analyze(request?.text, request?.pendingSplits, trace, httpRequest?.user?.accessToken)),
       ...trace,
     };
   }
@@ -114,11 +124,12 @@ export class ParserController {
     @Body() request: { text: unknown; drafts: unknown; referenceTimestamp?: string; timeZone?: string },
     @Headers('x-conversation-id') conversationId?: string,
     @Headers('x-request-id') requestId?: string,
+    @Req() httpRequest?: AuthenticatedParserRequest,
   ) {
     const trace = readRequestTrace(conversationId, requestId);
     return {
       ...(await this.personalFollowUpService.analyze(request?.text, request?.drafts, trace,
-        request.referenceTimestamp ? new Date(request.referenceTimestamp) : new Date(), request.timeZone)),
+        request.referenceTimestamp ? new Date(request.referenceTimestamp) : new Date(), request.timeZone, 'EDIT', httpRequest?.user?.accessToken)),
       ...trace,
     };
   }

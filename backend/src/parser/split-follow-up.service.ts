@@ -46,6 +46,7 @@ export class SplitFollowUpService {
     text: unknown,
     pendingSplits: unknown,
     trace: RequestTrace,
+    accessToken?: string,
   ): Promise<SplitFollowUpResult> {
     if (typeof text !== 'string' || !text.trim() || text.length > 4000) {
       throw new BadRequestException('A follow-up message is required.');
@@ -79,7 +80,7 @@ export class SplitFollowUpService {
     if (localUpdates?.length) return this.result(localUpdates, false, false, 'LOCAL', trace);
 
     if (!this.model.isConfigured()) return this.result([], false, false, 'LOCAL', trace);
-    const proposed = await this.model.interpretFollowUp(text, pending);
+    const proposed = await this.model.interpretFollowUp(text, pending, trace, accessToken);
     const updates = proposed && this.validate(proposed, text, pending);
     return this.result(updates ?? [], true, Boolean(updates?.length), updates?.length ? 'MODEL' : 'LOCAL', trace);
   }

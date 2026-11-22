@@ -1,9 +1,17 @@
 /**
  * Purpose: Handles transaction text parsing and optional AI-assisted transaction segmentation.
  */
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import type { RequestTrace } from '../request-trace';
 import type { IntentSegmenter } from './intent-segmenter';
 import { loadPennyGuidance } from './penny-guidance';
+import {
+  logCloudflareUsage,
+  PENNY_MAX_COMPLETION_TOKENS,
+  PENNY_TEMPERATURE,
+  type CloudflareUsageContext,
+} from './cloudflare-usage';
+import { AiMetricsService } from './ai-metrics.service';
 
 const DEFAULT_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
@@ -23,6 +31,10 @@ const SEGMENT_SCHEMA = {
 
 @Injectable()
 export class CloudflareIntentSegmenter implements IntentSegmenter {
+  private readonly logger = new Logger(CloudflareIntentSegmenter.name);
+
+  constructor(@Optional() private readonly metrics?: AiMetricsService) {}
+
   /** Checks whether is configured. */
   isConfigured(): boolean {
     return Boolean(
@@ -33,7 +45,11 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
   }
 
   /** Provides segment. */
-  async segment(text: string): Promise<string[] | null> {
+  async segment(
+    text: string,
+    trace?: RequestTrace,
+    accessToken?: string,
+  ): Promise<string[] | null> {
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
     const apiToken = process.env.CLOUDFLARE_AI_API_TOKEN?.trim();
     const guidance = loadPennyGuidance();
@@ -42,6 +58,8 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
     const model = process.env.CLOUDFLARE_AI_MODEL?.trim() || DEFAULT_MODEL;
     const endpoint = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1/chat/completions`;
 
+    let usageLogged = false;
+    let httpStatus: number | undefined;
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -53,8 +71,8 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
         body: JSON.stringify({
           model,
           stream: false,
-          temperature: 0,
-          max_completion_tokens: 1024,
+          temperature: PENNY_TEMPERATURE,
+          max_completion_tokens: PENNY_MAX_COMPLETION_TOKENS,
           chat_template_kwargs: { enable_thinking: false },
           response_format: {
             type: 'json_schema',
@@ -72,8 +90,32 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
         }),
       });
 
-      if (!response.ok) return null;
+      httpStatus = response.status;
+      if (!response.ok) {
+        const usageContext: CloudflareUsageContext = {
+          trace,
+          route: 'parse-batch-segmentation',
+          model,
+          outcome: 'HTTP_ERROR',
+          httpStatus,
+        };
+        logCloudflareUsage(this.logger, usageContext);
+        await this.metrics?.record(accessToken, usageContext);
+        usageLogged = true;
+        return null;
+      }
       const envelope: unknown = await response.json();
+      const usageContext: CloudflareUsageContext = {
+        trace,
+        route: 'parse-batch-segmentation',
+        model,
+        outcome: 'SUCCESS',
+        httpStatus,
+        envelope,
+      };
+      logCloudflareUsage(this.logger, usageContext);
+      await this.metrics?.record(accessToken, usageContext);
+      usageLogged = true;
       const content = readAssistantContent(envelope);
       if (!content) return null;
 
@@ -97,6 +139,17 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
 
       return segments as string[];
     } catch {
+      if (!usageLogged) {
+        const usageContext: CloudflareUsageContext = {
+          trace,
+          route: 'parse-batch-segmentation',
+          model,
+          outcome: 'NETWORK_OR_RESPONSE_ERROR',
+          httpStatus,
+        };
+        logCloudflareUsage(this.logger, usageContext);
+        await this.metrics?.record(accessToken, usageContext);
+      }
       return null;
     }
   }

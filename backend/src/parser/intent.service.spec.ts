@@ -27,7 +27,7 @@ describe('IntentService', () => {
 
     const result = await service.analyze(text, referenceDate, 'Asia/Kolkata');
 
-    expect(model.segment).toHaveBeenCalledWith(text);
+    expect(model.segment).toHaveBeenCalledWith(text, undefined, undefined);
     expect(result.drafts).toHaveLength(5);
     expect(result.modelAttempted).toBe(true);
     expect(result.modelAccepted).toBe(true);
@@ -61,7 +61,7 @@ describe('IntentService', () => {
     const completion = { analyze: jest.fn().mockResolvedValue({ updates: [{ ordinal: 1, category: 'Food & Dining' }], modelAttempted: true }) };
     const service = new IntentService(parser, model, completion as unknown as PersonalFollowUpService);
     const result = await service.analyze('spent 240 at CloudCafe today', referenceDate, 'Asia/Kolkata');
-    expect(completion.analyze).toHaveBeenCalledWith(expect.any(String), expect.any(Array), expect.any(Object), referenceDate, 'Asia/Kolkata', 'FILL_MISSING');
+    expect(completion.analyze).toHaveBeenCalledWith(expect.any(String), expect.any(Array), expect.any(Object), referenceDate, 'Asia/Kolkata', 'FILL_MISSING', undefined);
     expect(result).toMatchObject({ status: 'READY', modelAttempted: true, modelAccepted: true, interpretationSource: 'MODEL', drafts: [{ draft: { category: 'Food & Dining' } }] });
   });
 
