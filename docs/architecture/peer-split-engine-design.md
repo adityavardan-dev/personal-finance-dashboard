@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Phase A deterministic domain implementation authorized and completed; later phases remain subject to the decisions in Section 17 |
+| Status | Phase A complete; Phases C/D prototyping in progress; identity, persistence, notification, and settlement boundaries remain design targets |
 | Working branch | `feature/peer-split-engine-design` |
 | Base branch | `develop` |
 | Builds on | Milestone 10 deterministic context parser and conversational intake |
@@ -50,7 +50,7 @@ These names describe architectural responsibilities, not four autonomous LLM age
 
 | Component | Responsibility | Implementation boundary |
 |---|---|---|
-| Intent Agent | Convert the user's message into typed participants, contributions, and allocation rules | Internal TypeScript semantic SDK; local extractors first and an optional structured-model adapter for unresolved language |
+| Intent Agent | Convert the user's message into typed participants, contributions, dates, and allocation rules | Internal TypeScript semantic SDK; a deliberately small local layer plus primary and fallback structured-model adapters for free-form peer language |
 | Validation Agent | Reject missing, unsupported, contradictory, or unbalanced meaning | Deterministic schema, evidence, identity, and accounting-constraint validation; no model call required |
 | Ledger Solver | Calculate owed shares, net balances, and two-way obligations | Deterministic integer-minor-unit arithmetic; no language interpretation or persistence |
 | Confirmation Service | Persist the peer expense, obligations, and personal projection after approval | Authenticated, idempotent, transactional write boundary; never invoked automatically by analysis |
@@ -60,26 +60,30 @@ The one-way dependency is `Intent Agent -> Validation Agent -> Ledger Solver -> 
 | Lane | Example | Extraction | Math | External AI cost |
 |---|---|---|---|---|
 | Personal fast path | `Spent 300 on snacks today` | Existing Milestone 10 parser | Existing personal calculation | None |
-| Deterministic peer path | `I paid 1200 for lunch with Harsha and Jaswanth, split equally` | Local rules and identity resolution | Peer ledger solver | None |
-| Semantic peer path | `Paid 1800 for bowling, Jaswanth only had one beer so he pays 400 and split the rest` | TypeScript semantic SDK with optional structured-model fallback | Peer ledger solver | Only when local SDK modules cannot resolve it |
+| Deterministic peer path | A structured form or one of the small, stable grammars already supported by the application | Local normalization and identity resolution | Peer ledger solver | None |
+| Semantic peer path | `I paid 1200 for lunch with Harsha and Jaswanth, split equally` or a more complex exception | TypeScript semantic SDK with primary and fallback structured-model adapters | Peer ledger solver | One call for free-form peer language; one bounded fallback only on provider failure |
 
 The semantic model is never the source of truth for arithmetic or persistence. Its only responsibility is to translate flexible language into typed participants, payment facts, allocation constraints, and explicit ambiguities.
 
-Semantic understanding should be exposed through an internal **TypeScript SDK**, not implemented as repeated calls to an LLM agent from controllers or UI code. The SDK composes deterministic recognizers, conversation context, schema validation, and an optional model-provider adapter behind one stable contract. Most personal and simple peer messages finish locally; only unresolved complex language reaches the provider adapter.
+Semantic understanding should be exposed through an internal **TypeScript SDK**, not implemented as repeated calls to an LLM agent from controllers or UI code. The SDK composes bounded deterministic recognizers, conversation context, model-provider adapters, schema validation, and evidence checks behind one stable contract. Personal messages and structured peer forms remain local. Free-form peer messages may use a model even when the meaning appears simple; this is an intentional tradeoff that avoids expanding regex for every natural-language variation.
 
 ### Why not call an LLM for every message?
 
 - It would make the already-working personal path slower and more expensive.
-- It would add a network and provider dependency to simple transactions.
+- It would add a network and provider dependency to personal transactions and structured form edits that are already deterministic.
 - It would make deterministic behavior harder to test.
 - It would expose more financial text than necessary.
 - It would still require a deterministic solver and validation boundary.
 
 ### Why not extend regex indefinitely?
 
-Regex remains useful for classification and simple equal splits, but it becomes fragile when one sentence combines named people, multiple payers, exceptions, ratios, fixed shares, and residual allocation.
+Regex remains useful for coarse routing, normalization, and a small set of stable commands. It becomes fragile when it tries to cover every wording for names, dates, multiple payers, exceptions, ratios, fixed shares, and residual allocation. XPENSE will not grow a phrase-by-phrase regex catalog merely to avoid an AI call. A free-form peer message may therefore enter the semantic model path, while deterministic validation and calculation remain mandatory afterward.
 
 ## 3. Proposed end-to-end flow
+
+![XPENSE peer-split flow: semantic SDK, primary and fallback models, deterministic validation, identity resolution, ledger calculation, confirmation, persistence, and notifications](../assets/peer-split-engine-flow.svg)
+
+[Open the full-size peer-split flowchart](../assets/peer-split-engine-flow.svg).
 
 ```text
 RAW USER TEXT
@@ -90,9 +94,9 @@ INTENT AGENT
       |
       +-- personal transaction ----------------------> MILESTONE 10
       |
-      +-- explicit simple peer split ----------------> LOCAL PEER INTENT
+      +-- structured/stable peer command ------------> LOCAL PEER INTENT
       |
-      +-- asymmetric/complex peer language ----------> STAGE 2
+      +-- free-form peer language --------------------> STAGE 2
                                                            |
                                                            v
                                             SEMANTIC INTENT EXTRACTION
@@ -157,15 +161,16 @@ type IntakeLane =
 
 ### Deterministic peer-path signals
 
-- Participants are explicitly named or selected.
-- The payer is explicit or safely implied as the signed-in user.
-- The allocation is explicitly equal or uses one already-supported factor.
-- There are no exceptions, ratios, percentages, multiple contributors, or item-level constraints.
+- The user supplied the peer fields through the structured manual builder.
+- The message matches a small grammar already proven stable by the evaluation corpus.
+- The command edits a known draft field without adding new semantic meaning.
+- No new phrase-specific regex is added solely to make one failed example pass.
 
 ### Semantic peer-path signals
 
-Route to semantic extraction when the text contains one or more of:
+Route free-form peer language to semantic extraction when local structured handling cannot produce a complete typed intent. Examples include:
 
+- Named equal splits expressed conversationally.
 - Three or more participant mentions with natural-language exceptions.
 - `only`, `except`, `rest`, `remaining`, `contributed`, `covered`, `owes`, or `paid for` in split context.
 - Fixed participant amounts.
@@ -176,7 +181,7 @@ Route to semantic extraction when the text contains one or more of:
 
 ### Important routing rule
 
-Once the peer-ledger feature is enabled, an explicitly named peer must not be discarded merely because an equal personal share can be calculated. For example, `me and Harsha spent 500` may be solved locally, but it must use the peer contract so the relationship with Harsha is preserved.
+Once the peer-ledger feature is enabled, an explicitly named peer must not be discarded merely because an equal personal share can be calculated. For example, `me and Harsha spent 500` may be interpreted locally or by the semantic adapter, but it must use the peer contract so the relationship with Harsha is preserved.
 
 ## 5. Stage 2 — Semantic intent extraction
 
@@ -187,12 +192,26 @@ Convert raw language into structured facts and constraints. Do not:
 - Calculate final shares.
 - Create receivable/payable balances.
 - Resolve participant database IDs.
-- Invent missing people, totals, currencies, dates, or payer information.
+- Invent missing people, totals, currencies, or payer information. Dates may use only explicit evidence or the documented local-today default.
 - Persist anything.
 
 ### TypeScript semantic SDK boundary
 
 Implement semantic understanding as a reusable workspace package, for example `packages/semantic-intake`, with no dependency on HTTP controllers, persistence, or the ledger solver.
+
+In XPENSE, **SDK** means an internal TypeScript library with one public function. It is not a separate server and it is not another AI model. The controller gives it a message and conversation context; the SDK decides whether local handling is enough, selects a configured model adapter when needed, validates the returned shape, and gives the application one stable typed result. Controllers do not need to know whether Cloudflare, another hosted provider, or no model produced that result.
+
+```text
+Controller/UI
+    -> SemanticUnderstandingSdk
+         -> bounded local recognizers
+         -> primary ModelSemanticExtractor
+         -> fallback ModelSemanticExtractor (quota, timeout, or outage)
+         -> schema and evidence validation
+    <- typed intent or clarification
+```
+
+This boundary prevents provider-specific request formats, API keys, retry behavior, and JSON parsing from leaking into product code. It also lets unit tests replace both providers with in-memory stubs.
 
 ```ts
 interface SemanticUnderstandingSdk {
@@ -340,12 +359,36 @@ interface ModelSemanticExtractor {
 class SemanticUnderstandingService implements SemanticUnderstandingSdk {
   constructor(
     private readonly localExtractor: LocalPeerIntentExtractor,
-    private readonly modelExtractor?: ModelSemanticExtractor,
+    private readonly modelExtractors: ModelSemanticExtractor[],
   ) {}
 }
 ```
 
-This separation allows unit tests to use an in-memory model stub, permits provider replacement without changing product code, and keeps local extraction available when the model provider is disabled or unavailable.
+This separation allows unit tests to use in-memory model stubs, permits provider replacement without changing product code, and keeps local extraction available when every provider is disabled or unavailable. The provider chain is bounded: try the primary provider, try at most one configured fallback for quota, timeout, transport, or unavailable errors, then return a manual/clarification state. Do not create an autonomous retry loop. A semantically invalid response does not become trusted merely because it came from the fallback provider; every result passes the same deterministic validator.
+
+### Date policy
+
+- Extract an explicit date separately for every draft, including relative phrases such as `yesterday` and `three days ago`.
+- If a draft has no explicit date, default it to the user's local `today` using the supplied reference timestamp and timezone.
+- Never apply one clause's explicit date to an unrelated draft.
+- Display the interpreted date on the review card and keep it editable before confirmation.
+- Store the resolved ISO date and enough evidence in the evaluation case to test this behavior later.
+
+### Why the validation component remains necessary
+
+The `Validation Agent` is deterministic TypeScript code, not a second LLM call, so it consumes no model tokens. A clearer implementation name is `SemanticIntentValidator`. It protects the application from both the primary and fallback models returning JSON that is syntactically valid but financially wrong.
+
+For example, validation checks that:
+
+- `₹5,000` actually appears in the user's message or confirmed context;
+- `Katty` was mentioned and was not invented by a model;
+- `three days ago` resolves from the supplied timestamp and timezone;
+- participant counts agree with the named people;
+- payer and beneficiary are participants;
+- fixed allocations do not exceed the total;
+- unknown fields, database IDs, and persistence instructions are rejected.
+
+Provider fallback improves availability; deterministic validation provides trust. They solve different problems and both are required.
 
 ## 6. Participant identity resolution
 
@@ -356,10 +399,23 @@ The authenticated backend resolves each mention using:
 1. `SELF` to the authenticated user.
 2. Exact normalized contact match.
 3. Unique alias match.
-4. Unique registered-user match, if peer discovery is supported.
+4. Unique registered-account handle match, if peer discovery is supported.
 5. Clarification when zero or several candidates remain.
 
 The system must not silently create duplicate contacts for `Harsha`, `harsha`, and `Harsha K`.
+
+XPENSE currently stores a display `username`, but the database does not enforce that it is unique. Therefore the current username alone is not safe enough for silent account linking or notification. Before registered-peer notification is enabled, add a case-insensitive unique handle (or another explicit account-selection mechanism). Display names remain non-unique.
+
+### Registered accounts, placeholders, and notifications
+
+- `me`, `myself`, and `I` resolve to the authenticated XPENSE user.
+- A peer mention that uniquely matches an XPENSE handle resolves to `REGISTERED_USER`.
+- A peer mention with no registered match remains a `LOCAL_CONTACT` placeholder with its display name and ledger balance.
+- Several possible registered matches require the user to select the intended account; never guess from a display name.
+- Do not notify anyone while interpreting or previewing a split.
+- After explicit confirmation and successful persistence, write notification events for registered participants only.
+- Local placeholders receive no application notification. A future invite/share feature may be added separately.
+- Deliver notifications from a transactional outbox so a failed notification cannot partially save or roll back the financial ledger.
 
 ### Proposed identity state
 
@@ -372,7 +428,7 @@ interface ResolvedParticipant {
 }
 ```
 
-Open product decision: whether peer balances can be maintained for local contacts who do not have XPENSE accounts. The recommended answer is yes, because requiring registration would block basic expense tracking.
+Decision: peer balances can be maintained for local contacts who do not have XPENSE accounts. Registered accounts receive in-app notifications after confirmation; local contacts remain named placeholders.
 
 ## 7. Stage 3 — Deterministic asymmetric solver
 
@@ -566,6 +622,10 @@ Every manual edit runs the deterministic solver again. It must not require anoth
 
 ## 11. Data contract and persistence model
 
+The **persistence schema** is the durable database design used after the user confirms a draft. It defines which tables exist, which IDs connect them, which values are required, and which database constraints prevent partial or contradictory financial records. The in-memory TypeScript draft describes what the application is currently reviewing; the persistence schema describes how an approved peer expense survives logout, another device, or a server restart.
+
+One confirmed dinner is not one loose row. It is an aggregate containing the expense, its participants, what each person paid, what each person owes, the resulting obligations, the signed-in user's personal-spending projection, and any notification events. These records must be written in one database transaction: either all succeed or none are stored.
+
 ### Recommended aggregate
 
 ```ts
@@ -612,9 +672,12 @@ A relational persistence model is recommended:
 - `peer_obligations`
 - `peer_settlements`
 - `contacts` or `peer_identities`
+- `notification_outbox`
 - Existing personal `expenses`, linked by `peer_expense_id`
 
 The exact database technology is a separate decision, but it must support transactions, unique constraints, foreign keys, and idempotent confirmation.
+
+The current Supabase foundation (`peer_splits`, `peer_split_participants`, and `peer_split_obligations`) is not yet the complete persistence schema. It still needs authoritative contribution/allocation records, settlements, contact or registered-peer resolution, idempotency/version fields, an atomic confirmation operation, and the notification outbox.
 
 ### Dashboard projection rule
 
@@ -687,14 +750,14 @@ Partial settlements must be supported, and the original expense allocation must 
 
 ### Cost and latency
 
-- Use local routing to keep personal and simple peer inputs at zero external cost.
+- Use local routing to keep personal inputs, structured peer forms, and already-supported stable peer commands at zero external cost.
 - Run the TypeScript SDK's local extractors before its provider adapter.
 - Set strict input and output token limits.
-- Use one extraction call per new complex message, not per field edit.
+- Use one extraction call per new free-form peer message, not per field edit.
 - Reuse the last validated result for the same unchanged message and draft version within the active conversation; do not create a persistent raw-financial-text cache.
 - Use a single structured-output inference request rather than creating a stateful LLM agent session.
 - Do not use autonomous agent loops.
-- Apply a timeout and a small bounded retry policy only for transport failures.
+- Apply a timeout and at most one configured provider fallback for quota, transport, timeout, or unavailable failures.
 - Track route rate, latency, schema failures, clarification rate, and cost without storing raw financial text.
 
 ## 14. Failure behavior
@@ -755,7 +818,8 @@ Score schema validity, fact extraction, ambiguity detection, and unsupported-cas
 
 - Unit-test every local extractor without a network dependency.
 - Verify that complete local intents never invoke `ModelSemanticExtractor`.
-- Verify that only unresolved complex language invokes the model adapter.
+- Verify that free-form peer language invokes the model adapter while personal and structured peer inputs remain local.
+- Verify that the fallback adapter is attempted only for approved availability failures and never creates a retry loop.
 - Use an in-memory adapter stub for merge, validation, timeout, and failure tests.
 - Contract-test each vendor adapter against the same versioned schema.
 - Verify that an unchanged message and draft version reuse the active-conversation result.
@@ -788,22 +852,24 @@ Phase A is implemented under `backend/src/peer-splits/domain`. Editable expected
 - Add peer expense, participant, allocation, obligation, and settlement storage.
 - Link the user's owed share to the personal expense projection.
 - Add idempotent atomic confirmation.
+- Add a unique registered-account handle and transactional notification outbox.
 
 ### Phase C — Deterministic peer fast path and manual builder
 
 - Add local peer-intent routing.
-- Support named equal splits without AI.
+- Keep local handling bounded to structured input and stable, evaluated commands; do not grow phrase-specific regex indefinitely.
 - Add participant selection and balance preview UI.
 - Ensure every complex case can fall back to manual structured editing.
 
 ### Phase D — Semantic extraction behind a feature flag
 
 - Create the internal TypeScript semantic SDK and its public contract.
-- Implement local extractors, context merging, and deterministic clarification before adding a model adapter.
-- Implement the provider-neutral `ModelSemanticExtractor` port and one vendor adapter.
+- Implement bounded local extractors, context merging, and deterministic clarification.
+- Implement the provider-neutral `ModelSemanticExtractor` port, a primary vendor adapter, and at most one configured fallback adapter.
 - Add structured schema validation and evidence checks.
+- Extract and default dates per draft while keeping them editable.
 - Build the evaluation corpus and minimum quality threshold.
-- Roll out only to complex peer inputs.
+- Roll out to free-form peer inputs; keep personal fast paths and structured peer forms local.
 
 ### Phase E — Settlement lifecycle
 
@@ -815,10 +881,20 @@ This order prevents the model contract from driving the accounting model. The le
 
 ## 17. Decisions required before implementation
 
-1. Can a peer be a local contact without an XPENSE account?
+### Decisions recorded on 2026-11-25
+
+- Peers without XPENSE accounts are supported as local placeholders.
+- A uniquely matched registered account should receive an in-app notification only after confirmation and persistence.
+- Display usernames are not currently unique, so registered linking requires a new unique handle or explicit account selection.
+- Free-form peer messages may call a hosted model even for an apparently simple equal split; regex remains intentionally bounded.
+- A second free hosted model may be configured as a bounded availability fallback behind the same SDK interface.
+- Every primary or fallback model response must pass the same deterministic validator.
+- Dates are interpreted per draft, default to the user's local today when absent, and remain editable before confirmation.
+
+1. **Resolved:** A peer may be a local placeholder without an XPENSE account; only uniquely resolved registered accounts receive notifications.
 2. Will the first release support multiple payers, or only one payer with later reimbursements?
 3. Which relational persistence technology should replace or sit beside the current JSON expense store?
-4. Is a hosted semantic model acceptable for financial text, subject to explicit privacy controls?
+4. **Resolved for development:** A hosted semantic model is acceptable for financial text subject to explicit privacy controls; production retention and consent still require review.
 5. Should users be able to disable semantic processing and always use the manual peer builder?
 6. Should the payer receive equal-split rounding remainders, or should the first participant always receive them?
 7. Are percentages and weights both required in the first release?
@@ -837,7 +913,7 @@ Recommended first release:
 - Equal, fixed-amount, percentage, and weighted splits.
 - Deterministic remainder distribution.
 - Full and partial settlements.
-- Optional hosted semantic extraction only for complex language.
+- Hosted semantic extraction for free-form peer language, with one optional provider fallback.
 - Manual structured peer builder always available.
 - Explicit confirmation and atomic persistence required.
 
@@ -863,3 +939,63 @@ Implementation beyond the completed Phase A domain foundation should not begin u
 - Provider privacy and retention constraints are documented.
 - Manual fallback behavior is accepted.
 - A representative extraction evaluation corpus exists.
+
+## 20. Ordered implementation checklist
+
+This is the working order for the peer-split implementation. Complete and measure each step before moving to the next one so a later refactor cannot hide a regression.
+
+### 1. Protect the current behavior with evaluations
+
+- [x] Add an opt-in **Add test case** action for Penny replies across local, model, personal, and peer-split paths.
+- [x] Store flagged examples in the DEV-only `ai_eval_cases` table.
+- [x] Add structured `expected_json` to the two important READY cases.
+- [x] Add a generic expected-subset comparator; it checks only the fields declared by each case and therefore supports creates, edits, deletes, personal drafts, peer splits, and mixed conversations.
+- [x] Add the DEV-only `ai_eval_runs` table for immutable run summaries.
+- [x] Add `POST /parser/eval-runs/captured-baseline` to score stored observed replies without calling a model.
+- [x] Record the pre-refactor captured baseline: **0/2 complete cases passed (0%) and 16/28 expected fields passed (57.14%)** on 2026-11-25.
+- [ ] Add more reviewed cases until every important intent and failure family has representative coverage.
+- [ ] Add a LIVE_REPLAY evaluator after the semantic SDK provides one stable execution boundary.
+- [ ] Define the minimum pass-rate gate required before merging prompt, model, validator, or routing changes.
+
+`ai_eval_cases` answers **what should Penny have done?** Each row contains the input, captured response, human expectation, and structured `expected_json`. `ai_eval_runs` answers **how well did this code version perform?** Each row records strict case accuracy, expected-field accuracy, and per-case comparison details. Captured-baseline runs are deterministic and consume no model tokens; future LIVE_REPLAY runs will execute the same inputs through the semantic SDK and may consume provider quota.
+
+### 2. Introduce the unified semantic SDK
+
+- [ ] Define one versioned input, context, output, and ambiguity contract for personal and peer intents.
+- [ ] Route bounded local extraction and provider calls behind that contract.
+- [ ] Resolve a separate editable date for every produced draft; default an omitted date to the user's local current date.
+- [ ] Apply the same schema, evidence, identity, and accounting checks to local, primary-model, and fallback-model output.
+- [ ] Rerun the evaluation corpus and compare it with the captured baseline.
+
+### 3. Add the bounded provider fallback
+
+- [ ] Keep one configured primary hosted model and at most one availability fallback.
+- [ ] Invoke fallback only for approved provider failures or quota exhaustion, not for deterministic validation failures.
+- [ ] Prevent retry loops and record which provider produced the accepted result.
+
+### 4. Resolve participant identity
+
+- [ ] Add a unique registered-account handle or explicit account-selection flow.
+- [ ] Interpret `I`, `me`, and `myself` as the authenticated user.
+- [ ] Link uniquely resolved XPENSE users; retain unmatched names as local placeholders.
+- [ ] Ask for clarification when a name could match more than one registered account.
+
+### 5. Complete persistence and confirmation
+
+- [ ] Approve the peer-expense persistence schema.
+- [ ] Persist the peer expense, participants, allocations, obligations, and the user's personal projection atomically.
+- [ ] Make confirmation authenticated and idempotent; never save directly from model output.
+- [ ] Keep all dates, participants, payers, and allocations editable before confirmation.
+
+### 6. Add notifications
+
+- [ ] Write notification-outbox events in the same transaction as confirmed registered-peer splits.
+- [ ] Notify linked XPENSE users only after successful persistence.
+- [ ] Do not notify local placeholder participants.
+
+### 7. Add settlement lifecycle
+
+- [ ] Record full and partial settlements.
+- [ ] Show balances and audit history per peer and currency.
+- [ ] Define adjustment behavior for edits after settlement.
+- [ ] Add settlement invariants and end-to-end tests.

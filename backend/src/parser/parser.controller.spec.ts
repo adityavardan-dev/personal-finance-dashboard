@@ -10,11 +10,13 @@ import { SplitIntentService } from './split-intent.service';
 import { SplitFollowUpService } from './split-follow-up.service';
 import { PersonalFollowUpService } from './personal-follow-up.service';
 import { AiEvalCasesService } from './ai-eval-cases.service';
+import { AiEvalRunnerService } from './ai-eval-runner.service';
 
 describe('ParserController', () => {
   let controller: ParserController;
   let service: jest.Mocked<Pick<ParserService, 'parse' | 'parseBatch'>>;
   let intent: jest.Mocked<Pick<IntentService, 'analyze'>>;
+  let evalRunner: jest.Mocked<Pick<AiEvalRunnerService, 'runCapturedBaseline'>>;
 
   beforeEach(async () => {
     service = {
@@ -48,6 +50,11 @@ describe('ParserController', () => {
         interpretationSource: 'LOCAL',
       }),
     };
+    evalRunner = {
+      runCapturedBaseline: jest.fn().mockResolvedValue({ id: 'run-id' }),
+    } as unknown as jest.Mocked<
+      Pick<AiEvalRunnerService, 'runCapturedBaseline'>
+    >;
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ParserController],
@@ -66,7 +73,14 @@ describe('ParserController', () => {
           provide: PersonalFollowUpService,
           useValue: { analyze: jest.fn().mockResolvedValue({ updates: [] }) },
         },
-        { provide: AiEvalCasesService, useValue: { create: jest.fn().mockResolvedValue({ id: 'case-id' }) } },
+        {
+          provide: AiEvalCasesService,
+          useValue: { create: jest.fn().mockResolvedValue({ id: 'case-id' }) },
+        },
+        {
+          provide: AiEvalRunnerService,
+          useValue: evalRunner,
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -117,5 +131,12 @@ describe('ParserController', () => {
       ParserController,
     ) as unknown;
     expect(Array.isArray(guards) ? guards : []).toContain(JwtAuthGuard);
+  });
+
+  it('runs the captured baseline with the authenticated user token', async () => {
+    await expect(
+      controller.runCapturedBaseline({ user: { accessToken: 'user-token' } }),
+    ).resolves.toEqual({ id: 'run-id' });
+    expect(evalRunner.runCapturedBaseline).toHaveBeenCalledWith('user-token');
   });
 });

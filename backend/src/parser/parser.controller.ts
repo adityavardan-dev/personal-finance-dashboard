@@ -22,6 +22,7 @@ import { SplitFollowUpService } from './split-follow-up.service';
 import { PersonalFollowUpService } from './personal-follow-up.service';
 import { AiEvalCasesService } from './ai-eval-cases.service';
 import { CreateAiEvalCaseDto } from './dto/create-ai-eval-case.dto';
+import { AiEvalRunnerService } from './ai-eval-runner.service';
 
 interface AuthenticatedParserRequest {
   user?: { accessToken: string };
@@ -39,6 +40,7 @@ export class ParserController {
     private readonly splitFollowUpService: SplitFollowUpService,
     private readonly personalFollowUpService: PersonalFollowUpService,
     private readonly aiEvalCases: AiEvalCasesService,
+    private readonly aiEvalRunner: AiEvalRunnerService,
   ) {}
 
   /** Saves a user-approved response from any Penny path as a DEV evaluation candidate. */
@@ -48,6 +50,12 @@ export class ParserController {
     @Req() httpRequest: AuthenticatedParserRequest,
   ) {
     return this.aiEvalCases.create(httpRequest.user!.accessToken, request);
+  }
+
+  /** Scores stored human-reviewed cases without spending model tokens. */
+  @Post('eval-runs/captured-baseline')
+  runCapturedBaseline(@Req() httpRequest: AuthenticatedParserRequest) {
+    return this.aiEvalRunner.runCapturedBaseline(httpRequest.user!.accessToken);
   }
 
   /** Handles parse. */
@@ -125,7 +133,12 @@ export class ParserController {
   ) {
     const trace = readRequestTrace(conversationId, requestId);
     return {
-      ...(await this.splitFollowUpService.analyze(request?.text, request?.pendingSplits, trace, httpRequest?.user?.accessToken)),
+      ...(await this.splitFollowUpService.analyze(
+        request?.text,
+        request?.pendingSplits,
+        trace,
+        httpRequest?.user?.accessToken,
+      )),
       ...trace,
     };
   }
@@ -133,15 +146,30 @@ export class ParserController {
   /** Interprets edits to unsaved personal drafts supplied by the current conversation. */
   @Post('personal-follow-up')
   async personalFollowUp(
-    @Body() request: { text: unknown; drafts: unknown; referenceTimestamp?: string; timeZone?: string },
+    @Body()
+    request: {
+      text: unknown;
+      drafts: unknown;
+      referenceTimestamp?: string;
+      timeZone?: string;
+    },
     @Headers('x-conversation-id') conversationId?: string,
     @Headers('x-request-id') requestId?: string,
     @Req() httpRequest?: AuthenticatedParserRequest,
   ) {
     const trace = readRequestTrace(conversationId, requestId);
     return {
-      ...(await this.personalFollowUpService.analyze(request?.text, request?.drafts, trace,
-        request.referenceTimestamp ? new Date(request.referenceTimestamp) : new Date(), request.timeZone, 'EDIT', httpRequest?.user?.accessToken)),
+      ...(await this.personalFollowUpService.analyze(
+        request?.text,
+        request?.drafts,
+        trace,
+        request.referenceTimestamp
+          ? new Date(request.referenceTimestamp)
+          : new Date(),
+        request.timeZone,
+        'EDIT',
+        httpRequest?.user?.accessToken,
+      )),
       ...trace,
     };
   }
