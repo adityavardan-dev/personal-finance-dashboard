@@ -1,8 +1,8 @@
 import { DecimalPipe, DOCUMENT } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, isDevMode, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { PeerSplitsService, type SplitInput } from '../../peer-splits/peer-splits.service';
+import { PeerSplitsService, type SplitGroup, type SplitInput } from '../../peer-splits/peer-splits.service';
 import { parseSplitPrompt } from '../../peer-splits/prompt-parser';
 import { type PendingSplit } from '../../peer-splits/counted-split-parser';
 import { localDate, parseSplitDateFollowUp } from '../../peer-splits/split-date';
@@ -15,6 +15,7 @@ import {
   ParserMissingField,
 } from '../../../core/parser/parser.models';
 import { ParserService } from '../../../core/parser/parser.service';
+import { EvalCasesService } from '../../../core/parser/eval-cases.service';
 import { AppLayout } from '../../../shared/app-layout/app-layout';
 import { CreateExpensePayload, ExpenseService, TransactionType } from '../expense.service';
 import { ContextIntakeSessionService } from './context-intake-session.service';
@@ -25,6 +26,7 @@ type IntakeStatus = 'idle' | 'parsing' | 'draft' | 'saving' | 'error';
 type SplitResolution = '' | 'personal' | 'split';
 type ChatRole = 'user' | 'assistant';
 type DraftSaveStatus = 'draft' | 'saving' | 'saved' | 'error';
+type ResponseMedium = 'APP_LOGIC' | 'LOCAL_PARSER' | 'AI_INTERPRETER' | 'SPLIT_SOLVER';
 
 interface ChatMessage {
   id: string;
@@ -33,6 +35,15 @@ interface ChatMessage {
   role: ChatRole;
   text: string;
   createdAt: string;
+  modelAttempted?: boolean;
+  modelAccepted?: boolean;
+  interpretationSource?: 'LOCAL' | 'MODEL';
+  responseMedium?: ResponseMedium;
+  responsePayload?: unknown;
+  beforeState?: TurnState;
+  afterState?: TurnState;
+  timeZone?: string;
+  testCaseId?: string;
   savedSummary?: SavedTransactionSummary;
   splitPreview?: {
     id: string;
@@ -42,6 +53,12 @@ interface ChatMessage {
     date: string | null;
     title: string;
   };
+}
+
+interface TurnState {
+  personalDrafts: IntakeDraft[];
+  pendingSplits: PendingSplit[];
+  splitPreviews: SplitGroup[];
 }
 
 interface SavedTransactionSummary {
@@ -93,6 +110,7 @@ interface ConversationSnapshot {
 })
 export class ContextIntakeComponent {
   private readonly parserService = inject(ParserService);
+  private readonly evalCases = inject(EvalCasesService);
   private readonly expenseService = inject(ExpenseService);
   private readonly metricsStore = inject(FinanceMetricsStore);
   private readonly session = inject(ContextIntakeSessionService);
@@ -107,6 +125,11 @@ export class ContextIntakeComponent {
   protected readonly drafts = signal<IntakeDraft[]>([]);
   protected readonly pendingSplits = signal<PendingSplit[]>([]);
   protected readonly errorMessage = signal('');
+  protected readonly testCaseReplyId = signal<string | null>(null);
+  protected readonly testCaseSaving = signal(false);
+  protected readonly testCaseError = signal('');
+  protected expectedTestCase = '';
+  protected readonly showTestCaseActions = isDevMode();
   protected readonly applicationCurrency = computed(() => this.budgetStore.currency());
   protected readonly readyCount = computed(
     () =>
@@ -172,7 +195,7 @@ export class ContextIntakeComponent {
       conversationId: this.conversationId,
       requestId: createLocalId(),
     };
-    this.addMessage('user', text, undefined, undefined, trace);
+    this.addMessage('user', text, undefined, undefined, trace, undefined, this.captureTurnState());
     this.rawText = '';
     this.status.set('parsing');
     this.errorMessage.set('');
@@ -255,9 +278,11 @@ export class ContextIntakeComponent {
               ready.length === newDrafts.length
                 ? `I found ${newDrafts.length} split expenses and am creating their previews for review.`
                 : `I found ${newDrafts.length} split expenses. Review the cards below and add any missing names or payer. You can also reply: expense 1: You, Alice, Bob; paid by You.`,
+              undefined, undefined, trace, result.modelAttempted, undefined,
+              result.modelAccepted, result.interpretationSource, result, 'AI_INTERPRETER',
             );
             this.status.set('draft');
-            for (const item of ready) this.previewPendingSplit(item, trace);
+            for (const item of ready) this.previewPendingSplit(item, trace, result.modelAttempted);
           } else {
             this.awaitingSplitDetails = true;
             this.unresolvedSplitMessages.push(text);
@@ -265,6 +290,8 @@ export class ContextIntakeComponent {
               'assistant',
               result.clarificationPrompt ??
                 'Tell me each expense amount and how many people share it.',
+              undefined, undefined, trace, result.modelAttempted, undefined,
+              result.modelAccepted, result.interpretationSource, result, 'AI_INTERPRETER',
             );
             this.status.set('idle');
           }
@@ -303,6 +330,8 @@ export class ContextIntakeComponent {
             date,
             title,
           },
+          trace, false, undefined, false, 'LOCAL',
+          { input: draft.input, result }, 'SPLIT_SOLVER',
         );
         this.status.set('idle');
         this.persistConversation();
@@ -313,6 +342,8 @@ export class ContextIntakeComponent {
           'assistant',
           response.error?.issues?.map((issue) => issue.message).join(' ') ||
             'This split needs clarification. Review the total, payers, and people in the manual split form.',
+          undefined, undefined, trace, false, undefined, false, 'LOCAL',
+          response.error ?? null, 'SPLIT_SOLVER',
         );
         this.status.set('idle');
         this.persistConversation();
@@ -344,7 +375,9 @@ export class ContextIntakeComponent {
         const incomplete = result.updates.map((update) => ({ ordinal: update.ordinal, remaining: (update.peopleCount ?? known.get(update.ordinal)?.peopleCount ?? 0) - (update.names?.length ?? known.get(update.ordinal)?.names.split(/\s*,\s*|\s+and\s+/i).filter(Boolean).length ?? 0) })).filter((item) => item.remaining > 0);
         this.addMessage('assistant', result.updates.length
           ? `Updated ${result.updates.map((update) => `split ${update.ordinal}`).join(' and ')}. ${incomplete.map((item) => `Split ${item.ordinal} still needs ${item.remaining} ${this.pluralize('name', item.remaining)}.`).join(' ')} Add who paid before creating each preview.`
-          : result.clarificationPrompt ?? 'Tell me which split each participant belongs to.');
+          : result.clarificationPrompt ?? 'Tell me which split each participant belongs to.',
+          undefined, undefined, trace, result.modelAttempted, undefined,
+          result.modelAccepted, result.interpretationSource, result, 'AI_INTERPRETER');
         this.status.set('draft');
         this.persistConversation();
       },
@@ -354,7 +387,7 @@ export class ContextIntakeComponent {
     });
   }
 
-  protected previewPendingSplit(draft: PendingSplit, trace?: RequestTrace): void {
+  protected previewPendingSplit(draft: PendingSplit, trace?: RequestTrace, modelAttempted = false): void {
     const names = draft.names
       .split(/\s*,\s*|\s+and\s+/i)
       .map((name) => name.trim())
@@ -420,6 +453,13 @@ export class ContextIntakeComponent {
             date: draft.date,
             title: `Expense ${draft.ordinal}`,
           },
+          trace,
+          modelAttempted,
+          undefined,
+          modelAttempted,
+          modelAttempted ? 'MODEL' : 'LOCAL',
+          { input, result },
+          modelAttempted ? 'AI_INTERPRETER' : 'SPLIT_SOLVER',
         );
         this.persistConversation();
       },
@@ -572,7 +612,79 @@ export class ContextIntakeComponent {
     this.unresolvedSplitMessages = [];
     this.errorMessage.set('');
     this.rawText = '';
+    this.testCaseReplyId.set(null);
+    this.testCaseError.set('');
+    this.expectedTestCase = '';
     this.status.set('idle');
+  }
+
+  /** Offers DEV capture for every reply associated with a user turn. */
+  protected canAddTestCase(message: ChatMessage): boolean {
+    return this.showTestCaseActions && message.role === 'assistant' &&
+      !!message.requestId && !message.testCaseId &&
+      this.messages().some((item) => item.role === 'user' && item.requestId === message.requestId);
+  }
+
+  protected openTestCase(message: ChatMessage): void {
+    this.testCaseReplyId.set(message.id);
+    this.expectedTestCase = '';
+    this.testCaseError.set('');
+  }
+
+  protected saveTestCase(message: ChatMessage): void {
+    const userMessage = this.messages().find((item) => item.role === 'user' && item.requestId === message.requestId);
+    const expectedDescription = this.expectedTestCase.trim();
+    if (!this.canAddTestCase(message) || !userMessage || !message.conversationId || !message.requestId ||
+      !expectedDescription || this.testCaseSaving()) return;
+    this.testCaseSaving.set(true);
+    this.testCaseError.set('');
+    this.evalCases.create({
+      conversationId: message.conversationId,
+      requestId: message.requestId,
+      responseId: message.id,
+      modelAttempted: message.modelAttempted === true,
+      input: {
+        message: userMessage.text,
+        referenceTimestamp: userMessage.createdAt,
+        timeZone: userMessage.timeZone ?? null,
+        before: userMessage.beforeState ?? null,
+      },
+      observed: {
+        reply: message.text,
+        medium: message.responseMedium ?? 'APP_LOGIC',
+        modelAttempted: message.modelAttempted ?? null,
+        modelAccepted: message.modelAccepted ?? null,
+        interpretationSource: message.interpretationSource ?? null,
+        response: message.responsePayload ?? null,
+        after: message.afterState ?? null,
+      },
+      expectedDescription,
+    }).subscribe({
+      next: ({ id }) => {
+        this.messages.update((messages) => messages.map((item) => item.id === message.id ? { ...item, testCaseId: id } : item));
+        this.testCaseReplyId.set(null);
+        this.testCaseSaving.set(false);
+        this.persistConversation();
+      },
+      error: () => {
+        this.testCaseSaving.set(false);
+        this.testCaseError.set('Could not save the test case to XPENSE Development. Try again.');
+      },
+    });
+  }
+
+  private captureTurnState(extraPreview?: ChatMessage['splitPreview']): TurnState {
+    const previewIds = this.messages().flatMap((item) => item.splitPreview ? [item.splitPreview.id] : []);
+    if (extraPreview) previewIds.push(extraPreview.id);
+    const splitPreviews = previewIds.flatMap((id) => {
+      const group = this.peerSplits.getGroup(id);
+      return group ? [structuredClone(group)] : [];
+    });
+    return {
+      personalDrafts: this.drafts().map((draft) => ({ ...draft })),
+      pendingSplits: this.pendingSplits().map((split) => ({ ...split })),
+      splitPreviews,
+    };
   }
 
   protected formatMessageTime(message: ChatMessage): string {
@@ -601,6 +713,8 @@ export class ContextIntakeComponent {
           ? `I created ${added.length} ${this.pluralize('transaction draft', added.length)}. ${result.clarificationPrompt ?? `${attention} ${attention === 1 ? 'needs' : 'need'} attention; expand the cards or reply here to complete them.`}`
           : `I created ${added.length} ready ${this.pluralize('transaction draft', added.length)}. Review the details before saving.`
       }`,
+      undefined, undefined, trace, result.modelAttempted, undefined,
+      result.modelAccepted, result.interpretationSource, result, 'AI_INTERPRETER',
     );
     this.status.set('draft');
     this.persistConversation();
@@ -645,7 +759,9 @@ export class ContextIntakeComponent {
       next: (result) => {
         if (!this.isActiveTurn(trace)) return;
         if (!result.updates.length) {
-          this.addMessage('assistant', result.clarificationPrompt ?? 'Tell me which transaction to change and the new value.');
+          this.addMessage('assistant', result.clarificationPrompt ?? 'Tell me which transaction to change and the new value.',
+            undefined, undefined, trace, result.modelAttempted, undefined,
+            result.modelAccepted, result.interpretationSource, result, 'AI_INTERPRETER');
           this.status.set('draft');
           this.persistConversation();
           return;
@@ -685,7 +801,9 @@ export class ContextIntakeComponent {
         const edited = result.updates.length - removed;
         this.addMessage('assistant', removed && !edited
           ? `${removed} unsaved ${this.pluralize('transaction draft', removed)} removed with PENNY.`
-          : `${edited} ${this.pluralize('transaction', edited)} updated and ${removed} ${this.pluralize('draft', removed)} removed with PENNY. Review the cards before saving.`);
+          : `${edited} ${this.pluralize('transaction', edited)} updated and ${removed} ${this.pluralize('draft', removed)} removed with PENNY. Review the cards before saving.`,
+          undefined, undefined, trace, result.modelAttempted, undefined,
+          result.modelAccepted, result.interpretationSource, result, 'AI_INTERPRETER');
         this.status.set(this.drafts().length ? 'draft' : 'idle');
         this.persistConversation();
       },
@@ -823,7 +941,7 @@ export class ContextIntakeComponent {
   }
 
   private saveDrafts(drafts: IntakeDraft[]): void {
-    if (!drafts.length) return;
+    if (!drafts.length || this.status() === 'saving') return;
     this.status.set('saving');
     this.errorMessage.set('');
     drafts.forEach((draft) => {
@@ -938,6 +1056,7 @@ export class ContextIntakeComponent {
     this.addMessage(
       'assistant',
       'I could not process that message. Try a specific instruction or edit a transaction card.',
+      undefined, undefined, trace, null,
     );
     this.status.set(this.drafts().length ? 'draft' : 'error');
     this.persistConversation();
@@ -979,6 +1098,12 @@ export class ContextIntakeComponent {
     savedSummary?: SavedTransactionSummary,
     splitPreview?: ChatMessage['splitPreview'],
     trace?: RequestTrace,
+    modelAttempted?: boolean | null,
+    beforeState?: TurnState,
+    modelAccepted?: boolean,
+    interpretationSource?: 'LOCAL' | 'MODEL',
+    responsePayload?: unknown,
+    responseMedium?: ResponseMedium,
   ): void {
     const messageTrace =
       trace ?? (role === 'assistant' && this.status() === 'parsing' ? this.activeTrace : null);
@@ -991,6 +1116,15 @@ export class ContextIntakeComponent {
         role,
         text,
         createdAt: new Date().toISOString(),
+        modelAttempted: role === 'assistant' && messageTrace && modelAttempted !== null
+          ? (modelAttempted ?? false) : undefined,
+        modelAccepted: role === 'assistant' ? modelAccepted : undefined,
+        interpretationSource: role === 'assistant' ? interpretationSource : undefined,
+        responsePayload: role === 'assistant' ? responsePayload : undefined,
+        responseMedium: role === 'assistant' && messageTrace ? (responseMedium ?? 'APP_LOGIC') : undefined,
+        beforeState: role === 'user' ? beforeState : undefined,
+        afterState: role === 'assistant' && messageTrace ? this.captureTurnState(splitPreview) : undefined,
+        timeZone: role === 'user' ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined,
         savedSummary,
         splitPreview,
       },

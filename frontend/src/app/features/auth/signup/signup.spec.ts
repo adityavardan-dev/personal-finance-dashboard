@@ -113,7 +113,7 @@ describe('SignupComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('#signup-success')?.textContent).toContain(
-      'Your account is ready',
+      'Check your email to confirm your account',
     );
     expect(form.getAttribute('aria-busy')).toBe('false');
     expect(submitButton.disabled).toBe(false);

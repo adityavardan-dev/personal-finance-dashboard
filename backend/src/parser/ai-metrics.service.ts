@@ -38,6 +38,8 @@ export class AiMetricsService {
           outcome: context.outcome,
           http_status: context.httpStatus ?? null,
           usage_reported: usage !== null,
+          query_json: context.queryJson ?? null,
+          response_json: context.envelope ?? null,
         }),
       });
     } catch {

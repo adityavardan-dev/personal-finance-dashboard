@@ -9,6 +9,7 @@ import { ParserService } from './parser.service';
 import { SplitIntentService } from './split-intent.service';
 import { SplitFollowUpService } from './split-follow-up.service';
 import { PersonalFollowUpService } from './personal-follow-up.service';
+import { AiEvalCasesService } from './ai-eval-cases.service';
 
 describe('ParserController', () => {
   let controller: ParserController;
@@ -65,6 +66,7 @@ describe('ParserController', () => {
           provide: PersonalFollowUpService,
           useValue: { analyze: jest.fn().mockResolvedValue({ updates: [] }) },
         },
+        { provide: AiEvalCasesService, useValue: { create: jest.fn().mockResolvedValue({ id: 'case-id' }) } },
       ],
     })
       .overrideGuard(JwtAuthGuard)

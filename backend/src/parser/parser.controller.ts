@@ -20,6 +20,8 @@ import { ParserService } from './parser.service';
 import { SplitIntentService } from './split-intent.service';
 import { SplitFollowUpService } from './split-follow-up.service';
 import { PersonalFollowUpService } from './personal-follow-up.service';
+import { AiEvalCasesService } from './ai-eval-cases.service';
+import { CreateAiEvalCaseDto } from './dto/create-ai-eval-case.dto';
 
 interface AuthenticatedParserRequest {
   user?: { accessToken: string };
@@ -36,7 +38,17 @@ export class ParserController {
     private readonly splitIntentService: SplitIntentService,
     private readonly splitFollowUpService: SplitFollowUpService,
     private readonly personalFollowUpService: PersonalFollowUpService,
+    private readonly aiEvalCases: AiEvalCasesService,
   ) {}
+
+  /** Saves a user-approved response from any Penny path as a DEV evaluation candidate. */
+  @Post('eval-cases')
+  createEvalCase(
+    @Body() request: CreateAiEvalCaseDto,
+    @Req() httpRequest: AuthenticatedParserRequest,
+  ) {
+    return this.aiEvalCases.create(httpRequest.user!.accessToken, request);
+  }
 
   /** Handles parse. */
   @Post('parse')

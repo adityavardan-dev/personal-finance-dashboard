@@ -13,6 +13,19 @@ const pending = [
 ];
 
 describe('SplitFollowUpService', () => {
+  it('normalizes a local myself participant to You', async () => {
+    const model = { isConfigured: () => true, interpretFollowUp: jest.fn() };
+    const service = new SplitFollowUpService(model as unknown as CloudflareSplitInterpreter);
+    const result = await service.analyze(
+      'Use myself, Katty and Sridevi for split 1',
+      [{ ordinal: 1, peopleCount: 3 }],
+      trace,
+    );
+    expect(result).toMatchObject({
+      modelAttempted: false,
+      updates: [{ ordinal: 1, names: ['You', 'Katty', 'Sridevi'] }],
+    });
+  });
   it('updates two numbered splits locally without calling the model', async () => {
     const model = { isConfigured: jest.fn().mockReturnValue(true), interpretFollowUp: jest.fn() };
     const service = new SplitFollowUpService(model as unknown as CloudflareSplitInterpreter);

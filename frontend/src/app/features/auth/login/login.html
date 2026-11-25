@@ -39,6 +39,30 @@
           {{ errorMessage }}
         </div>
       }
+      @if (showResendConfirmation) {
+        <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+          <button
+            id="resend-confirmation"
+            type="button"
+            (click)="resendConfirmation()"
+            [disabled]="isResendingConfirmation || resendCooldownSeconds > 0"
+            class="font-semibold text-emerald-700 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-400"
+          >
+            @if (isResendingConfirmation) {
+              Sending confirmation email…
+            } @else if (resendCooldownSeconds > 0) {
+              Resend available in {{ resendCooldownSeconds }}s
+            } @else {
+              Resend confirmation email
+            }
+          </button>
+          @if (confirmationMessage) {
+            <p id="confirmation-message" role="status" aria-live="polite" class="mt-2">
+              {{ confirmationMessage }}
+            </p>
+          }
+        </div>
+      }
 
       <div class="space-y-5">
         <div>

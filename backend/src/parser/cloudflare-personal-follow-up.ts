@@ -26,6 +26,7 @@ export interface PersonalEditProposal {
   action?: 'UPDATE' | 'DELETE';
   amount: string | null;
   date: string | null;
+  dateEvidence?: string | null;
   category: string | null;
   merchant: string | null;
   splitResolution: 'personal' | 'split' | null;
@@ -51,6 +52,7 @@ export class CloudflarePersonalFollowUp {
     const guidance = loadPennyGuidance();
     if (!account || !token || !guidance) return null;
     const model = process.env.CLOUDFLARE_AI_MODEL?.trim() || DEFAULT_MODEL;
+    const queryJson = { mode, message: text, drafts, referenceTimestamp, timeZone: timeZone ?? null };
     let usageLogged = false;
     let httpStatus: number | undefined;
     try {
@@ -70,10 +72,11 @@ export class CloudflarePersonalFollowUp {
               type: 'object', additionalProperties: false, required: ['updates'],
               properties: { updates: { type: 'array', minItems: 0, maxItems: 20, items: {
                 type: 'object', additionalProperties: false,
-                required: ['ordinal', 'action', 'amount', 'date', 'category', 'merchant', 'splitResolution', 'splitFactor'],
+                required: ['ordinal', 'action', 'amount', 'date', 'dateEvidence', 'category', 'merchant', 'splitResolution', 'splitFactor'],
                 properties: {
                   ordinal: { type: 'integer' }, action: { type: 'string', enum: ['UPDATE', 'DELETE'] },
                   amount: { type: ['string', 'null'] }, date: { type: ['string', 'null'] },
+                  dateEvidence: { type: ['string', 'null'] },
                   category: { type: ['string', 'null'] }, merchant: { type: ['string', 'null'] },
                   splitResolution: { type: ['string', 'null'], enum: ['personal', 'split', null] },
                   splitFactor: { type: ['integer', 'null'] },
@@ -83,21 +86,22 @@ export class CloudflarePersonalFollowUp {
           },
           messages: [
             { role: 'system', content: guidance },
-            { role: 'system', content: 'Interpret the current personal-expense message against the supplied unsaved drafts. In EDIT mode, propose only changes explicitly requested in this follow-up. If the user explicitly asks to delete an unsaved draft, use action DELETE, choose its ordinal from the supplied drafts, and set all edit fields to null. Match a stated amount to the current draft amount; if several drafts match or the target is ambiguous, return an empty updates array. In FILL_MISSING mode, use only UPDATE and fill only fields currently missing from the initial draft when supported by the message. Use ordinal numbers from the draft list. Use null for every unchanged field. Copy changed amount and merchant text from the current message. Normalize a requested date to YYYY-MM-DD using the reference timestamp and time zone. Category must be one of Food & Dining, Transportation, Shopping, Entertainment, Bills & Utilities, Health & Personal Care, Income, Other. If target or meaning is ambiguous, return an empty updates array. Never create a new transaction, calculate a share, or save anything. Output JSON matching the schema.' },
+            { role: 'system', content: 'Interpret the current personal-expense message against the supplied unsaved drafts. In EDIT mode, propose only changes explicitly requested in this follow-up. If the user explicitly asks to delete an unsaved draft, use action DELETE, choose its ordinal from the supplied drafts, and set all edit fields to null. Match a stated amount to the current draft amount; if several drafts match or the target is ambiguous, return an empty updates array. In FILL_MISSING mode, use only UPDATE and fill only fields currently missing from the initial draft when supported by the message. Use ordinal numbers from the draft list. Use null for every unchanged field. Copy changed amount and merchant text from the current message. Normalize a requested date to YYYY-MM-DD using the reference timestamp and time zone. For every FILL_MISSING date, dateEvidence MUST be an exact short substring of the original message containing BOTH the literal date phrase (for example today or yesterday) AND that draft amount. A quote containing only the amount or purchase is invalid. In "spent a lot today, almost 5000 on shopping and yesterday I have spent 500 tops", use "today, almost 5000" for draft 1 and "yesterday I have spent 500" for draft 2. If no such quote exists, leave date and dateEvidence null. Use null for dateEvidence when date is null or in EDIT mode. Category must be one of Food & Dining, Transportation, Shopping, Entertainment, Bills & Utilities, Health & Personal Care, Income, Other. If target or meaning is ambiguous, return an empty updates array. Never create a new transaction, calculate a share, or save anything. Output JSON matching the schema.' },
+            { role: 'system', content: 'For EDIT requests that say delete, remove, or discard drafts above or below an amount, compare the threshold with every supplied draft amount. Return one DELETE update for every matching ordinal and no others. Above 400 means strictly greater than 400: with draft amounts 180, 70, 350, 500, and 1000, delete ordinals 4 and 5. Keep all edit fields null. A threshold is a selection rule, not a draft amount.' },
             { role: 'user', content: JSON.stringify({ mode, message: text, drafts, referenceTimestamp, timeZone }) },
           ],
         }),
       });
       httpStatus = response.status;
       if (!response.ok) {
-        const usageContext: CloudflareUsageContext = { trace, route: 'personal-follow-up', model, outcome: 'HTTP_ERROR', httpStatus };
+        const usageContext: CloudflareUsageContext = { trace, route: 'personal-follow-up', model, outcome: 'HTTP_ERROR', httpStatus, queryJson, envelope: await response.clone().json().catch(() => null) };
         logCloudflareUsage(this.logger, usageContext);
         await this.metrics?.record(accessToken, usageContext);
         usageLogged = true;
         return null;
       }
       const body: unknown = await response.json();
-      const usageContext: CloudflareUsageContext = { trace, route: 'personal-follow-up', model, outcome: 'SUCCESS', httpStatus, envelope: body };
+      const usageContext: CloudflareUsageContext = { trace, route: 'personal-follow-up', model, outcome: 'SUCCESS', httpStatus, envelope: body, queryJson };
       logCloudflareUsage(this.logger, usageContext);
       await this.metrics?.record(accessToken, usageContext);
       usageLogged = true;
@@ -110,7 +114,7 @@ export class CloudflarePersonalFollowUp {
       return parsed.updates as PersonalEditProposal[];
     } catch {
       if (!usageLogged) {
-        const usageContext: CloudflareUsageContext = { trace, route: 'personal-follow-up', model, outcome: 'NETWORK_OR_RESPONSE_ERROR', httpStatus };
+        const usageContext: CloudflareUsageContext = { trace, route: 'personal-follow-up', model, outcome: 'NETWORK_OR_RESPONSE_ERROR', httpStatus, queryJson };
         logCloudflareUsage(this.logger, usageContext);
         await this.metrics?.record(accessToken, usageContext);
       }

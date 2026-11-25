@@ -73,6 +73,42 @@ describe('IntentService', () => {
     expect(result).toMatchObject({ modelAttempted: true, modelAccepted: false, drafts: [{ draft: { amount: 240, category: null } }] });
   });
 
+  it('asks PENNY to complete missing fields across two already separated drafts', async () => {
+    const model = { isConfigured: jest.fn(), segment: jest.fn() };
+    const completion = { analyze: jest.fn().mockResolvedValue({
+      updates: [
+        { ordinal: 1, date: '2026-11-19' },
+        { ordinal: 2, date: '2026-11-18', category: 'Shopping' },
+      ], modelAttempted: true,
+    }) };
+    const service = new IntentService(parser, model, completion as unknown as PersonalFollowUpService);
+    const input = 'I spent a lot today, almost 5000 on shopping and yesterday I have spent 500 tops.';
+
+    const result = await service.analyze(input, referenceDate, 'Asia/Kolkata');
+
+    expect(model.segment).not.toHaveBeenCalled();
+    expect(completion.analyze).toHaveBeenCalledWith(input, expect.arrayContaining([
+      expect.objectContaining({ ordinal: 1, amount: 5000, date: '' }),
+      expect.objectContaining({ ordinal: 2, amount: 500, date: '' }),
+    ]), expect.any(Object), referenceDate, 'Asia/Kolkata', 'FILL_MISSING', undefined);
+    expect(result).toMatchObject({ status: 'READY', modelAttempted: true, modelAccepted: true, interpretationSource: 'MODEL' });
+    expect(result.drafts.map((item) => [item.draft.amount, item.draft.date, item.draft.category])).toEqual([
+      [5000, '2026-11-19', 'Shopping'], [500, '2026-11-18', 'Shopping'],
+    ]);
+  });
+
+  it('keeps remaining missing fields visible after a partial model completion', async () => {
+    const model = { isConfigured: jest.fn(), segment: jest.fn() };
+    const completion = { analyze: jest.fn().mockResolvedValue({
+      updates: [{ ordinal: 1, date: '2026-11-19' }], modelAttempted: true,
+    }) };
+    const service = new IntentService(parser, model, completion as unknown as PersonalFollowUpService);
+    const result = await service.analyze('I spent a lot today, almost 5000 on shopping and yesterday I have spent 500 tops.', referenceDate, 'Asia/Kolkata');
+    expect(result).toMatchObject({ status: 'NEEDS_CLARIFICATION', modelAttempted: true, modelAccepted: true });
+    expect(result.drafts[1].missingFields).toContain('date');
+    expect(result.clarificationPrompt).toContain('1 of 2');
+  });
+
   it('rejects model output that drops part of the original message' /** Checks that rejects model output that drops part of the original message. */, async () => {
     const model = {
       isConfigured: jest.fn().mockReturnValue(true),

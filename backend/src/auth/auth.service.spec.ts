@@ -1,5 +1,10 @@
 /** Verifies that Nest auth delegates credentials to Supabase Auth. */
-import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SupabaseRequestError, SupabaseService } from '../supabase/supabase.service';
 
@@ -7,6 +12,7 @@ describe('AuthService', () => {
   const supabase = {
     signUp: jest.fn(),
     signInWithPassword: jest.fn(),
+    resendSignupConfirmation: jest.fn(),
   };
   let service: AuthService;
 
@@ -69,5 +75,30 @@ describe('AuthService', () => {
     await expect(service.login({
       email: 'user@example.com', password: 'wrong-password',
     })).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('keeps an unconfirmed login distinct so the UI can offer resend', async () => {
+    supabase.signInWithPassword.mockRejectedValue(
+      new SupabaseRequestError(400, 'Email not confirmed', 'email_not_confirmed'),
+    );
+    await expect(service.login({
+      email: 'user@example.com', password: 'password123',
+    })).rejects.toThrow(ForbiddenException);
+  });
+
+  it('resends a confirmation email using a normalized address', async () => {
+    supabase.resendSignupConfirmation.mockResolvedValue({});
+    await expect(service.resendConfirmation({ email: ' USER@EXAMPLE.COM ' })).resolves.toEqual({
+      message: 'If an unconfirmed account exists, a new confirmation email has been sent.',
+    });
+    expect(supabase.resendSignupConfirmation).toHaveBeenCalledWith('user@example.com');
+  });
+
+  it('reports confirmation email rate limits without confirming or signing in the user', async () => {
+    supabase.resendSignupConfirmation.mockRejectedValue(
+      new SupabaseRequestError(429, 'Email rate limit exceeded', 'over_email_send_rate_limit'),
+    );
+    await expect(service.resendConfirmation({ email: 'user@example.com' }))
+      .rejects.toMatchObject({ status: 429 });
   });
 });

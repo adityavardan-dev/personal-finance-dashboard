@@ -39,18 +39,21 @@ export class PersonalFollowUpService {
     const proposals = await this.model.interpret(text, context, referenceDate.toISOString(), timeZone, mode, trace, accessToken);
     let localDate: string | null = null;
     try { localDate = this.parser.parse(text, referenceDate, timeZone).draft.date; } catch { /* Invalid temporal language cannot ground a date edit. */ }
-    const updates = proposals && this.validate(proposals, text, context, localDate, mode);
+    const updates = proposals && this.validate(proposals, text, context, localDate, mode, referenceDate, timeZone);
     return this.result(updates ?? [], true, Boolean(updates?.length), trace);
   }
 
   /** Rejects unknown targets, unsupported fields, and values absent from the message. */
-  private validate(proposals: PersonalEditProposal[], text: string, drafts: PersonalDraftContext[], localDate: string | null, mode: 'EDIT' | 'FILL_MISSING'): PersonalFollowUpUpdate[] | null {
+  private validate(proposals: PersonalEditProposal[], text: string, drafts: PersonalDraftContext[], localDate: string | null, mode: 'EDIT' | 'FILL_MISSING', referenceDate: Date, timeZone?: string): PersonalFollowUpUpdate[] | null {
     if (!Array.isArray(proposals) || !proposals.length || proposals.length > drafts.length) return null;
+    const rangeTargets = mode === 'EDIT' ? this.deleteRangeTargets(text, drafts) : null;
+    if (rangeTargets && (!rangeTargets.size || proposals.length !== rangeTargets.size ||
+      proposals.some((proposal) => proposal.action !== 'DELETE' || !rangeTargets.has(proposal.ordinal)))) return null;
     const known = new Set(drafts.map((item) => item.ordinal));
     const seen = new Set<number>();
     const updates: PersonalFollowUpUpdate[] = [];
     for (const proposal of proposals) {
-      if (!isRecord(proposal) || !Number.isInteger(proposal.ordinal) || !known.has(proposal.ordinal) || seen.has(proposal.ordinal) || Object.keys(proposal).some((key) => !['ordinal', 'action', 'amount', 'date', 'category', 'merchant', 'splitResolution', 'splitFactor'].includes(key))) return null;
+      if (!isRecord(proposal) || !Number.isInteger(proposal.ordinal) || !known.has(proposal.ordinal) || seen.has(proposal.ordinal) || Object.keys(proposal).some((key) => !['ordinal', 'action', 'amount', 'date', 'dateEvidence', 'category', 'merchant', 'splitResolution', 'splitFactor'].includes(key))) return null;
       seen.add(proposal.ordinal);
       const update: PersonalFollowUpUpdate = { ordinal: proposal.ordinal };
       if (proposal.action === 'DELETE') {
@@ -61,8 +64,10 @@ export class PersonalFollowUpService {
         const explicitOrdinal = ordinalReference.test(text);
         const numbers = [...text.replace(ordinalReference, ' ').matchAll(/\b\d[\d,]*(?:\.\d{1,2})?\b/g)]
           .map((match) => Number(match[0].replace(/,/g, '')));
-        if (numbers.length ? !numbers.includes(draft.amount ?? NaN) : drafts.length !== 1 && !explicitOrdinal) return null;
-        if (!explicitOrdinal && drafts.filter((item) => item.amount === draft.amount).length !== 1) return null;
+        if (!rangeTargets) {
+          if (numbers.length ? !numbers.includes(draft.amount ?? NaN) : drafts.length !== 1 && !explicitOrdinal) return null;
+          if (!explicitOrdinal && drafts.filter((item) => item.amount === draft.amount).length !== 1) return null;
+        }
         update.delete = true;
         updates.push(update);
         continue;
@@ -75,7 +80,18 @@ export class PersonalFollowUpService {
         update.amount = amount;
       }
       if (proposal.date !== null && proposal.date !== undefined) {
-        if (typeof proposal.date !== 'string' || proposal.date !== localDate) return null;
+        if (typeof proposal.date !== 'string') return null;
+        if (mode === 'EDIT' && proposal.date !== localDate) return null;
+        if (mode === 'FILL_MISSING') {
+          const evidence = proposal.dateEvidence;
+          const draft = drafts.find((item) => item.ordinal === proposal.ordinal)!;
+          if (typeof evidence !== 'string' || evidence.length > 120 || !text.includes(evidence)) return null;
+          let grounded: { date: string | null; amount: number | null } | null = null;
+          try { grounded = this.parser.parse(evidence, referenceDate, timeZone).draft; } catch { /* Reject unsupported date evidence. */ }
+          const expectedAmount = draft.amount ?? update.amount ?? null;
+          if (grounded?.date !== proposal.date ||
+            (drafts.length > 1 && (expectedAmount === null || grounded?.amount !== expectedAmount))) return null;
+        }
         update.date = proposal.date;
       }
       if (proposal.category !== null && proposal.category !== undefined) {
@@ -103,6 +119,18 @@ export class PersonalFollowUpService {
       updates.push(update);
     }
     return updates;
+  }
+
+  /** Grounds an explicit amount threshold against the supplied unsaved drafts. */
+  private deleteRangeTargets(text: string, drafts: PersonalDraftContext[]): Set<number> | null {
+    if (!/\b(?:delete|remove|discard)\b/i.test(text)) return null;
+    const match = text.match(/\b(above|over|greater than|more than|below|under|less than)\s*(?:₹\s*|rs\.?\s*|inr\s*)?(\d[\d,]*(?:\.\d{1,2})?)\b/i);
+    if (!match) return null;
+    const threshold = Number(match[2].replace(/,/g, ''));
+    if (!Number.isFinite(threshold)) return new Set();
+    const above = ['above', 'over', 'greater than', 'more than'].includes(match[1].toLowerCase());
+    return new Set(drafts.filter((draft) => draft.amount !== null &&
+      (above ? draft.amount > threshold : draft.amount < threshold)).map((draft) => draft.ordinal));
   }
 
   private result(updates: PersonalFollowUpUpdate[], modelAttempted: boolean, modelAccepted: boolean, trace: RequestTrace) {

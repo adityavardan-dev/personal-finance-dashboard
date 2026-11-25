@@ -47,6 +47,17 @@ describe('AuthService', () => {
     });
   });
 
+  it('posts the email to the confirmation resend endpoint', () => {
+    service.resendConfirmation('test@example.com').subscribe((response) => {
+      expect(response.message).toContain('confirmation email');
+    });
+
+    const request = httpMock.expectOne((req) => req.url.endsWith('/auth/resend-confirmation'));
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ email: 'test@example.com' });
+    request.flush({ message: 'A confirmation email was requested.' });
+  });
+
   it('clears the token and temporary intake conversations on logout', () => {
     sessionStorage.setItem('accessToken', 'token');
     sessionStorage.setItem('xpense:intake:index:1', 'conversation');

@@ -284,7 +284,7 @@ Every Cloudflare request writes one structured `cloudflare-ai-usage` event to th
 
 `inputTokens` comes from Cloudflare's `usage.prompt_tokens`. Failed requests are logged with their request ID and outcome; their token fields are `null` when Cloudflare does not report usage. The log contains no prompt text, model response, JWT, or provider credential. Search backend logs for a request ID or for `"event":"cloudflare-ai-usage"` to inspect usage.
 
-The metrics table exists independently in the development and production Supabase projects. Each row stores:
+The metrics table exists independently in the development and production Supabase projects. After the payload migration is applied to each project, new rows also store the user input context and Cloudflare response:
 
 | Column | Purpose |
 |---|---|
@@ -297,9 +297,17 @@ The metrics table exists independently in the development and production Supabas
 | `max_completion_tokens` | Records the configured maximum generated-token allowance. |
 | `input_tokens`, `output_tokens`, `total_tokens` | Store Cloudflare's actual usage counters when reported. |
 | `outcome`, `http_status`, `usage_reported` | Distinguish success, provider errors, transport errors, and missing counters. |
+| `query_json` | The current user message plus draft or time context supplied to this model call. |
+| `response_json` | The JSON envelope received from Cloudflare, including assistant content and usage when present. Null when no JSON response was available. |
 | `created_at` | Supports time-based monitoring and aggregation. |
 
-The table stores no user message, prompt, model response, JWT, or Cloudflare credential. RLS permits authenticated users to insert and select only their own rows; metrics cannot be updated or deleted through the authenticated Data API.
+Older rows have null payload columns. The table does not store the full system prompt, JWT, or Cloudflare credential. The JSON columns can contain private financial details and should be treated as sensitive user data. RLS permits authenticated users to insert and select only their own rows; metrics cannot be updated or deleted through the authenticated Data API. Raw content remains absent from the NestJS usage log.
+
+### Development test-case capture
+
+In the development chat, every PENNY reply associated with a user turn shows **Add test case**, whether it came from local logic, the split solver, an accepted model response, or a rejected model response. The user describes the result PENNY should have produced. The backend saves that description, the triggering message, the before/after draft snapshots, the structured response when available, model decision fields, and source request IDs to `public.ai_eval_cases` in the XPENSE Development project only. The table uses owner-scoped RLS. Its schema is kept separately in `supabase/dev-only/ai_eval_cases.sql` so it is not deployed with production migrations.
+
+These records are human-labeled examples awaiting a structured expected result. They are not counted as automatic pass/fail evaluations yet. `ai_request_metrics` measures model calls and may have no row for the original local-only turn; a future replay can link its new model-call metrics by request ID.
 
 ## 9. How PENNY responds
 
@@ -454,6 +462,6 @@ Relevant tests include:
 - Never automatically save a model-created draft.
 - Never use model arithmetic as the authoritative split calculation.
 - Keep every draft editable and require explicit user confirmation.
-- Avoid logging raw financial prompts or raw model responses in production.
+- Keep raw financial prompts and responses out of server logs. The user-scoped metrics table intentionally retains the current message and provider response for quality review.
 
 The core rule is: PENNY interprets language; deterministic XPENSE code validates facts, calculates money, and controls persistence.

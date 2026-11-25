@@ -38,6 +38,14 @@ export class SupabaseService {
     );
   }
 
+  /** Asks Supabase Auth to send a fresh confirmation email for a pending signup. */
+  resendSignupConfirmation(email: string) {
+    return this.request<Record<string, never>>('/auth/v1/resend', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'signup', email }),
+    });
+  }
+
   /** Validates a bearer token against Supabase Auth and returns its owner. */
   getUser(accessToken: string) {
     return this.request<SupabaseUser>('/auth/v1/user', { method: 'GET' }, accessToken);

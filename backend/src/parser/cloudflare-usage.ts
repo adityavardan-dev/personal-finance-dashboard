@@ -1,4 +1,4 @@
-/** Records Cloudflare token usage without logging prompts or model responses. */
+/** Records Cloudflare token usage without printing prompts or model responses to server logs. */
 import type { LoggerService } from '@nestjs/common';
 import type { RequestTrace } from '../request-trace';
 
@@ -15,6 +15,7 @@ export interface CloudflareUsageContext {
   outcome: CloudflareRequestOutcome;
   httpStatus?: number;
   envelope?: unknown;
+  queryJson?: Record<string, unknown>;
 }
 
 /** Writes one structured usage event for a Cloudflare model request. */

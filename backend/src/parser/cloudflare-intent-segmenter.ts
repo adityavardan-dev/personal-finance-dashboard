@@ -57,6 +57,7 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
 
     const model = process.env.CLOUDFLARE_AI_MODEL?.trim() || DEFAULT_MODEL;
     const endpoint = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1/chat/completions`;
+    const queryJson = { message: text };
 
     let usageLogged = false;
     let httpStatus: number | undefined;
@@ -98,6 +99,8 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
           model,
           outcome: 'HTTP_ERROR',
           httpStatus,
+          queryJson,
+          envelope: await response.clone().json().catch(() => null),
         };
         logCloudflareUsage(this.logger, usageContext);
         await this.metrics?.record(accessToken, usageContext);
@@ -112,6 +115,7 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
         outcome: 'SUCCESS',
         httpStatus,
         envelope,
+        queryJson,
       };
       logCloudflareUsage(this.logger, usageContext);
       await this.metrics?.record(accessToken, usageContext);
@@ -146,6 +150,7 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
           model,
           outcome: 'NETWORK_OR_RESPONSE_ERROR',
           httpStatus,
+          queryJson,
         };
         logCloudflareUsage(this.logger, usageContext);
         await this.metrics?.record(accessToken, usageContext);

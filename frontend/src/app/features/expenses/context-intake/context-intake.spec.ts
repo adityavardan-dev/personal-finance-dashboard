@@ -7,6 +7,7 @@ import { BudgetStore } from '../../../core/budget/budget.store';
 import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store';
 import { ParseBatchResult, ParseResult } from '../../../core/parser/parser.models';
 import { ParserService } from '../../../core/parser/parser.service';
+import { EvalCasesService } from '../../../core/parser/eval-cases.service';
 import { ExpenseService } from '../expense.service';
 import { ContextIntakeSessionService } from './context-intake-session.service';
 import { ContextIntakeComponent } from './context-intake';
@@ -23,6 +24,7 @@ describe('ContextIntakeComponent', () => {
     interpretPersonalFollowUp: ReturnType<typeof vi.fn>;
   };
   let expenseService: { createBatch: ReturnType<typeof vi.fn> };
+  let evalCases: { create: ReturnType<typeof vi.fn> };
   let metricsStore: { refresh: ReturnType<typeof vi.fn> };
   let splitService: {
     preview: ReturnType<typeof vi.fn>;
@@ -53,6 +55,7 @@ describe('ContextIntakeComponent', () => {
   beforeEach(async () => {
     parserService = { parse: vi.fn(), parseBatch: vi.fn(), interpretSplit: vi.fn(), interpretSplitFollowUp: vi.fn(), interpretPersonalFollowUp: vi.fn().mockReturnValue(of({ updates: [], clarificationPrompt: 'I could not identify which transaction to update.' })) };
     expenseService = { createBatch: vi.fn() };
+    evalCases = { create: vi.fn().mockReturnValue(of({ id: 'case-1' })) };
     metricsStore = { refresh: vi.fn() };
     splitService = {
       preview: vi.fn(),
@@ -76,6 +79,7 @@ describe('ContextIntakeComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ParserService, useValue: parserService },
+        { provide: EvalCasesService, useValue: evalCases },
         { provide: ExpenseService, useValue: expenseService },
         { provide: PeerSplitsService, useValue: splitService },
         { provide: FinanceMetricsStore, useValue: metricsStore },
@@ -168,6 +172,53 @@ describe('ContextIntakeComponent', () => {
     expect(
       fixture.nativeElement.querySelector('a[aria-label="View split details for Group split"]'),
     ).toBeTruthy();
+  });
+
+  it('offers a DEV test case beneath a local split reply and saves the human expectation', () => {
+    splitService.preview.mockReturnValue(of({
+      totalAmountMinor: 90000, currency: 'INR', allocations: [], balances: [], obligations: [],
+    }));
+    component['rawText'] = 'Today I paid ₹900 for dinner with Asha and Ravi. Split it equally among the three of us. I also spent ₹150 on coffee just for myself';
+    component['submitMessage']();
+    fixture.detectChanges();
+
+    const addButton = [...fixture.nativeElement.querySelectorAll('button')]
+      .find((button: HTMLButtonElement) => button.textContent?.trim() === 'Add test case');
+    expect(addButton).toBeTruthy();
+    addButton.click();
+    component['expectedTestCase'] = 'Keep the dinner split and also create a ₹150 personal coffee draft.';
+    component['saveTestCase'](component['messages']().at(-1)!);
+
+    expect(evalCases.create).toHaveBeenCalledWith(expect.objectContaining({
+      modelAttempted: false,
+      expectedDescription: 'Keep the dinner split and also create a ₹150 personal coffee draft.',
+      input: expect.objectContaining({ message: expect.stringContaining('₹150 on coffee') }),
+      observed: expect.objectContaining({ reply: expect.stringContaining('Split preview ready') }),
+    }));
+    expect(component['messages']().at(-1)?.testCaseId).toBe('case-1');
+  });
+
+  it('offers a test case for an attempted but rejected AI response and stores the response', () => {
+    const response = { status: 'NEEDS_CLARIFICATION', drafts: [readyDraft],
+      modelAttempted: true, modelAccepted: false, interpretationSource: 'LOCAL' as const,
+      clarificationPrompt: 'Could not separate safely.' };
+    parserService.parseBatch.mockReturnValue(of(response));
+    component['rawText'] = 'personal was 700 2 days ago and 1000 spent yesterday with harsha and jaswanth';
+    component['submitMessage']();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Add test case');
+    component['expectedTestCase'] = 'Create a personal draft and a separate split draft, preserving both dates.';
+    component['saveTestCase'](component['messages']().at(-1)!);
+    expect(evalCases.create).toHaveBeenCalledWith(expect.objectContaining({
+      modelAttempted: true,
+      observed: expect.objectContaining({
+        modelAttempted: true,
+        modelAccepted: false,
+        interpretationSource: 'LOCAL',
+        response,
+      }),
+    }));
   });
 
   it('keeps multiple unnamed splits as drafts and previews one after names and payer arrive', () => {

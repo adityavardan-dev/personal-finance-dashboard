@@ -37,6 +37,20 @@ describe('SupabaseService', () => {
       user: { id: 'user-1' },
     });
   });
+
+  it('requests a fresh signup confirmation email', async () => {
+    fetchMock.mockResolvedValue(response({}));
+
+    await service.resendSignupConfirmation('user@example.com');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://project.supabase.co/auth/v1/resend',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ type: 'signup', email: 'user@example.com' }),
+      }),
+    );
+  });
 });
 
 function response(body: unknown): Pick<Response, 'ok' | 'status' | 'text'> {

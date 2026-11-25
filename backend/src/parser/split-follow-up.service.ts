@@ -2,6 +2,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import type { RequestTrace } from '../request-trace';
 import { CloudflareSplitInterpreter } from './cloudflare-split-interpreter';
+import { normalizeParticipantName, participantAppearsInText } from './participant-reference';
 
 export interface PendingSplitContext {
   ordinal: number;
@@ -97,8 +98,8 @@ export class SplitFollowUpService {
       const raw = (use?.[1] ?? prefix?.[2] ?? '').trim();
       const [nameText, paidBy] = raw.split(/\s*;\s*paid\s+by\s+/i);
       if (!nameText || raw.split(/\s*;\s*paid\s+by\s+/i).length > 2) return null;
-      const names = nameText.split(/\s*,\s*|\s+and\s+/i).map((name) => name.trim()).filter(Boolean);
-      updates.push({ ordinal, names, ...(paidBy ? { paidBy: paidBy.trim() } : {}) });
+      const names = nameText.split(/\s*,\s*|\s+and\s+/i).map(normalizeParticipantName).filter(Boolean);
+      updates.push({ ordinal, names, ...(paidBy ? { paidBy: normalizeParticipantName(paidBy) } : {}) });
     }
     return updates;
   }
@@ -118,7 +119,9 @@ export class SplitFollowUpService {
       seen.add(update.ordinal);
       const current = known.get(update.ordinal);
       if (!current) return null;
-      const names = update.names ?? undefined;
+      const rawNames = update.names ?? undefined;
+      if (rawNames !== undefined && (!Array.isArray(rawNames) || !rawNames.every((name) => typeof name === 'string'))) return null;
+      const names = rawNames?.map(normalizeParticipantName);
       const count = update.peopleCount ?? current.peopleCount;
       const revised: SplitFollowUpUpdate = { ordinal: update.ordinal };
       if (update.peopleCount !== null && update.peopleCount !== undefined) {
@@ -133,9 +136,11 @@ export class SplitFollowUpService {
         revised.names = names.map((name) => name.trim());
       }
       if (update.paidBy !== null && update.paidBy !== undefined) {
+        if (typeof update.paidBy !== 'string') return null;
+        const paidBy = normalizeParticipantName(update.paidBy);
         const knownNames = names ?? current.names ?? [];
-        if (typeof update.paidBy !== 'string' || (knownNames.length > 0 && !knownNames.some((name) => name.toLowerCase() === update.paidBy?.toLowerCase())) || !this.appearsInMessage(update.paidBy, text)) return null;
-        revised.paidBy = update.paidBy.trim();
+        if ((knownNames.length > 0 && !knownNames.some((name) => name.toLowerCase() === paidBy.toLowerCase())) || !this.appearsInMessage(paidBy, text)) return null;
+        revised.paidBy = paidBy;
       }
       if (update.amount !== null && update.amount !== undefined) {
         if (typeof update.amount !== 'string' || !text.includes(update.amount)) return null;
@@ -150,8 +155,7 @@ export class SplitFollowUpService {
   }
 
   private appearsInMessage(name: string, text: string): boolean {
-    const escaped = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`(?<![\\p{L}\\p{M}])${escaped}(?![\\p{L}\\p{M}])`, 'iu').test(text);
+    return participantAppearsInText(name, text);
   }
 
   private result(updates: SplitFollowUpUpdate[], modelAttempted: boolean, modelAccepted: boolean, interpretationSource: 'LOCAL' | 'MODEL', trace: RequestTrace): SplitFollowUpResult {

@@ -42,6 +42,7 @@ export class CloudflareSplitInterpreter {
     const guidance = loadPennyGuidance();
     if (!account || !token || !guidance) return null;
     const model = process.env.CLOUDFLARE_AI_MODEL?.trim() || DEFAULT_MODEL;
+    const queryJson = { message: text };
     let usageLogged = false;
     let httpStatus: number | undefined;
     try {
@@ -102,14 +103,14 @@ export class CloudflareSplitInterpreter {
       );
       httpStatus = response.status;
       if (!response.ok) {
-        const usageContext: CloudflareUsageContext = { trace, route: 'split-intent', model, outcome: 'HTTP_ERROR', httpStatus };
+        const usageContext: CloudflareUsageContext = { trace, route: 'split-intent', model, outcome: 'HTTP_ERROR', httpStatus, queryJson, envelope: await response.clone().json().catch(() => null) };
         logCloudflareUsage(this.logger, usageContext);
         await this.metrics?.record(accessToken, usageContext);
         usageLogged = true;
         return null;
       }
       const body: unknown = await response.json();
-      const usageContext: CloudflareUsageContext = { trace, route: 'split-intent', model, outcome: 'SUCCESS', httpStatus, envelope: body };
+      const usageContext: CloudflareUsageContext = { trace, route: 'split-intent', model, outcome: 'SUCCESS', httpStatus, envelope: body, queryJson };
       logCloudflareUsage(this.logger, usageContext);
       await this.metrics?.record(accessToken, usageContext);
       usageLogged = true;
@@ -144,7 +145,7 @@ export class CloudflareSplitInterpreter {
       return parsed.drafts as ProposedSplit[];
     } catch {
       if (!usageLogged) {
-        const usageContext: CloudflareUsageContext = { trace, route: 'split-intent', model, outcome: 'NETWORK_OR_RESPONSE_ERROR', httpStatus };
+        const usageContext: CloudflareUsageContext = { trace, route: 'split-intent', model, outcome: 'NETWORK_OR_RESPONSE_ERROR', httpStatus, queryJson };
         logCloudflareUsage(this.logger, usageContext);
         await this.metrics?.record(accessToken, usageContext);
       }
@@ -159,6 +160,7 @@ export class CloudflareSplitInterpreter {
     const guidance = loadPennyGuidance();
     if (!account || !token || !guidance) return null;
     const model = process.env.CLOUDFLARE_AI_MODEL?.trim() || DEFAULT_MODEL;
+    const queryJson = { message: text, pendingSplits: pending };
     let usageLogged = false;
     let httpStatus: number | undefined;
     try {
@@ -203,14 +205,14 @@ export class CloudflareSplitInterpreter {
       );
       httpStatus = response.status;
       if (!response.ok) {
-        const usageContext: CloudflareUsageContext = { trace, route: 'split-follow-up', model, outcome: 'HTTP_ERROR', httpStatus };
+        const usageContext: CloudflareUsageContext = { trace, route: 'split-follow-up', model, outcome: 'HTTP_ERROR', httpStatus, queryJson, envelope: await response.clone().json().catch(() => null) };
         logCloudflareUsage(this.logger, usageContext);
         await this.metrics?.record(accessToken, usageContext);
         usageLogged = true;
         return null;
       }
       const body: unknown = await response.json();
-      const usageContext: CloudflareUsageContext = { trace, route: 'split-follow-up', model, outcome: 'SUCCESS', httpStatus, envelope: body };
+      const usageContext: CloudflareUsageContext = { trace, route: 'split-follow-up', model, outcome: 'SUCCESS', httpStatus, envelope: body, queryJson };
       logCloudflareUsage(this.logger, usageContext);
       await this.metrics?.record(accessToken, usageContext);
       usageLogged = true;
@@ -223,7 +225,7 @@ export class CloudflareSplitInterpreter {
       return parsed.updates as SplitFollowUpProposal[];
     } catch {
       if (!usageLogged) {
-        const usageContext: CloudflareUsageContext = { trace, route: 'split-follow-up', model, outcome: 'NETWORK_OR_RESPONSE_ERROR', httpStatus };
+        const usageContext: CloudflareUsageContext = { trace, route: 'split-follow-up', model, outcome: 'NETWORK_OR_RESPONSE_ERROR', httpStatus, queryJson };
         logCloudflareUsage(this.logger, usageContext);
         await this.metrics?.record(accessToken, usageContext);
       }

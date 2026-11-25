@@ -10,12 +10,14 @@ describe('AuthController', () => {
   let authService: {
     login: jest.Mock;
     signup: jest.Mock;
+    resendConfirmation: jest.Mock;
   };
 
   beforeEach(async () => {
     authService = {
       login: jest.fn(),
       signup: jest.fn(),
+      resendConfirmation: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -54,5 +56,14 @@ describe('AuthController', () => {
 
     expect(controller.signup(dto)).toBe(response);
     expect(authService.signup).toHaveBeenCalledWith(dto);
+  });
+
+  it('delegates confirmation resend to AuthService', () => {
+    const dto = { email: 'user@example.com' };
+    const response = { message: 'Confirmation requested' };
+    authService.resendConfirmation.mockReturnValue(response);
+
+    expect(controller.resendConfirmation(dto)).toBe(response);
+    expect(authService.resendConfirmation).toHaveBeenCalledWith(dto);
   });
 });

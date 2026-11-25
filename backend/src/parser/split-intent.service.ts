@@ -2,6 +2,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestTrace } from '../request-trace';
 import { CloudflareSplitInterpreter, type ProposedSplit } from './cloudflare-split-interpreter';
+import { normalizeParticipantName, participantAppearsInText } from './participant-reference';
 
 export interface SplitIntentDraft {
   ordinal: number;
@@ -47,9 +48,9 @@ export class SplitIntentService {
         const amount = Number(item.amount.replace(/,/g, ''));
         const peopleCount = Number(item.peopleCount);
         const amountMinor = Math.round(amount * 100);
-        const names = (item.participants ?? []).map((name) => name.trim());
-        const paidBy = item.paidBy?.trim() || undefined;
-        const beneficiary = item.beneficiary?.trim() || undefined;
+        const names = (item.participants ?? []).map(normalizeParticipantName);
+        const paidBy = item.paidBy ? normalizeParticipantName(item.paidBy) : undefined;
+        const beneficiary = item.beneficiary ? normalizeParticipantName(item.beneficiary) : undefined;
         if (
           !text.includes(item.amount) ||
           (!this.countSupported(text, peopleCount, names.length) && names.length !== peopleCount) ||
@@ -112,9 +113,7 @@ export class SplitIntentService {
 
   private nameInText(name: string, text: string): boolean {
     if (!name || !/^[\p{L}][\p{L}\p{M}' .-]{0,59}$/u.test(name)) return false;
-    if (name.toLocaleLowerCase() === 'you') return /\b(?:i|me|my|you|your|self)\b/i.test(text);
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`(?<![\\p{L}\\p{M}])${escaped}(?![\\p{L}\\p{M}])`, 'iu').test(text);
+    return participantAppearsInText(name, text);
   }
 
   /** Extracts numbered clauses with explicit amount and group size. */

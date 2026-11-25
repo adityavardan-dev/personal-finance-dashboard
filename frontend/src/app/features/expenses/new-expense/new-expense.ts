@@ -158,6 +158,7 @@ export class NewExpenseComponent implements OnInit {
   }
 
   protected saveExpense(): void {
+    if (this.isSubmitting || this.isLoading) return;
     if (this.isSplitMode) {
       this.previewSplit();
       return;

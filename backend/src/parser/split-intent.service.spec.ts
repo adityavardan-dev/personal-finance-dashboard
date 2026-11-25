@@ -90,6 +90,21 @@ describe('SplitIntentService', () => {
     ] });
   });
 
+  it.each(['I', 'me', 'myself'])('normalizes %s to the logged-in participant', async (alias) => {
+    const model = {
+      isConfigured: () => true,
+      interpret: jest.fn().mockResolvedValue([
+        { amount: '2000', peopleCount: '3', participants: [alias, 'Katty', 'Sridevi'], paidBy: alias, allocationKind: 'EQUAL', beneficiary: null },
+      ]),
+    };
+    const service = new SplitIntentService(model as unknown as CloudflareSplitInterpreter);
+    const result = await service.analyze(`Split 2000 between ${alias}, Katty and Sridevi`, trace);
+    expect(result).toMatchObject({
+      modelAccepted: true,
+      drafts: [{ names: ['You', 'Katty', 'Sridevi'], paidBy: 'You' }],
+    });
+  });
+
   it('rejects model participants absent from the message', async () => {
     const model = {
       isConfigured: jest.fn().mockReturnValue(true),

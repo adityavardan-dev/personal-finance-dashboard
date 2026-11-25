@@ -48,7 +48,7 @@ Adapters may target a hosted provider, a local Ollama endpoint, or a determinist
 - Never accept database IDs or persistence commands from a model.
 - Never automatically save a transaction or change a budget based on model output.
 - Provide a manual/deterministic fallback if the model is unavailable, refused, slow, or invalid.
-- Do not log raw financial prompts or model responses in production.
+- Keep raw financial prompts and model responses out of server logs. The RLS-protected `ai_request_metrics` table retains the current message and provider response for quality review.
 
 ## 5. UI behavior for AI features
 

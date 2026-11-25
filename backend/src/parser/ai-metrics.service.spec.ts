@@ -17,7 +17,9 @@ describe('AiMetricsService', () => {
       model: '@cf/google/gemma-4-26b-a4b-it',
       outcome: 'SUCCESS',
       httpStatus: 200,
+      queryJson: { message: 'Share 4000 across 5 people' },
       envelope: {
+        choices: [{ message: { content: '{"drafts":[]}' } }],
         usage: {
           prompt_tokens: 321,
           completion_tokens: 45,
@@ -41,6 +43,11 @@ describe('AiMetricsService', () => {
       output_tokens: 45,
       total_tokens: 366,
       usage_reported: true,
+      query_json: { message: 'Share 4000 across 5 people' },
+      response_json: {
+        choices: [{ message: { content: '{"drafts":[]}' } }],
+        usage: { prompt_tokens: 321, completion_tokens: 45, total_tokens: 366 },
+      },
     });
   });
 

@@ -38,49 +38,8 @@ export class IntentService {
       return localResult;
     }
     if (!this.needsSegmentation(local, text)) {
-      if (local.drafts.length === 1 && local.status !== 'READY' && this.personalFollowUp) {
-        const draft = local.drafts[0].draft;
-        const completion = await this.personalFollowUp.analyze(text, [{
-          ordinal: 1,
-          amount: draft.amount,
-          category: draft.category ?? '',
-          merchant: draft.merchant ?? '',
-          date: draft.date ?? '',
-          note: draft.notes.slice(0, 500),
-          splitResolution: local.drafts[0].missingFields.includes('split') ? '' : 'personal',
-          splitFactor: draft.splitFactor ?? null,
-        }], trace ?? { conversationId: '', requestId: '' }, referenceDate, timeZone, 'FILL_MISSING', accessToken);
-        if (completion.updates.length === 1) {
-          const update = completion.updates[0];
-          const filled = {
-            ...draft,
-            amount: draft.amount === null ? (update.amount ?? draft.amount) : draft.amount,
-            date: draft.date === null ? (update.date ?? draft.date) : draft.date,
-            category: draft.category === null ? (update.category ?? draft.category) : draft.category,
-            merchant: draft.merchant === null ? (update.merchant ?? draft.merchant) : draft.merchant,
-          };
-          if (filled.amount === draft.amount && filled.date === draft.date && filled.category === draft.category && filled.merchant === draft.merchant) {
-            localResult.modelAttempted = true;
-            this.logDecision(trace, localResult, 'MODEL_NO_MISSING_FIELD_FILLED');
-            return localResult;
-          }
-          const missingFields = local.drafts[0].missingFields.filter((field) =>
-            (field === 'amount' && filled.amount === null) ||
-            (field === 'date' && filled.date === null) ||
-            (field === 'category' && filled.category === null) ||
-            field === 'split');
-          const completedDraft = { ...local.drafts[0], draft: filled,
-            status: missingFields.length ? 'NEEDS_CLARIFICATION' as const : 'READY' as const,
-            missingFields,
-            clarificationPrompt: missingFields.length ? local.drafts[0].clarificationPrompt : undefined };
-          const completed: ParseBatchResultDto = { ...localResult, drafts: [completedDraft],
-            status: completedDraft.status, modelAttempted: true, modelAccepted: true, interpretationSource: 'MODEL',
-            clarificationPrompt: missingFields.length ? localResult.clarificationPrompt : undefined };
-          this.logDecision(trace, completed, 'MODEL_COMPLETED_SINGLE_DRAFT');
-          return completed;
-        }
-        if (completion.modelAttempted) localResult.modelAttempted = true;
-      }
+      const completed = await this.completeMissingFields(localResult, text, referenceDate, timeZone, trace, accessToken);
+      if (completed) return completed;
       this.logDecision(trace, localResult, 'LOCAL_SUFFICIENT');
       return localResult;
     }
@@ -136,6 +95,83 @@ export class IntentService {
     };
     this.logDecision(trace, result, 'MODEL_ACCEPTED');
     return result;
+  }
+
+  /** Lets PENNY fill missing fields in any locally separated personal drafts. */
+  private async completeMissingFields(
+    local: ParseBatchResultDto,
+    text: string,
+    referenceDate: Date,
+    timeZone?: string,
+    trace?: RequestTrace,
+    accessToken?: string,
+  ): Promise<ParseBatchResultDto | null> {
+    if (local.status === 'READY' || !local.drafts.length || local.drafts.length > 20 || !this.personalFollowUp) return null;
+    const context = local.drafts.map(({ draft, missingFields }, index) => ({
+      ordinal: index + 1,
+      amount: draft.amount,
+      category: draft.category ?? '',
+      merchant: draft.merchant ?? '',
+      date: draft.date ?? '',
+      note: draft.notes.slice(0, 500),
+      splitResolution: missingFields.includes('split') ? '' : 'personal',
+      splitFactor: draft.splitFactor ?? null,
+    }));
+    const completion = await this.personalFollowUp.analyze(
+      text, context, trace ?? { conversationId: '', requestId: '' },
+      referenceDate, timeZone, 'FILL_MISSING', accessToken,
+    );
+    if (!completion.modelAttempted) return null;
+    const attempted: ParseBatchResultDto = { ...local, modelAttempted: true };
+    const updates = new Map(completion.updates.map((update) => [update.ordinal, update]));
+    if (!updates.size || updates.size !== completion.updates.length ||
+      [...updates.keys()].some((ordinal) => !local.drafts[ordinal - 1])) {
+      this.logDecision(trace, attempted, 'MODEL_NO_MISSING_FIELD_FILLED');
+      return attempted;
+    }
+    let changed = false;
+    const proposedDrafts = local.drafts.map((result, index) => {
+      const update = updates.get(index + 1);
+      if (!update) return result;
+      const draft = result.draft;
+      // A model proposal may add missing facts, but must not rewrite parsed facts.
+      if (update.delete ||
+        (update.amount !== undefined && draft.amount !== null) ||
+        (update.date !== undefined && draft.date !== null) ||
+        (update.category !== undefined && draft.category !== null) ||
+        (update.merchant !== undefined && draft.merchant !== null) ||
+        update.splitResolution !== undefined || update.splitFactor !== undefined) return null;
+      const filled = {
+        ...draft,
+        amount: update.amount ?? draft.amount,
+        date: update.date ?? draft.date,
+        category: update.category ?? draft.category,
+        merchant: update.merchant ?? draft.merchant,
+      };
+      if (filled.amount !== draft.amount || filled.date !== draft.date ||
+        filled.category !== draft.category || filled.merchant !== draft.merchant) changed = true;
+      const missingFields = result.missingFields.filter((field) =>
+        (field === 'amount' && filled.amount === null) ||
+        (field === 'date' && filled.date === null) ||
+        (field === 'category' && filled.category === null) || field === 'split');
+      return { ...result, draft: filled, missingFields,
+        status: missingFields.length ? 'NEEDS_CLARIFICATION' as const : 'READY' as const,
+        clarificationPrompt: missingFields.length ? result.clarificationPrompt : undefined };
+    });
+    const drafts = proposedDrafts.filter((draft): draft is NonNullable<typeof draft> => draft !== null);
+    if (!changed || drafts.length !== local.drafts.length) {
+      this.logDecision(trace, attempted, 'MODEL_COMPLETION_REJECTED');
+      return attempted;
+    }
+    const incomplete = drafts.filter((draft) => draft.status !== 'READY');
+    const completed: ParseBatchResultDto = { ...attempted, drafts,
+      status: incomplete.length ? 'NEEDS_CLARIFICATION' : 'READY',
+      modelAccepted: true, interpretationSource: 'MODEL',
+      clarificationPrompt: incomplete.length
+        ? `${incomplete.length} of ${drafts.length} transaction drafts need attention. Review their remaining missing fields before confirming.`
+        : undefined };
+    this.logDecision(trace, completed, 'MODEL_COMPLETED_MISSING_FIELDS');
+    return completed;
   }
 
   /** Handles log decision. */

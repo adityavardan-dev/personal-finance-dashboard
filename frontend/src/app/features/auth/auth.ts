@@ -40,6 +40,10 @@ export class AuthService {
     });
   }
 
+  resendConfirmation(email: string) {
+    return this.http.post<{ message: string }>(`${this.API_URL}/resend-confirmation`, { email });
+  }
+
   getAccessToken(): string | null {
     return this.isBrowser ? sessionStorage.getItem(this.TOKEN_KEY) : null;
   }

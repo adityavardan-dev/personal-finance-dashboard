@@ -13,6 +13,7 @@ import { SplitFollowUpService } from './split-follow-up.service';
 import { CloudflarePersonalFollowUp } from './cloudflare-personal-follow-up';
 import { PersonalFollowUpService } from './personal-follow-up.service';
 import { AiMetricsService } from './ai-metrics.service';
+import { AiEvalCasesService } from './ai-eval-cases.service';
 
 @Module({
   controllers: [ParserController],
@@ -26,6 +27,7 @@ import { AiMetricsService } from './ai-metrics.service';
     CloudflarePersonalFollowUp,
     PersonalFollowUpService,
     AiMetricsService,
+    AiEvalCasesService,
     { provide: INTENT_SEGMENTER, useExisting: CloudflareIntentSegmenter },
   ],
   exports: [ParserService],

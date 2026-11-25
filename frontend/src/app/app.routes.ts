@@ -1,13 +1,4 @@
 import { Routes } from '@angular/router';
-import { DashboardComponent } from './features/dashboard/dashboard';
-import { InsightsComponent } from './features/insights/insights';
-import { NewExpenseComponent } from './features/expenses/new-expense/new-expense';
-import { HistoryComponent } from './features/history/history';
-import { TransactionDetailComponent } from './features/history/transaction-detail/transaction-detail';
-import { ProfileComponent } from './features/profile/profile';
-import { LoginComponent } from './features/auth/login/login';
-import { SignupComponent } from './features/auth/signup/signup';
-import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password';
 import { authGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
@@ -18,24 +9,24 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    component: LoginComponent,
+    loadComponent: () => import('./features/auth/login/login').then((m) => m.LoginComponent),
   },
   {
     path: 'signup',
-    component: SignupComponent,
+    loadComponent: () => import('./features/auth/signup/signup').then((m) => m.SignupComponent),
   },
   {
     path: 'forgot-password',
-    component: ForgotPasswordComponent,
+    loadComponent: () => import('./features/auth/forgot-password/forgot-password').then((m) => m.ForgotPasswordComponent),
   },
   {
     path: 'dashboard',
-    component: DashboardComponent,
+    loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.DashboardComponent),
     canActivate: [authGuard],
   },
   {
     path: 'insights',
-    component: InsightsComponent,
+    loadComponent: () => import('./features/insights/insights').then((m) => m.InsightsComponent),
     canActivate: [authGuard],
   },
   {
@@ -48,7 +39,7 @@ export const routes: Routes = [
   },
   {
     path: 'peer-splits/new',
-    component: NewExpenseComponent,
+    loadComponent: () => import('./features/expenses/new-expense/new-expense').then((m) => m.NewExpenseComponent),
     canActivate: [authGuard],
   },
   {
@@ -61,7 +52,7 @@ export const routes: Routes = [
   },
   {
     path: 'expenses/new',
-    component: NewExpenseComponent,
+    loadComponent: () => import('./features/expenses/new-expense/new-expense').then((m) => m.NewExpenseComponent),
     canActivate: [authGuard],
   },
   {
@@ -74,22 +65,22 @@ export const routes: Routes = [
   },
   {
     path: 'expenses/:id/edit',
-    component: NewExpenseComponent,
+    loadComponent: () => import('./features/expenses/new-expense/new-expense').then((m) => m.NewExpenseComponent),
     canActivate: [authGuard],
   },
   {
     path: 'history/:id',
-    component: TransactionDetailComponent,
+    loadComponent: () => import('./features/history/transaction-detail/transaction-detail').then((m) => m.TransactionDetailComponent),
     canActivate: [authGuard],
   },
   {
     path: 'history',
-    component: HistoryComponent,
+    loadComponent: () => import('./features/history/history').then((m) => m.HistoryComponent),
     canActivate: [authGuard],
   },
   {
     path: 'profile',
-    component: ProfileComponent,
+    loadComponent: () => import('./features/profile/profile').then((m) => m.ProfileComponent),
     canActivate: [authGuard],
   },
 ];
