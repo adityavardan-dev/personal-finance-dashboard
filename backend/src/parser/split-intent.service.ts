@@ -1,8 +1,12 @@
 /** Extracts reviewable split drafts before participant names and payer are known. */
 import { Injectable, Logger } from '@nestjs/common';
+import { XpenseSemanticSdk } from '../expense-semantics';
 import type { RequestTrace } from '../request-trace';
-import { CloudflareSplitInterpreter, type ProposedSplit } from './cloudflare-split-interpreter';
-import { normalizeParticipantName, participantAppearsInText } from './participant-reference';
+import type { ProposedSplit } from './cloudflare-split-interpreter';
+import {
+  normalizeParticipantName,
+  participantAppearsInText,
+} from './participant-reference';
 
 export interface SplitIntentDraft {
   ordinal: number;
@@ -27,7 +31,7 @@ export interface SplitIntentResult {
 @Injectable()
 export class SplitIntentService {
   private readonly logger = new Logger(SplitIntentService.name);
-  constructor(private readonly model: CloudflareSplitInterpreter) {}
+  constructor(private readonly semantics: XpenseSemanticSdk) {}
 
   /** Uses explicit local patterns first, then a validated model proposal. */
   async analyze(
@@ -39,27 +43,43 @@ export class SplitIntentService {
   ): Promise<SplitIntentResult> {
     const local = this.extractLocal(text, referenceDate, timeZone);
     if (local.length) return this.result(local, false, false, 'LOCAL', trace);
-    if (!this.model.isConfigured())
+    if (!this.semantics.isPeerConfigured())
       return this.result([], false, false, 'LOCAL', trace);
 
-    const proposed = await this.model.interpret(text, trace, accessToken);
+    const proposed = await this.semantics.interpretPeerSplits(
+      text,
+      trace,
+      accessToken,
+    );
     const candidates =
       proposed?.map((item, index) => {
         const amount = Number(item.amount.replace(/,/g, ''));
         const peopleCount = Number(item.peopleCount);
         const amountMinor = Math.round(amount * 100);
         const names = (item.participants ?? []).map(normalizeParticipantName);
-        const paidBy = item.paidBy ? normalizeParticipantName(item.paidBy) : undefined;
-        const beneficiary = item.beneficiary ? normalizeParticipantName(item.beneficiary) : undefined;
+        const paidBy = item.paidBy
+          ? normalizeParticipantName(item.paidBy)
+          : undefined;
+        const beneficiary = item.beneficiary
+          ? normalizeParticipantName(item.beneficiary)
+          : undefined;
         if (
           !text.includes(item.amount) ||
-          (!this.countSupported(text, peopleCount, names.length) && names.length !== peopleCount) ||
+          (!this.countSupported(text, peopleCount, names.length) &&
+            names.length !== peopleCount) ||
           !Number.isSafeInteger(amountMinor) ||
           amountMinor <= 0 ||
           !Number.isInteger(peopleCount) ||
           peopleCount < 2 ||
           peopleCount > 100 ||
-          !this.validModelDetails(item, text, peopleCount, names, paidBy, beneficiary)
+          !this.validModelDetails(
+            item,
+            text,
+            peopleCount,
+            names,
+            paidBy,
+            beneficiary,
+          )
         )
           return null;
         return {
@@ -70,7 +90,9 @@ export class SplitIntentService {
           date: this.date(text, referenceDate, timeZone),
           ...(names.length ? { names } : {}),
           ...(paidBy ? { paidBy } : {}),
-          ...(item.allocationKind ? { allocationKind: item.allocationKind } : {}),
+          ...(item.allocationKind
+            ? { allocationKind: item.allocationKind }
+            : {}),
           ...(beneficiary ? { beneficiary } : {}),
         };
       }) ?? [];
@@ -92,21 +114,73 @@ export class SplitIntentService {
   }
 
   /** Accepts a count stated as digits or a common number word, or implied by named people. */
-  private countSupported(text: string, peopleCount: number, namedCount: number): boolean {
+  private countSupported(
+    text: string,
+    peopleCount: number,
+    namedCount: number,
+  ): boolean {
     if (namedCount === peopleCount) return true;
     if (text.includes(String(peopleCount))) return true;
-    const words: Record<number, string> = { 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten' };
-    return Boolean(words[peopleCount] && text.toLowerCase().split(/[^a-z]+/).includes(words[peopleCount]));
+    const words: Record<number, string> = {
+      2: 'two',
+      3: 'three',
+      4: 'four',
+      5: 'five',
+      6: 'six',
+      7: 'seven',
+      8: 'eight',
+      9: 'nine',
+      10: 'ten',
+    };
+    return Boolean(
+      words[peopleCount] &&
+      text
+        .toLowerCase()
+        .split(/[^a-z]+/)
+        .includes(words[peopleCount]),
+    );
   }
 
   /** Accepts only named participants, payers and beneficiaries grounded in the message. */
-  private validModelDetails(item: ProposedSplit, text: string, peopleCount: number, names: string[], paidBy?: string, beneficiary?: string): boolean {
-    if (names.length > peopleCount || new Set(names.map((name) => name.toLocaleLowerCase())).size !== names.length) return false;
+  private validModelDetails(
+    item: ProposedSplit,
+    text: string,
+    peopleCount: number,
+    names: string[],
+    paidBy?: string,
+    beneficiary?: string,
+  ): boolean {
+    if (
+      names.length > peopleCount ||
+      new Set(names.map((name) => name.toLocaleLowerCase())).size !==
+        names.length
+    )
+      return false;
     if (!names.every((name) => this.nameInText(name, text))) return false;
-    if (paidBy && (!names.some((name) => name.toLocaleLowerCase() === paidBy.toLocaleLowerCase()) || !this.nameInText(paidBy, text))) return false;
+    if (
+      paidBy &&
+      (!names.some(
+        (name) => name.toLocaleLowerCase() === paidBy.toLocaleLowerCase(),
+      ) ||
+        !this.nameInText(paidBy, text))
+    )
+      return false;
     if (item.allocationKind === 'FULL_TO_OTHER') {
-      if (!paidBy || !beneficiary || names.length !== peopleCount || beneficiary.toLocaleLowerCase() === paidBy.toLocaleLowerCase()) return false;
-      if (!names.some((name) => name.toLocaleLowerCase() === beneficiary.toLocaleLowerCase()) || !this.nameInText(beneficiary, text)) return false;
+      if (
+        !paidBy ||
+        !beneficiary ||
+        names.length !== peopleCount ||
+        beneficiary.toLocaleLowerCase() === paidBy.toLocaleLowerCase()
+      )
+        return false;
+      if (
+        !names.some(
+          (name) =>
+            name.toLocaleLowerCase() === beneficiary.toLocaleLowerCase(),
+        ) ||
+        !this.nameInText(beneficiary, text)
+      )
+        return false;
     } else if (beneficiary) return false;
     return true;
   }

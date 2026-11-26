@@ -15,6 +15,14 @@ import { PersonalFollowUpService } from './personal-follow-up.service';
 import { AiMetricsService } from './ai-metrics.service';
 import { AiEvalCasesService } from './ai-eval-cases.service';
 import { AiEvalRunnerService } from './ai-eval-runner.service';
+import {
+  CloudflareStructuredModelProvider,
+  SemanticEngine,
+} from '../semantic-sdk';
+import {
+  CloudflareTransactionSegmentationProvider,
+  XpenseSemanticSdk,
+} from '../expense-semantics';
 
 @Module({
   controllers: [ParserController],
@@ -30,7 +38,11 @@ import { AiEvalRunnerService } from './ai-eval-runner.service';
     AiMetricsService,
     AiEvalCasesService,
     AiEvalRunnerService,
-    { provide: INTENT_SEGMENTER, useExisting: CloudflareIntentSegmenter },
+    SemanticEngine,
+    CloudflareStructuredModelProvider,
+    CloudflareTransactionSegmentationProvider,
+    XpenseSemanticSdk,
+    { provide: INTENT_SEGMENTER, useExisting: XpenseSemanticSdk },
   ],
   exports: [ParserService],
 })

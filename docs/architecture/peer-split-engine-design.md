@@ -199,7 +199,7 @@ Convert raw language into structured facts and constraints. Do not:
 
 Implement semantic understanding as a reusable workspace package, for example `packages/semantic-intake`, with no dependency on HTTP controllers, persistence, or the ledger solver.
 
-In XPENSE, **SDK** means an internal TypeScript library with one public function. It is not a separate server and it is not another AI model. The controller gives it a message and conversation context; the SDK decides whether local handling is enough, selects a configured model adapter when needed, validates the returned shape, and gives the application one stable typed result. Controllers do not need to know whether Cloudflare, another hosted provider, or no model produced that result.
+In XPENSE, **SDK** means an internal TypeScript library with one public facade. It is not a separate server and it is not another AI model. Application services give the facade a message and conversation context; the semantic layer selects a configured model adapter when needed, validates the returned shape, and gives the application a stable typed result for that task. Controllers and application services do not need to know Cloudflare's request format.
 
 ```text
 Controller/UI
@@ -212,6 +212,16 @@ Controller/UI
 ```
 
 This boundary prevents provider-specific request formats, API keys, retry behavior, and JSON parsing from leaking into product code. It also lets unit tests replace both providers with in-memory stubs.
+
+### Current SDK foundation
+
+The first provider-neutral foundation is implemented in `backend/src/semantic-sdk`. It defines generic domain and provider contracts plus a bounded `SemanticEngine`: one primary provider, at most one availability fallback, and no fallback when output is invalid or rejected by the domain validator.
+
+The application-specific layer is implemented in `backend/src/expense-semantics`. `XpenseSemanticSdk` is now the application-facing facade for ambiguous multi-transaction segmentation, peer-split intent, personal-draft follow-up, and peer-split follow-up. Its versioned transaction-segmentation domain verifies that returned segments occur in the original message. The other task adapters retain their XPENSE-specific prompts, schemas, and evidence validation while their callers depend only on the facade.
+
+Cloudflare's account configuration, endpoint construction, authentication headers, timeout, HTTP classification, response-envelope extraction, JSON parsing, and telemetry callback now live once in `CloudflareStructuredModelProvider`. Task adapters no longer perform their own network calls. This removes transport boilerplate while intentionally keeping different business prompts and validators separate.
+
+This remains an incremental migration, not yet the final unified semantic contract. The four operations still return task-specific result types, local recognizers still sit in their existing application services, and only transaction segmentation currently runs through the generic `SemanticEngine`. The next consolidation is a versioned input/context/result contract shared by personal and peer intents.
 
 ```ts
 interface SemanticUnderstandingSdk {
@@ -952,15 +962,20 @@ This is the working order for the peer-split implementation. Complete and measur
 - [x] Add a generic expected-subset comparator; it checks only the fields declared by each case and therefore supports creates, edits, deletes, personal drafts, peer splits, and mixed conversations.
 - [x] Add the DEV-only `ai_eval_runs` table for immutable run summaries.
 - [x] Add `POST /parser/eval-runs/captured-baseline` to score stored observed replies without calling a model.
-- [x] Record the pre-refactor captured baseline: **0/2 complete cases passed (0%) and 16/28 expected fields passed (57.14%)** on 2026-11-25.
+- [x] Record the pre-refactor captured baseline: **16/28 expected fields passed (57.14%)** on 2026-11-25. Field accuracy is the current headline metric.
 - [ ] Add more reviewed cases until every important intent and failure family has representative coverage.
 - [ ] Add a LIVE_REPLAY evaluator after the semantic SDK provides one stable execution boundary.
 - [ ] Define the minimum pass-rate gate required before merging prompt, model, validator, or routing changes.
 
-`ai_eval_cases` answers **what should Penny have done?** Each row contains the input, captured response, human expectation, and structured `expected_json`. `ai_eval_runs` answers **how well did this code version perform?** Each row records strict case accuracy, expected-field accuracy, and per-case comparison details. Captured-baseline runs are deterministic and consume no model tokens; future LIVE_REPLAY runs will execute the same inputs through the semantic SDK and may consume provider quota.
+`ai_eval_cases` answers **what should Penny have done?** Each row contains the input, captured response, human expectation, and structured `expected_json`. `ai_eval_runs` answers **how well did this code version perform?** Each row records total expected fields, passed fields, field accuracy, and per-case comparison details. Captured-baseline runs are deterministic and consume no model tokens; future LIVE_REPLAY runs will execute the same inputs through the semantic SDK and may consume provider quota. Complete-case scoring remains stored for possible later use but is not the current headline metric because the corpus is intentionally failure-heavy.
 
 ### 2. Introduce the unified semantic SDK
 
+- [x] Add reusable provider/domain contracts and a provider-neutral `SemanticEngine`.
+- [x] Add bounded primary/fallback execution: fallback only for unavailability, never for invalid or domain-rejected output.
+- [x] Add `XpenseSemanticSdk` and migrate ambiguous personal transaction segmentation as the first production caller.
+- [x] Move peer-split intent, personal follow-up, and peer-split follow-up behind `XpenseSemanticSdk`.
+- [x] Centralize Cloudflare transport, authentication, timeout, response parsing, error classification, and telemetry dispatch in one structured-model provider.
 - [ ] Define one versioned input, context, output, and ambiguity contract for personal and peer intents.
 - [ ] Route bounded local extraction and provider calls behind that contract.
 - [ ] Resolve a separate editable date for every produced draft; default an omitted date to the user's local current date.
@@ -976,7 +991,7 @@ This is the working order for the peer-split implementation. Complete and measur
 ### 4. Resolve participant identity
 
 - [ ] Add a unique registered-account handle or explicit account-selection flow.
-- [ ] Interpret `I`, `me`, and `myself` as the authenticated user.
+- [x] Interpret `I`, `me`, and `myself` as the authenticated user.
 - [ ] Link uniquely resolved XPENSE users; retain unmatched names as local placeholders.
 - [ ] Ask for clarification when a name could match more than one registered account.
 
