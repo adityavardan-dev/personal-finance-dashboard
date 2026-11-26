@@ -63,34 +63,41 @@ browser developer tools.
 
 ## Project setup
 
+Install from the repository root so npm links the three SDK workspace packages
+used by the backend:
+
 ```bash
-$ npm install
+$ npm ci
+$ npm run build:sdk
 ```
+
+Do not run `npm ci` only inside `backend`; the authoritative lockfile is now the
+repository-root `package-lock.json`.
 
 ## Compile and run the project
 
 ```bash
 # development
-$ npm run start
+$ npm run start --workspace=backend
 
 # watch mode
-$ npm run start:dev
+$ npm run start:dev --workspace=backend
 
 # production mode
-$ npm run start:prod
+$ npm run start:prod --workspace=backend
 ```
 
 ## Run tests
 
 ```bash
 # unit tests
-$ npm run test
+$ npm test --workspace=backend
 
 # e2e tests
-$ npm run test:e2e
+$ npm run test:e2e --workspace=backend
 
 # test coverage
-$ npm run test:cov
+$ npm run test:cov --workspace=backend
 ```
 
 ## Deployment

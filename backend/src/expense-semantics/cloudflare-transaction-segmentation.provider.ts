@@ -4,11 +4,11 @@ import { CloudflareIntentSegmenter } from '../parser/cloudflare-intent-segmenter
 import type {
   SemanticModelProvider,
   SemanticProviderResult,
-} from '../semantic-sdk';
+} from '@adityavardan/semantic-core';
 import type {
   TransactionSegmentationInput,
   TransactionSegmentationProposal,
-} from './transaction-segmentation.domain';
+} from '@adityavardan/xpense-semantics';
 
 @Injectable()
 export class CloudflareTransactionSegmentationProvider implements SemanticModelProvider<

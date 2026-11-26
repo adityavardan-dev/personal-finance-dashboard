@@ -1,5 +1,5 @@
 import type { SemanticDomain, SemanticModelProvider } from './contracts';
-import { SemanticEngine } from './semantic-engine';
+import { SemanticEngine } from '@adityavardan/semantic-core';
 
 interface Input {
   text: string;

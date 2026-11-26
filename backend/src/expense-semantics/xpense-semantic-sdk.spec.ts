@@ -1,6 +1,6 @@
 import type { CloudflareTransactionSegmentationProvider } from './cloudflare-transaction-segmentation.provider';
-import { XpenseSemanticSdk } from './xpense-semantic-sdk';
-import { SemanticEngine } from '../semantic-sdk';
+import { XpenseSemanticSdk } from '@adityavardan/xpense-semantics';
+import { SemanticEngine } from '@adityavardan/semantic-core';
 import type { CloudflareSplitInterpreter } from '../parser/cloudflare-split-interpreter';
 import type { CloudflarePersonalFollowUp } from '../parser/cloudflare-personal-follow-up';
 

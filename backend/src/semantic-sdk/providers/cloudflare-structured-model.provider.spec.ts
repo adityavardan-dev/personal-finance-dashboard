@@ -1,18 +1,8 @@
-import { CloudflareStructuredModelProvider } from './cloudflare-structured-model.provider';
+import { CloudflareStructuredModelProvider } from '@adityavardan/provider-cloudflare';
 
 describe('CloudflareStructuredModelProvider', () => {
-  const account = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const token = process.env.CLOUDFLARE_AI_API_TOKEN;
-
-  beforeEach(() => {
-    process.env.CLOUDFLARE_ACCOUNT_ID = 'account';
-    process.env.CLOUDFLARE_AI_API_TOKEN = 'token';
-  });
-
   afterEach(() => {
     jest.restoreAllMocks();
-    restore('CLOUDFLARE_ACCOUNT_ID', account);
-    restore('CLOUDFLARE_AI_API_TOKEN', token);
   });
 
   it('returns parsed structured content', async () => {
@@ -25,15 +15,14 @@ describe('CloudflareStructuredModelProvider', () => {
       ),
     );
 
-    const result =
-      await new CloudflareStructuredModelProvider().generateStructured<{
-        answer: number;
-      }>({
-        messages: [{ role: 'user', content: 'question' }],
-        responseSchema: { type: 'object' },
-        temperature: 0.3,
-        maxCompletionTokens: 100,
-      });
+    const result = await provider().generateStructured<{
+      answer: number;
+    }>({
+      messages: [{ role: 'user', content: 'question' }],
+      responseSchema: { type: 'object' },
+      temperature: 0.3,
+      maxCompletionTokens: 100,
+    });
 
     expect(result).toEqual({ status: 'SUCCESS', value: { answer: 42 } });
   });
@@ -44,13 +33,12 @@ describe('CloudflareStructuredModelProvider', () => {
       jest
         .spyOn(global, 'fetch')
         .mockResolvedValue(new Response('{}', { status }));
-      const result =
-        await new CloudflareStructuredModelProvider().generateStructured({
-          messages: [{ role: 'user', content: 'question' }],
-          responseSchema: { type: 'object' },
-          temperature: 0.3,
-          maxCompletionTokens: 100,
-        });
+      const result = await provider().generateStructured({
+        messages: [{ role: 'user', content: 'question' }],
+        responseSchema: { type: 'object' },
+        temperature: 0.3,
+        maxCompletionTokens: 100,
+      });
       expect(result.status).toBe('UNAVAILABLE');
     },
   );
@@ -64,18 +52,19 @@ describe('CloudflareStructuredModelProvider', () => {
         },
       ),
     );
-    const result =
-      await new CloudflareStructuredModelProvider().generateStructured({
-        messages: [{ role: 'user', content: 'question' }],
-        responseSchema: { type: 'object' },
-        temperature: 0.3,
-        maxCompletionTokens: 100,
-      });
+    const result = await provider().generateStructured({
+      messages: [{ role: 'user', content: 'question' }],
+      responseSchema: { type: 'object' },
+      temperature: 0.3,
+      maxCompletionTokens: 100,
+    });
     expect(result.status).toBe('INVALID_RESPONSE');
   });
 });
 
-function restore(name: string, value: string | undefined): void {
-  if (value === undefined) delete process.env[name];
-  else process.env[name] = value;
+function provider(): CloudflareStructuredModelProvider {
+  return new CloudflareStructuredModelProvider({
+    accountId: 'account',
+    apiToken: 'token',
+  });
 }

@@ -1,6 +1,6 @@
 /** Validates PENNY's proposed edits to unsaved personal transaction drafts. */
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { XpenseSemanticSdk } from '../expense-semantics';
+import { XpenseSemanticSdk } from '@adityavardan/xpense-semantics';
 import type { RequestTrace } from '../request-trace';
 import { PARSER_CATEGORIES, type ParserCategory } from './dto/parse-result.dto';
 import type {

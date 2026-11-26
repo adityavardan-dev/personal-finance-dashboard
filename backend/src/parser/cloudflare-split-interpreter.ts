@@ -2,11 +2,12 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { recordXpenseCloudflareTelemetry } from '../expense-semantics/xpense-cloudflare-telemetry';
 import type { RequestTrace } from '../request-trace';
-import { CloudflareStructuredModelProvider } from '../semantic-sdk';
+import { CloudflareStructuredModelProvider } from '@adityavardan/provider-cloudflare';
 import type {
   PendingSplitContext,
+  ProposedSplit,
   SplitFollowUpProposal,
-} from './split-follow-up.service';
+} from '@adityavardan/xpense-semantics';
 import {
   PENNY_MAX_COMPLETION_TOKENS,
   PENNY_TEMPERATURE,
@@ -14,14 +15,7 @@ import {
 import { AiMetricsService } from './ai-metrics.service';
 import { loadPennyGuidance } from './penny-guidance';
 
-export interface ProposedSplit {
-  amount: string;
-  peopleCount: string;
-  participants?: string[];
-  paidBy?: string | null;
-  allocationKind?: 'EQUAL' | 'FULL_TO_OTHER';
-  beneficiary?: string | null;
-}
+export type { ProposedSplit } from '@adityavardan/xpense-semantics';
 @Injectable()
 export class CloudflareSplitInterpreter {
   private readonly logger = new Logger(CloudflareSplitInterpreter.name);
@@ -34,9 +28,7 @@ export class CloudflareSplitInterpreter {
 
   isConfigured(): boolean {
     return Boolean(
-      (
-        this.structuredProvider ?? new CloudflareStructuredModelProvider()
-      ).isConfigured() && loadPennyGuidance(),
+      this.structuredProvider?.isConfigured() && loadPennyGuidance(),
     );
   }
 
@@ -236,7 +228,10 @@ export class CloudflareSplitInterpreter {
   }
 
   private provider(): CloudflareStructuredModelProvider {
-    return this.structuredProvider ?? new CloudflareStructuredModelProvider();
+    if (!this.structuredProvider) {
+      throw new Error('Cloudflare structured provider is not configured.');
+    }
+    return this.structuredProvider;
   }
 }
 

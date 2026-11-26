@@ -1,1 +1,12 @@
-{}
+{
+  "name": "personal-finance-dashboard-workspace",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:sdk": "npm run build --workspace=@adityavardan/semantic-core && npm run build --workspace=@adityavardan/provider-cloudflare && npm run build --workspace=@adityavardan/xpense-semantics",
+    "pack:sdk": "npm pack --workspace=@adityavardan/semantic-core && npm pack --workspace=@adityavardan/provider-cloudflare && npm pack --workspace=@adityavardan/xpense-semantics"
+  }
+}

@@ -1,9 +1,7 @@
-/** Provider-neutral contracts for reusable semantic interpretation. */
-
 export type SemanticProviderResult<T> =
-  | { status: 'SUCCESS'; value: T }
-  | { status: 'UNAVAILABLE'; reason?: string }
-  | { status: 'INVALID_RESPONSE'; reason?: string };
+  | { status: "SUCCESS"; value: T }
+  | { status: "UNAVAILABLE"; reason?: string }
+  | { status: "INVALID_RESPONSE"; reason?: string };
 
 export interface SemanticModelProvider<TInput, TProposal> {
   readonly name: string;
@@ -19,13 +17,13 @@ export interface SemanticDomain<TInput, TProposal> {
 
 export interface SemanticProviderAttempt {
   provider: string;
-  outcome: 'ACCEPTED' | 'UNAVAILABLE' | 'INVALID_RESPONSE' | 'DOMAIN_REJECTED';
+  outcome: "ACCEPTED" | "UNAVAILABLE" | "INVALID_RESPONSE" | "DOMAIN_REJECTED";
 }
 
 export type SemanticInterpretationResult<T> =
   | {
-      status: 'ACCEPTED';
-      source: 'MODEL';
+      status: "ACCEPTED";
+      source: "MODEL";
       value: T;
       providerAttempted: true;
       providerAccepted: true;
@@ -33,8 +31,8 @@ export type SemanticInterpretationResult<T> =
       attempts: SemanticProviderAttempt[];
     }
   | {
-      status: 'UNAVAILABLE' | 'REJECTED';
-      source: 'NONE';
+      status: "UNAVAILABLE" | "REJECTED";
+      source: "NONE";
       value: null;
       providerAttempted: boolean;
       providerAccepted: false;

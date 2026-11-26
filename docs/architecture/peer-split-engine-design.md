@@ -2,13 +2,13 @@
 
 ## Metadata
 
-| Field | Value |
-|---|---|
-| Status | Phase A complete; Phases C/D prototyping in progress; identity, persistence, notification, and settlement boundaries remain design targets |
-| Working branch | `feature/peer-split-engine-design` |
-| Base branch | `develop` |
-| Builds on | Milestone 10 deterministic context parser and conversational intake |
-| Primary objective | Preserve personal expense accuracy while adding multi-party balances and deterministic asymmetric splits |
+| Field             | Value                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Status            | Phase A complete; Phases C/D prototyping in progress; identity, persistence, notification, and settlement boundaries remain design targets |
+| Working branch    | `feature/peer-split-engine-design`                                                                                                         |
+| Base branch       | `develop`                                                                                                                                  |
+| Builds on         | Milestone 10 deterministic context parser and conversational intake                                                                        |
+| Primary objective | Preserve personal expense accuracy while adding multi-party balances and deterministic asymmetric splits                                   |
 
 ## 1. Why this document exists
 
@@ -48,20 +48,20 @@ Confirmation Service
 
 These names describe architectural responsibilities, not four autonomous LLM agents:
 
-| Component | Responsibility | Implementation boundary |
-|---|---|---|
-| Intent Agent | Convert the user's message into typed participants, contributions, dates, and allocation rules | Internal TypeScript semantic SDK; a deliberately small local layer plus primary and fallback structured-model adapters for free-form peer language |
-| Validation Agent | Reject missing, unsupported, contradictory, or unbalanced meaning | Deterministic schema, evidence, identity, and accounting-constraint validation; no model call required |
-| Ledger Solver | Calculate owed shares, net balances, and two-way obligations | Deterministic integer-minor-unit arithmetic; no language interpretation or persistence |
-| Confirmation Service | Persist the peer expense, obligations, and personal projection after approval | Authenticated, idempotent, transactional write boundary; never invoked automatically by analysis |
+| Component            | Responsibility                                                                                 | Implementation boundary                                                                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Intent Agent         | Convert the user's message into typed participants, contributions, dates, and allocation rules | Internal TypeScript semantic SDK; a deliberately small local layer plus primary and fallback structured-model adapters for free-form peer language |
+| Validation Agent     | Reject missing, unsupported, contradictory, or unbalanced meaning                              | Deterministic schema, evidence, identity, and accounting-constraint validation; no model call required                                             |
+| Ledger Solver        | Calculate owed shares, net balances, and two-way obligations                                   | Deterministic integer-minor-unit arithmetic; no language interpretation or persistence                                                             |
+| Confirmation Service | Persist the peer expense, obligations, and personal projection after approval                  | Authenticated, idempotent, transactional write boundary; never invoked automatically by analysis                                                   |
 
 The one-way dependency is `Intent Agent -> Validation Agent -> Ledger Solver -> Confirmation Service`. A downstream component must not reinterpret or silently repair the output of an upstream component. Invalid output returns to clarification rather than progressing toward persistence.
 
-| Lane | Example | Extraction | Math | External AI cost |
-|---|---|---|---|---|
-| Personal fast path | `Spent 300 on snacks today` | Existing Milestone 10 parser | Existing personal calculation | None |
-| Deterministic peer path | A structured form or one of the small, stable grammars already supported by the application | Local normalization and identity resolution | Peer ledger solver | None |
-| Semantic peer path | `I paid 1200 for lunch with Harsha and Jaswanth, split equally` or a more complex exception | TypeScript semantic SDK with primary and fallback structured-model adapters | Peer ledger solver | One call for free-form peer language; one bounded fallback only on provider failure |
+| Lane                    | Example                                                                                     | Extraction                                                                  | Math                          | External AI cost                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------- |
+| Personal fast path      | `Spent 300 on snacks today`                                                                 | Existing Milestone 10 parser                                                | Existing personal calculation | None                                                                                |
+| Deterministic peer path | A structured form or one of the small, stable grammars already supported by the application | Local normalization and identity resolution                                 | Peer ledger solver            | None                                                                                |
+| Semantic peer path      | `I paid 1200 for lunch with Harsha and Jaswanth, split equally` or a more complex exception | TypeScript semantic SDK with primary and fallback structured-model adapters | Peer ledger solver            | One call for free-form peer language; one bounded fallback only on provider failure |
 
 The semantic model is never the source of truth for arithmetic or persistence. Its only responsibility is to translate flexible language into typed participants, payment facts, allocation constraints, and explicit ambiguities.
 
@@ -147,10 +147,10 @@ The local router runs before any optional AI call. It should return one of:
 
 ```ts
 type IntakeLane =
-  | 'PERSONAL_FAST_PATH'
-  | 'PEER_DETERMINISTIC_PATH'
-  | 'PEER_SEMANTIC_PATH'
-  | 'NEEDS_ROUTING_CLARIFICATION';
+  | "PERSONAL_FAST_PATH"
+  | "PEER_DETERMINISTIC_PATH"
+  | "PEER_SEMANTIC_PATH"
+  | "NEEDS_ROUTING_CLARIFICATION";
 ```
 
 ### Personal fast-path signals
@@ -215,11 +215,11 @@ This boundary prevents provider-specific request formats, API keys, retry behavi
 
 ### Current SDK foundation
 
-The first provider-neutral foundation is implemented in `backend/src/semantic-sdk`. It defines generic domain and provider contracts plus a bounded `SemanticEngine`: one primary provider, at most one availability fallback, and no fallback when output is invalid or rejected by the domain validator.
+The provider-neutral foundation is packaged in `packages/semantic-core` as `@adityavardan/semantic-core`. It defines generic domain and provider contracts plus a bounded `SemanticEngine`: one primary provider, at most one availability fallback, and no fallback when output is invalid or rejected by the domain validator.
 
-The application-specific layer is implemented in `backend/src/expense-semantics`. `XpenseSemanticSdk` is now the application-facing facade for ambiguous multi-transaction segmentation, peer-split intent, personal-draft follow-up, and peer-split follow-up. Its versioned transaction-segmentation domain verifies that returned segments occur in the original message. The other task adapters retain their XPENSE-specific prompts, schemas, and evidence validation while their callers depend only on the facade.
+The application-specific layer is packaged in `packages/xpense-semantics` as `@adityavardan/xpense-semantics`. `XpenseSemanticSdk` is the application-facing facade for ambiguous multi-transaction segmentation, peer-split intent, personal-draft follow-up, and peer-split follow-up. Its versioned transaction-segmentation domain verifies that returned segments occur in the original message. The backend supplies task adapters containing PENNY prompts, schemas, telemetry, and evidence validation through the package's public ports.
 
-Cloudflare's account configuration, endpoint construction, authentication headers, timeout, HTTP classification, response-envelope extraction, JSON parsing, and telemetry callback now live once in `CloudflareStructuredModelProvider`. Task adapters no longer perform their own network calls. This removes transport boilerplate while intentionally keeping different business prompts and validators separate.
+Cloudflare endpoint construction, authentication headers, timeout, HTTP classification, response-envelope extraction, JSON parsing, and telemetry callback live in `packages/provider-cloudflare` as `@adityavardan/provider-cloudflare`. The package receives account ID, API token, and optional model configuration through its constructor; it never reads XPENSE environment variables or contains credentials. XPENSE's Nest module remains responsible for reading deployment configuration and constructing the provider. Task adapters no longer perform their own network calls.
 
 This remains an incremental migration, not yet the final unified semantic contract. The four operations still return task-specific result types, local recognizers still sit in their existing application services, and only transaction segmentation currently runs through the generic `SemanticEngine`. The next consolidation is a versioned input/context/result contract shared by personal and peer intents.
 
@@ -232,18 +232,18 @@ interface SemanticUnderstandingSdk {
 
 type SemanticUnderstandingResult =
   | {
-      source: 'LOCAL';
+      source: "LOCAL";
       intent: SemanticPeerExpenseIntent;
       providerCalled: false;
     }
   | {
-      source: 'MODEL';
+      source: "MODEL";
       intent: SemanticPeerExpenseIntent;
       providerCalled: true;
       providerRequestId?: string;
     }
   | {
-      source: 'CLARIFICATION';
+      source: "CLARIFICATION";
       intent: SemanticPeerExpenseIntent;
       providerCalled: false;
     };
@@ -277,12 +277,12 @@ Using a TypeScript SDK makes the semantic layer modular and testable, but it doe
 ### Proposed intermediate contract
 
 ```ts
-type EvidenceKind = 'EXPLICIT' | 'IMPLIED_BY_APP_COMMAND' | 'MISSING';
+type EvidenceKind = "EXPLICIT" | "IMPLIED_BY_APP_COMMAND" | "MISSING";
 
 interface ParticipantMention {
   mentionId: string;
   displayText: string;
-  role: 'SELF' | 'PEER';
+  role: "SELF" | "PEER";
   evidence: EvidenceKind;
 }
 
@@ -294,25 +294,25 @@ interface PaymentContributionIntent {
 
 type AllocationRuleIntent =
   | {
-      kind: 'FIXED_AMOUNT';
+      kind: "FIXED_AMOUNT";
       participantMentionId: string;
       amountMinor: number;
       evidenceText: string;
     }
   | {
-      kind: 'PERCENTAGE';
+      kind: "PERCENTAGE";
       participantMentionId: string;
       basisPoints: number;
       evidenceText: string;
     }
   | {
-      kind: 'WEIGHT';
+      kind: "WEIGHT";
       participantMentionId: string;
       weight: number;
       evidenceText: string;
     }
   | {
-      kind: 'EQUAL_REMAINDER';
+      kind: "EQUAL_REMAINDER";
       participantMentionIds: string[];
       evidenceText: string;
     };
@@ -320,7 +320,7 @@ type AllocationRuleIntent =
 interface SemanticPeerExpenseIntent {
   schemaVersion: 1;
   totalAmountMinor: number | null;
-  currency: 'INR' | 'USD' | 'EUR' | null;
+  currency: "INR" | "USD" | "EUR" | null;
   description: string | null;
   merchant: string | null;
   category: string | null;
@@ -353,17 +353,19 @@ Recommended first implementation:
 
 ### Provider strategy options
 
-| Method | Advantages | Limitations | Recommended use |
-|---|---|---|---|
-| Hosted structured-output model | Best natural-language coverage and fastest initial delivery | Per-call cost, network dependency, privacy review | Initial semantic lane behind a feature flag |
-| Self-hosted small model | Greater data control and predictable marginal cost | Operational complexity and weaker extraction on edge cases | Later, after an evaluation corpus exists |
-| Deterministic-only manual builder | No model cost or disclosure | More user effort for complex language | Mandatory fallback in every release |
+| Method                            | Advantages                                                  | Limitations                                                | Recommended use                             |
+| --------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------- |
+| Hosted structured-output model    | Best natural-language coverage and fastest initial delivery | Per-call cost, network dependency, privacy review          | Initial semantic lane behind a feature flag |
+| Self-hosted small model           | Greater data control and predictable marginal cost          | Operational complexity and weaker extraction on edge cases | Later, after an evaluation corpus exists    |
+| Deterministic-only manual builder | No model cost or disclosure                                 | More user effort for complex language                      | Mandatory fallback in every release         |
 
 The application should depend on the internal `SemanticUnderstandingSdk`, which in turn depends on a narrow provider port rather than a specific vendor SDK. A vendor TypeScript client belongs only inside its adapter.
 
 ```ts
 interface ModelSemanticExtractor {
-  extract(request: SemanticExtractionRequest): Promise<SemanticPeerExpenseIntent>;
+  extract(
+    request: SemanticExtractionRequest,
+  ): Promise<SemanticPeerExpenseIntent>;
 }
 
 class SemanticUnderstandingService implements SemanticUnderstandingSdk {
@@ -432,7 +434,7 @@ XPENSE currently stores a display `username`, but the database does not enforce 
 ```ts
 interface ResolvedParticipant {
   participantId: string;
-  kind: 'SELF' | 'REGISTERED_USER' | 'LOCAL_CONTACT';
+  kind: "SELF" | "REGISTERED_USER" | "LOCAL_CONTACT";
   displayName: string;
   sourceMentionId: string;
 }
@@ -590,21 +592,19 @@ Reuse the mature Milestone 10 interaction pattern, extended with peer fields.
 
 ```ts
 type PeerDraftStatus =
-  | 'NEEDS_CLARIFICATION'
-  | 'READY_FOR_REVIEW'
-  | 'UNSUPPORTED';
+  "NEEDS_CLARIFICATION" | "READY_FOR_REVIEW" | "UNSUPPORTED";
 
 type PeerMissingField =
-  | 'totalAmount'
-  | 'currency'
-  | 'date'
-  | 'category'
-  | 'participants'
-  | 'participantIdentity'
-  | 'payer'
-  | 'contributionTotal'
-  | 'allocationRule'
-  | 'allocationTotal';
+  | "totalAmount"
+  | "currency"
+  | "date"
+  | "category"
+  | "participants"
+  | "participantIdentity"
+  | "payer"
+  | "contributionTotal"
+  | "allocationRule"
+  | "allocationTotal";
 ```
 
 ### Clarification priority
@@ -644,7 +644,7 @@ interface PeerExpenseDraft {
   version: number;
   status: PeerDraftStatus;
   totalAmountMinor: number | null;
-  currency: 'INR' | 'USD' | 'EUR' | null;
+  currency: "INR" | "USD" | "EUR" | null;
   date: string | null;
   merchant: string | null;
   category: string | null;
@@ -772,17 +772,17 @@ Partial settlements must be supported, and the original expense allocation must 
 
 ## 14. Failure behavior
 
-| Failure | Required behavior |
-|---|---|
-| Semantic provider unavailable | Keep the text and open the manual peer builder |
-| Invalid model JSON | Reject it, record a non-sensitive metric, and use manual fallback |
-| Participant identity ambiguous | Ask the user to select or create the intended contact |
-| Contributions do not equal total | Ask which payer amount or total is incorrect |
-| Allocations exceed total | Block solving and identify the conflicting rule |
-| Allocations are below total without a remainder rule | Ask who shares the remainder |
-| Solver invariant fails | Treat as an internal error; do not persist |
-| Confirmation is repeated | Return the prior result through idempotency handling |
-| Persistence partially fails | Roll back the entire aggregate and personal projection |
+| Failure                                              | Required behavior                                                 |
+| ---------------------------------------------------- | ----------------------------------------------------------------- |
+| Semantic provider unavailable                        | Keep the text and open the manual peer builder                    |
+| Invalid model JSON                                   | Reject it, record a non-sensitive metric, and use manual fallback |
+| Participant identity ambiguous                       | Ask the user to select or create the intended contact             |
+| Contributions do not equal total                     | Ask which payer amount or total is incorrect                      |
+| Allocations exceed total                             | Block solving and identify the conflicting rule                   |
+| Allocations are below total without a remainder rule | Ask who shares the remainder                                      |
+| Solver invariant fails                               | Treat as an internal error; do not persist                        |
+| Confirmation is repeated                             | Return the prior result through idempotency handling              |
+| Persistence partially fails                          | Roll back the entire aggregate and personal projection            |
 
 ## 15. Testing strategy
 

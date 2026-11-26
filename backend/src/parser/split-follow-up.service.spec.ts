@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { SplitFollowUpService } from './split-follow-up.service';
-import type { XpenseSemanticSdk } from '../expense-semantics';
+import type { XpenseSemanticSdk } from '@adityavardan/xpense-semantics';
 
 const trace = {
   conversationId: '11111111-1111-4111-8111-111111111111',
@@ -92,17 +92,15 @@ describe('SplitFollowUpService', () => {
   it('accepts a payer-only later turn using existing participant context', async () => {
     const model = {
       isPeerConfigured: () => true,
-      interpretPeerFollowUp: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            ordinal: 2,
-            names: null,
-            paidBy: 'Katty',
-            amount: null,
-            peopleCount: null,
-          },
-        ]),
+      interpretPeerFollowUp: jest.fn().mockResolvedValue([
+        {
+          ordinal: 2,
+          names: null,
+          paidBy: 'Katty',
+          amount: null,
+          peopleCount: null,
+        },
+      ]),
     };
     const service = new SplitFollowUpService(
       model as unknown as XpenseSemanticSdk,
@@ -130,17 +128,15 @@ describe('SplitFollowUpService', () => {
   it('retains a payer supplied before participant names', async () => {
     const model = {
       isPeerConfigured: () => true,
-      interpretPeerFollowUp: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            ordinal: 1,
-            names: null,
-            paidBy: 'Harsha',
-            amount: null,
-            peopleCount: null,
-          },
-        ]),
+      interpretPeerFollowUp: jest.fn().mockResolvedValue([
+        {
+          ordinal: 1,
+          names: null,
+          paidBy: 'Harsha',
+          amount: null,
+          peopleCount: null,
+        },
+      ]),
     };
     const service = new SplitFollowUpService(
       model as unknown as XpenseSemanticSdk,
@@ -164,17 +160,15 @@ describe('SplitFollowUpService', () => {
   it('accepts a corrected total without replacing names', async () => {
     const model = {
       isPeerConfigured: () => true,
-      interpretPeerFollowUp: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            ordinal: 2,
-            names: null,
-            paidBy: null,
-            amount: '350',
-            peopleCount: null,
-          },
-        ]),
+      interpretPeerFollowUp: jest.fn().mockResolvedValue([
+        {
+          ordinal: 2,
+          names: null,
+          paidBy: null,
+          amount: '350',
+          peopleCount: null,
+        },
+      ]),
     };
     const service = new SplitFollowUpService(
       model as unknown as XpenseSemanticSdk,

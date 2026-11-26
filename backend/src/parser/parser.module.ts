@@ -15,14 +15,10 @@ import { PersonalFollowUpService } from './personal-follow-up.service';
 import { AiMetricsService } from './ai-metrics.service';
 import { AiEvalCasesService } from './ai-eval-cases.service';
 import { AiEvalRunnerService } from './ai-eval-runner.service';
-import {
-  CloudflareStructuredModelProvider,
-  SemanticEngine,
-} from '../semantic-sdk';
-import {
-  CloudflareTransactionSegmentationProvider,
-  XpenseSemanticSdk,
-} from '../expense-semantics';
+import { CloudflareStructuredModelProvider } from '@adityavardan/provider-cloudflare';
+import { SemanticEngine } from '@adityavardan/semantic-core';
+import { XpenseSemanticSdk } from '@adityavardan/xpense-semantics';
+import { CloudflareTransactionSegmentationProvider } from '../expense-semantics/cloudflare-transaction-segmentation.provider';
 
 @Module({
   controllers: [ParserController],
@@ -39,9 +35,37 @@ import {
     AiEvalCasesService,
     AiEvalRunnerService,
     SemanticEngine,
-    CloudflareStructuredModelProvider,
+    {
+      provide: CloudflareStructuredModelProvider,
+      useFactory: () =>
+        new CloudflareStructuredModelProvider({
+          accountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? '',
+          apiToken: process.env.CLOUDFLARE_AI_API_TOKEN ?? '',
+          defaultModel: process.env.CLOUDFLARE_AI_MODEL,
+        }),
+    },
     CloudflareTransactionSegmentationProvider,
-    XpenseSemanticSdk,
+    {
+      provide: XpenseSemanticSdk,
+      inject: [
+        SemanticEngine,
+        CloudflareTransactionSegmentationProvider,
+        CloudflareSplitInterpreter,
+        CloudflarePersonalFollowUp,
+      ],
+      useFactory: (
+        engine: SemanticEngine,
+        transactionProvider: CloudflareTransactionSegmentationProvider,
+        splitInterpreter: CloudflareSplitInterpreter,
+        personalInterpreter: CloudflarePersonalFollowUp,
+      ) =>
+        new XpenseSemanticSdk(
+          engine,
+          transactionProvider,
+          splitInterpreter,
+          personalInterpreter,
+        ),
+    },
     { provide: INTENT_SEGMENTER, useExisting: XpenseSemanticSdk },
   ],
   exports: [ParserService],

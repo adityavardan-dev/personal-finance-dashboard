@@ -1,8 +1,10 @@
 /** Extracts reviewable split drafts before participant names and payer are known. */
 import { Injectable, Logger } from '@nestjs/common';
-import { XpenseSemanticSdk } from '../expense-semantics';
+import {
+  XpenseSemanticSdk,
+  type ProposedSplit,
+} from '@adityavardan/xpense-semantics';
 import type { RequestTrace } from '../request-trace';
-import type { ProposedSplit } from './cloudflare-split-interpreter';
 import {
   normalizeParticipantName,
   participantAppearsInText,

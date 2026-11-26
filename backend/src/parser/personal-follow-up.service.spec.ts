@@ -1,5 +1,5 @@
 import { PersonalFollowUpService } from './personal-follow-up.service';
-import type { XpenseSemanticSdk } from '../expense-semantics';
+import type { XpenseSemanticSdk } from '@adityavardan/xpense-semantics';
 import type { ParserService } from './parser.service';
 import { ParserService as RealParserService } from './parser.service';
 
@@ -38,19 +38,17 @@ describe('PersonalFollowUpService', () => {
   it('accepts a grounded edit to a named existing draft', async () => {
     const model = {
       isPersonalFollowUpConfigured: () => true,
-      interpretPersonalFollowUp: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            ordinal: 1,
-            amount: '420',
-            date: null,
-            category: null,
-            merchant: 'New Cafe',
-            splitResolution: null,
-            splitFactor: null,
-          },
-        ]),
+      interpretPersonalFollowUp: jest.fn().mockResolvedValue([
+        {
+          ordinal: 1,
+          amount: '420',
+          date: null,
+          category: null,
+          merchant: 'New Cafe',
+          splitResolution: null,
+          splitFactor: null,
+        },
+      ]),
     };
     const service = new PersonalFollowUpService(
       parser,
@@ -80,19 +78,17 @@ describe('PersonalFollowUpService', () => {
   it('rejects invented values and unknown targets', async () => {
     const model = {
       isPersonalFollowUpConfigured: () => true,
-      interpretPersonalFollowUp: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            ordinal: 3,
-            amount: '999',
-            date: null,
-            category: null,
-            merchant: null,
-            splitResolution: null,
-            splitFactor: null,
-          },
-        ]),
+      interpretPersonalFollowUp: jest.fn().mockResolvedValue([
+        {
+          ordinal: 3,
+          amount: '999',
+          date: null,
+          category: null,
+          merchant: null,
+          splitResolution: null,
+          splitFactor: null,
+        },
+      ]),
     };
     const service = new PersonalFollowUpService(
       parser,
@@ -312,15 +308,13 @@ describe('PersonalFollowUpService', () => {
     ];
     const model = {
       isPersonalFollowUpConfigured: () => true,
-      interpretPersonalFollowUp: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            ordinal: 1,
-            date: '2026-11-24',
-            dateEvidence: 'yesterday spent 500',
-          },
-        ]),
+      interpretPersonalFollowUp: jest.fn().mockResolvedValue([
+        {
+          ordinal: 1,
+          date: '2026-11-24',
+          dateEvidence: 'yesterday spent 500',
+        },
+      ]),
     };
     const service = new PersonalFollowUpService(
       new RealParserService(),

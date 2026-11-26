@@ -4,7 +4,7 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { recordXpenseCloudflareTelemetry } from '../expense-semantics/xpense-cloudflare-telemetry';
 import type { RequestTrace } from '../request-trace';
-import { CloudflareStructuredModelProvider } from '../semantic-sdk';
+import { CloudflareStructuredModelProvider } from '@adityavardan/provider-cloudflare';
 import type { IntentSegmenter } from './intent-segmenter';
 import { loadPennyGuidance } from './penny-guidance';
 import {
@@ -40,9 +40,7 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
   /** Checks whether is configured. */
   isConfigured(): boolean {
     return Boolean(
-      (
-        this.structuredProvider ?? new CloudflareStructuredModelProvider()
-      ).isConfigured() && loadPennyGuidance(),
+      this.structuredProvider?.isConfigured() && loadPennyGuidance(),
     );
   }
 
@@ -56,8 +54,8 @@ export class CloudflareIntentSegmenter implements IntentSegmenter {
     if (!guidance) return null;
     const queryJson = { message: text };
 
-    const provider =
-      this.structuredProvider ?? new CloudflareStructuredModelProvider();
+    const provider = this.structuredProvider;
+    if (!provider) return null;
     const result = await provider.generateStructured<unknown>(
       {
         temperature: PENNY_TEMPERATURE,

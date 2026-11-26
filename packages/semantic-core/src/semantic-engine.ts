@@ -1,11 +1,11 @@
-/** Executes one primary and at most one fallback semantic provider. */
 import type {
   SemanticDomain,
   SemanticInterpretationResult,
   SemanticModelProvider,
   SemanticProviderAttempt,
-} from './contracts';
+} from "./contracts";
 
+/** Executes one primary and at most one availability fallback. */
 export class SemanticEngine {
   async interpret<TInput, TProposal>(
     input: TInput,
@@ -19,22 +19,22 @@ export class SemanticEngine {
 
     for (const provider of configured) {
       const result = await provider.extract(input);
-      if (result.status === 'UNAVAILABLE') {
-        attempts.push({ provider: provider.name, outcome: 'UNAVAILABLE' });
+      if (result.status === "UNAVAILABLE") {
+        attempts.push({ provider: provider.name, outcome: "UNAVAILABLE" });
         continue;
       }
-      if (result.status === 'INVALID_RESPONSE') {
-        attempts.push({ provider: provider.name, outcome: 'INVALID_RESPONSE' });
+      if (result.status === "INVALID_RESPONSE") {
+        attempts.push({ provider: provider.name, outcome: "INVALID_RESPONSE" });
         return this.rejected(attempts);
       }
       if (!domain.validate(result.value, input)) {
-        attempts.push({ provider: provider.name, outcome: 'DOMAIN_REJECTED' });
+        attempts.push({ provider: provider.name, outcome: "DOMAIN_REJECTED" });
         return this.rejected(attempts);
       }
-      attempts.push({ provider: provider.name, outcome: 'ACCEPTED' });
+      attempts.push({ provider: provider.name, outcome: "ACCEPTED" });
       return {
-        status: 'ACCEPTED',
-        source: 'MODEL',
+        status: "ACCEPTED",
+        source: "MODEL",
         value: result.value,
         providerAttempted: true,
         providerAccepted: true,
@@ -44,8 +44,8 @@ export class SemanticEngine {
     }
 
     return {
-      status: 'UNAVAILABLE',
-      source: 'NONE',
+      status: "UNAVAILABLE",
+      source: "NONE",
       value: null,
       providerAttempted: attempts.length > 0,
       providerAccepted: false,
@@ -58,8 +58,8 @@ export class SemanticEngine {
     attempts: SemanticProviderAttempt[],
   ): SemanticInterpretationResult<T> {
     return {
-      status: 'REJECTED',
-      source: 'NONE',
+      status: "REJECTED",
+      source: "NONE",
       value: null,
       providerAttempted: true,
       providerAccepted: false,

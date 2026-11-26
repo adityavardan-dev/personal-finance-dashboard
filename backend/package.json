@@ -21,6 +21,9 @@
     "peer-split:examples": "ts-node --transpile-only scripts/peer-split-examples.ts"
   },
   "dependencies": {
+    "@adityavardan/provider-cloudflare": "0.1.0",
+    "@adityavardan/semantic-core": "0.1.0",
+    "@adityavardan/xpense-semantics": "0.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",

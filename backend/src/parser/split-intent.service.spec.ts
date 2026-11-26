@@ -1,5 +1,5 @@
 import { SplitIntentService } from './split-intent.service';
-import type { XpenseSemanticSdk } from '../expense-semantics';
+import type { XpenseSemanticSdk } from '@adityavardan/xpense-semantics';
 
 const trace = {
   conversationId: '11111111-1111-4111-8111-111111111111',
@@ -52,18 +52,16 @@ describe('SplitIntentService', () => {
   it('accepts an explicit people count written as a word across a split clarification', async () => {
     const model = {
       isPeerConfigured: () => true,
-      interpretPeerSplits: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            amount: '500',
-            peopleCount: '2',
-            participants: [],
-            paidBy: null,
-            allocationKind: 'EQUAL',
-            beneficiary: null,
-          },
-        ]),
+      interpretPeerSplits: jest.fn().mockResolvedValue([
+        {
+          amount: '500',
+          peopleCount: '2',
+          participants: [],
+          paidBy: null,
+          allocationKind: 'EQUAL',
+          beneficiary: null,
+        },
+      ]),
     };
     const service = new SplitIntentService(
       model as unknown as XpenseSemanticSdk,
@@ -155,18 +153,16 @@ describe('SplitIntentService', () => {
     async (alias) => {
       const model = {
         isPeerConfigured: () => true,
-        interpretPeerSplits: jest
-          .fn()
-          .mockResolvedValue([
-            {
-              amount: '2000',
-              peopleCount: '3',
-              participants: [alias, 'Katty', 'Sridevi'],
-              paidBy: alias,
-              allocationKind: 'EQUAL',
-              beneficiary: null,
-            },
-          ]),
+        interpretPeerSplits: jest.fn().mockResolvedValue([
+          {
+            amount: '2000',
+            peopleCount: '3',
+            participants: [alias, 'Katty', 'Sridevi'],
+            paidBy: alias,
+            allocationKind: 'EQUAL',
+            beneficiary: null,
+          },
+        ]),
       };
       const service = new SplitIntentService(
         model as unknown as XpenseSemanticSdk,
@@ -185,18 +181,16 @@ describe('SplitIntentService', () => {
   it('rejects model participants absent from the message', async () => {
     const model = {
       isPeerConfigured: jest.fn().mockReturnValue(true),
-      interpretPeerSplits: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            amount: '500',
-            peopleCount: '2',
-            participants: ['You', 'Invented'],
-            paidBy: 'Invented',
-            allocationKind: 'EQUAL',
-            beneficiary: null,
-          },
-        ]),
+      interpretPeerSplits: jest.fn().mockResolvedValue([
+        {
+          amount: '500',
+          peopleCount: '2',
+          participants: ['You', 'Invented'],
+          paidBy: 'Invented',
+          allocationKind: 'EQUAL',
+          beneficiary: null,
+        },
+      ]),
     };
     const service = new SplitIntentService(
       model as unknown as XpenseSemanticSdk,

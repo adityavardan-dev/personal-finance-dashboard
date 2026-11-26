@@ -1,35 +1,25 @@
-/** Public XPENSE semantic facade; application services depend on this, not a vendor. */
-import { Injectable, Optional } from '@nestjs/common';
-import type { RequestTrace } from '../request-trace';
-import { SemanticEngine } from '../semantic-sdk';
-import type { IntentSegmenter } from '../parser/intent-segmenter';
-import {
-  CloudflareSplitInterpreter,
-  type ProposedSplit,
-} from '../parser/cloudflare-split-interpreter';
-import {
-  CloudflarePersonalFollowUp,
-  type PersonalDraftContext,
-  type PersonalEditProposal,
-} from '../parser/cloudflare-personal-follow-up';
+import { SemanticEngine } from "@adityavardan/semantic-core";
 import type {
+  PeerSemanticInterpreter,
   PendingSplitContext,
+  PersonalDraftContext,
+  PersonalEditProposal,
+  PersonalSemanticInterpreter,
+  ProposedSplit,
   SplitFollowUpProposal,
-} from '../parser/split-follow-up.service';
-import { CloudflareTransactionSegmentationProvider } from './cloudflare-transaction-segmentation.provider';
-import {
-  TRANSACTION_SEGMENTATION_DOMAIN,
-  type TransactionSegmentationInput,
-} from './transaction-segmentation.domain';
+  TransactionSegmentationInput,
+  TransactionSegmentationProvider,
+  XpenseRequestTrace,
+} from "./contracts";
+import { TRANSACTION_SEGMENTATION_DOMAIN } from "./transaction-segmentation.domain";
 
-@Injectable()
-export class XpenseSemanticSdk implements IntentSegmenter {
+/** Public XPENSE facade with adapters supplied by the consuming application. */
+export class XpenseSemanticSdk {
   constructor(
     private readonly engine: SemanticEngine,
-    private readonly transactionProvider: CloudflareTransactionSegmentationProvider,
-    @Optional() private readonly splitInterpreter?: CloudflareSplitInterpreter,
-    @Optional()
-    private readonly personalInterpreter?: CloudflarePersonalFollowUp,
+    private readonly transactionProvider: TransactionSegmentationProvider,
+    private readonly splitInterpreter?: PeerSemanticInterpreter,
+    private readonly personalInterpreter?: PersonalSemanticInterpreter,
   ) {}
 
   isConfigured(): boolean {
@@ -38,7 +28,7 @@ export class XpenseSemanticSdk implements IntentSegmenter {
 
   async segment(
     text: string,
-    trace?: RequestTrace,
+    trace?: XpenseRequestTrace,
     accessToken?: string,
   ): Promise<string[] | null> {
     const input: TransactionSegmentationInput = { text, trace, accessToken };
@@ -47,7 +37,7 @@ export class XpenseSemanticSdk implements IntentSegmenter {
       TRANSACTION_SEGMENTATION_DOMAIN,
       [this.transactionProvider],
     );
-    return result.status === 'ACCEPTED' ? result.value.segments : null;
+    return result.status === "ACCEPTED" ? result.value.segments : null;
   }
 
   isPeerConfigured(): boolean {
@@ -56,7 +46,7 @@ export class XpenseSemanticSdk implements IntentSegmenter {
 
   interpretPeerSplits(
     text: string,
-    trace?: RequestTrace,
+    trace?: XpenseRequestTrace,
     accessToken?: string,
   ): Promise<ProposedSplit[] | null> {
     return (
@@ -68,7 +58,7 @@ export class XpenseSemanticSdk implements IntentSegmenter {
   interpretPeerFollowUp(
     text: string,
     pending: PendingSplitContext[],
-    trace?: RequestTrace,
+    trace?: XpenseRequestTrace,
     accessToken?: string,
   ): Promise<SplitFollowUpProposal[] | null> {
     return (
@@ -90,8 +80,8 @@ export class XpenseSemanticSdk implements IntentSegmenter {
     drafts: PersonalDraftContext[],
     referenceTimestamp: string,
     timeZone?: string,
-    mode: 'EDIT' | 'FILL_MISSING' = 'EDIT',
-    trace?: RequestTrace,
+    mode: "EDIT" | "FILL_MISSING" = "EDIT",
+    trace?: XpenseRequestTrace,
     accessToken?: string,
   ): Promise<PersonalEditProposal[] | null> {
     return (

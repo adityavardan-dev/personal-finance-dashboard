@@ -2,7 +2,11 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { recordXpenseCloudflareTelemetry } from '../expense-semantics/xpense-cloudflare-telemetry';
 import type { RequestTrace } from '../request-trace';
-import { CloudflareStructuredModelProvider } from '../semantic-sdk';
+import { CloudflareStructuredModelProvider } from '@adityavardan/provider-cloudflare';
+import type {
+  PersonalDraftContext,
+  PersonalEditProposal,
+} from '@adityavardan/xpense-semantics';
 import {
   PENNY_MAX_COMPLETION_TOKENS,
   PENNY_TEMPERATURE,
@@ -10,28 +14,10 @@ import {
 import { AiMetricsService } from './ai-metrics.service';
 import { loadPennyGuidance } from './penny-guidance';
 
-export interface PersonalDraftContext {
-  ordinal: number;
-  amount: number | null;
-  category: string;
-  merchant: string;
-  date: string;
-  note: string;
-  splitResolution: string;
-  splitFactor: number | null;
-}
-
-export interface PersonalEditProposal {
-  ordinal: number;
-  action?: 'UPDATE' | 'DELETE';
-  amount: string | null;
-  date: string | null;
-  dateEvidence?: string | null;
-  category: string | null;
-  merchant: string | null;
-  splitResolution: 'personal' | 'split' | null;
-  splitFactor: number | null;
-}
+export type {
+  PersonalDraftContext,
+  PersonalEditProposal,
+} from '@adityavardan/xpense-semantics';
 
 const PERSONAL_EDIT_SCHEMA = {
   type: 'object',
@@ -87,9 +73,7 @@ export class CloudflarePersonalFollowUp {
 
   isConfigured(): boolean {
     return Boolean(
-      (
-        this.structuredProvider ?? new CloudflareStructuredModelProvider()
-      ).isConfigured() && loadPennyGuidance(),
+      this.structuredProvider?.isConfigured() && loadPennyGuidance(),
     );
   }
 
@@ -112,8 +96,8 @@ export class CloudflarePersonalFollowUp {
       referenceTimestamp,
       timeZone: timeZone ?? null,
     };
-    const provider =
-      this.structuredProvider ?? new CloudflareStructuredModelProvider();
+    const provider = this.structuredProvider;
+    if (!provider) return null;
     const result = await provider.generateStructured<unknown>(
       {
         temperature: PENNY_TEMPERATURE,

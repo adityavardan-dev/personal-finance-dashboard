@@ -1,7 +1,7 @@
 /** Bridges reusable provider telemetry to XPENSE logging and authenticated metrics. */
 import type { LoggerService } from '@nestjs/common';
 import type { RequestTrace } from '../request-trace';
-import type { CloudflareTelemetryEvent } from '../semantic-sdk/providers/cloudflare-structured-model.provider';
+import type { CloudflareTelemetryEvent } from '@adityavardan/provider-cloudflare';
 import type { AiMetricsService } from '../parser/ai-metrics.service';
 import { logCloudflareUsage } from '../parser/cloudflare-usage';
 

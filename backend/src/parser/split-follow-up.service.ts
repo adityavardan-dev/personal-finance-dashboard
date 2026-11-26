@@ -1,19 +1,20 @@
 /** Applies participant and payer follow-ups to existing split drafts. */
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { XpenseSemanticSdk } from '../expense-semantics';
+import {
+  XpenseSemanticSdk,
+  type PendingSplitContext,
+  type SplitFollowUpProposal,
+} from '@adityavardan/xpense-semantics';
 import type { RequestTrace } from '../request-trace';
 import {
   normalizeParticipantName,
   participantAppearsInText,
 } from './participant-reference';
 
-export interface PendingSplitContext {
-  ordinal: number;
-  peopleCount: number;
-  amountMinor?: number;
-  names?: string[];
-  paidBy?: string;
-}
+export type {
+  PendingSplitContext,
+  SplitFollowUpProposal,
+} from '@adityavardan/xpense-semantics';
 
 export interface SplitFollowUpUpdate {
   ordinal: number;
@@ -21,14 +22,6 @@ export interface SplitFollowUpUpdate {
   paidBy?: string;
   amountMinor?: number;
   peopleCount?: number;
-}
-
-export interface SplitFollowUpProposal {
-  ordinal: number;
-  names?: string[] | null;
-  paidBy?: string | null;
-  amount?: string | null;
-  peopleCount?: number | null;
 }
 
 export interface SplitFollowUpResult {
