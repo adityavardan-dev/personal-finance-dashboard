@@ -1,13 +1,25 @@
 # `@adityavardan/semantic-core`
 
-Provider-neutral TypeScript contracts and a small semantic execution engine. It knows nothing about XPENSE, Cloudflare, prompts, databases, or HTTP controllers.
+A small, provider-neutral TypeScript engine for accepting only validated AI
+output. It can be used by expense, customer-support, HR, commerce, or other
+applications because it contains no application-specific rules.
 
-## Behavior
+## When to use it
 
-- Runs the first configured provider.
-- Tries at most one fallback only when a provider is unavailable.
-- Stops when provider output is malformed or the application domain rejects it.
-- Returns the same accepted, rejected, or unavailable envelope for every domain.
+Use this package when your application needs the same safe flow for one or
+more AI providers:
+
+1. Your application creates a typed input.
+2. The engine selects the first configured provider.
+3. The provider returns structured data, reports that it is unavailable, or
+   reports an invalid response.
+4. Your domain validator checks that the structured data is safe for your
+   application.
+5. The engine returns one consistent `ACCEPTED`, `REJECTED`, or `UNAVAILABLE`
+   result.
+
+The model proposes meaning. Your application remains responsible for deciding
+whether that proposal is valid and whether any external action should happen.
 
 ## Installation
 
@@ -15,13 +27,9 @@ Provider-neutral TypeScript contracts and a small semantic execution engine. It 
 npm install @adityavardan/semantic-core
 ```
 
-Until the package is published, install a packed archive:
+Requires Node.js 18 or newer.
 
-```bash
-npm install ./adityavardan-semantic-core-0.1.0.tgz
-```
-
-## Example
+## Minimal example
 
 ```ts
 import {
@@ -30,25 +38,96 @@ import {
   type SemanticModelProvider,
 } from "@adityavardan/semantic-core";
 
-type Input = { message: string };
-type Proposal = { department: string };
+type SupportInput = { message: string };
+type SupportProposal = {
+  department: "BILLING" | "TECHNICAL";
+  priority: "LOW" | "HIGH";
+};
 
-const domain: SemanticDomain<Input, Proposal> = {
-  name: "support.routing",
+const provider: SemanticModelProvider<SupportInput, SupportProposal> = {
+  name: "example-provider",
+  isConfigured: () => true,
+  async extract(input) {
+    // Replace this example with a real provider call.
+    return {
+      status: "SUCCESS",
+      value: {
+        department: input.message.includes("charged")
+          ? "BILLING"
+          : "TECHNICAL",
+        priority: "HIGH",
+      },
+    };
+  },
+};
+
+const supportDomain: SemanticDomain<SupportInput, SupportProposal> = {
+  name: "support-routing",
   schemaVersion: 1,
-  validate: (proposal) =>
-    ["BILLING", "TECHNICAL"].includes(proposal.department),
+  validate(proposal) {
+    return (
+      ["BILLING", "TECHNICAL"].includes(proposal.department) &&
+      ["LOW", "HIGH"].includes(proposal.priority)
+    );
+  },
 };
 
 const engine = new SemanticEngine();
-const result = await engine.interpret(input, domain, [
-  primaryProvider,
-  fallbackProvider,
-]);
+const result = await engine.interpret(
+  { message: "I was charged twice" },
+  supportDomain,
+  [provider],
+);
+
+if (result.status === "ACCEPTED") {
+  console.log(result.value.department); // BILLING
+} else {
+  console.log(result.status, result.attempts);
+}
 ```
 
-The consuming application owns the input type, proposal type, prompt, schema, and validation rules.
+## Result behavior
 
-## Publishing
+| Result | Meaning | Suggested application behavior |
+| --- | --- | --- |
+| `ACCEPTED` | A provider returned structured data and the domain accepted it. | Use the typed proposal in the next application step. |
+| `REJECTED` | The response was malformed or failed domain validation. | Do not apply it; ask for clarification or use deterministic logic. |
+| `UNAVAILABLE` | No configured provider produced a response. | Use a local fallback or show a temporary failure. |
 
-The `@adityavardan` scope is the current workspace name. Before public publication, confirm that this npm scope is owned by the publisher or rename it to an owned scope.
+Every result includes `attempts`, which records the provider name and outcome
+for debugging and observability.
+
+## Fallback policy
+
+- The engine considers at most the first two configured providers.
+- It tries the second provider only when the first is `UNAVAILABLE`.
+- It does not send malformed or domain-rejected output to another model.
+  Invalid output is rejected immediately so a second model cannot silently
+  reinterpret an unsafe response.
+
+## What the consuming application supplies
+
+- Input and proposal TypeScript types.
+- Provider adapters and credentials.
+- Prompts and structured-output schemas.
+- Domain validation rules.
+- Logging, persistence, user confirmation, and external actions.
+
+## What this package does not contain
+
+- Cloudflare, OpenAI, Gemini, or other provider-specific HTTP code.
+- Prompts, databases, authentication, controllers, or user interfaces.
+- Expense, support, HR, or other domain rules.
+- Automatic side effects such as saving data or sending messages.
+
+## Related packages
+
+- `@adityavardan/provider-cloudflare` provides a Cloudflare Workers AI
+  structured-output transport.
+- `@adityavardan/xpense-semantics` provides XPENSE-specific semantic contracts
+  and routing built on this core.
+
+## API stability
+
+This package is currently in the `0.x` release line. Public contracts may
+evolve between minor releases; pin the version when adopting it in production.

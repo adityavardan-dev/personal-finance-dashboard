@@ -1,6 +1,6 @@
 {
   "name": "@adityavardan/xpense-semantics",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "XPENSE-specific semantic facade and validated transaction segmentation domain.",
   "license": "UNLICENSED",
   "type": "commonjs",
@@ -36,7 +36,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@adityavardan/semantic-core": "0.1.0"
+    "@adityavardan/semantic-core": "0.1.1"
   },
   "devDependencies": {
     "typescript": "^5.7.3"
