@@ -1,315 +1,61 @@
-jest.mock('fs');
-
+/** Verifies authenticated Supabase expense persistence and API field mapping. */
 import { NotFoundException } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import * as fs from 'fs';
+import { CurrencyCode } from '../budgets/currency-code';
+import { SupabaseService } from '../supabase/supabase.service';
 import { ExpensesService } from './expenses.service';
+import { TransactionType } from './transaction-type';
 
-const mockedFs = jest.mocked(fs);
+const row = {
+  id: 'expense-1',
+  user_id: 'user-1',
+  type: TransactionType.Expense,
+  amount_minor: 300025,
+  currency: CurrencyCode.INR,
+  category: 'Other',
+  merchant: 'Vendor',
+  transaction_date: '2026-11-22',
+  description: 'Project supplies',
+  created_at: '2026-11-22T00:00:00.000Z',
+};
 
 describe('ExpensesService', () => {
-  let service: ExpensesService;
+  const supabase = { data: jest.fn() };
+  const service = new ExpensesService(supabase as unknown as SupabaseService);
 
-  const USER_A = 1;
-  const USER_B = 2;
+  beforeEach(() => jest.clearAllMocks());
 
-  const storedExpenses = [
-    {
-      id: 'uuid-a1',
-      userId: USER_A,
-      amount: 500,
-      category: 'Food & Dining',
-      merchant: 'Swiggy',
-      date: '2026-09-17',
-      createdAt: '2026-09-17T10:00:00.000Z',
-    },
-    {
-      id: 'uuid-b1',
-      userId: USER_B,
-      amount: 1200,
-      category: 'Shopping',
-      merchant: 'Amazon',
-      date: '2026-09-17',
-      createdAt: '2026-09-17T11:00:00.000Z',
-    },
-  ];
-
-  beforeEach(async () => {
-    jest.clearAllMocks();
-
-    mockedFs.existsSync.mockReturnValue(true);
-    (mockedFs.readFileSync as jest.Mock).mockReturnValue(
-      JSON.stringify(storedExpenses),
-    );
-    mockedFs.writeFileSync.mockImplementation(() => undefined);
-    (mockedFs.mkdirSync as jest.Mock).mockImplementation(() => undefined);
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [ExpensesService],
-    }).compile();
-
-    service = module.get<ExpensesService>(ExpensesService);
+  it('stores amount in minor units and maps API note to database description', async () => {
+    supabase.data
+      .mockResolvedValueOnce([{ currency: CurrencyCode.INR }])
+      .mockResolvedValueOnce([row]);
+    await expect(service.create('user-1', 'token', {
+      type: TransactionType.Expense,
+      amount: 3000.25,
+      category: 'Other',
+      merchant: 'Vendor',
+      date: '2026-11-22',
+      note: 'Project supplies',
+    })).resolves.toMatchObject({ amount: 3000.25, note: 'Project supplies' });
+    const insert = supabase.data.mock.calls[1][2];
+    expect(insert.body).toContain('"amount_minor":300025');
+    expect(insert.body).toContain('"description":"Project supplies"');
   });
 
-  describe('create', () => {
-    it('persists a new expense and returns it with an id', () => {
-      (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
-      const dto = {
-        type: 'expense',
-        amount: 750,
-        category: 'Transport',
-        merchant: 'Ola',
-        date: '2026-09-17',
-      };
-
-      const result = service.create(USER_A, dto as any);
-
-      expect(result.id).toBeDefined();
-      expect(result.userId).toBe(USER_A);
-      expect(result.amount).toBe(750);
-      expect(result.merchant).toBe('Ola');
-      expect(result.createdAt).toBeDefined();
-      expect(mockedFs.writeFileSync).toHaveBeenCalledTimes(1);
-    });
-
-    it('appends to existing expenses without overwriting others', () => {
-      const written: any[] = [];
-      mockedFs.writeFileSync.mockImplementation((_path, data) => {
-        written.push(JSON.parse(data as string));
-      });
-      const dto = {
-        type: 'expense',
-        amount: 200,
-        category: 'Utilities',
-        merchant: 'BESCOM',
-        date: '2026-09-17',
-      };
-
-      service.create(USER_A, dto as any);
-
-      expect(written[0]).toHaveLength(storedExpenses.length + 1);
-    });
-
-    it('stores optional note when provided', () => {
-      (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
-      const dto = {
-        type: 'expense',
-        amount: 300,
-        category: 'Other',
-        merchant: 'DMart',
-        date: '2026-09-17',
-        note: 'Weekly groceries',
-      };
-
-      const result = service.create(USER_A, dto as any);
-
-      expect(result.note).toBe('Weekly groceries');
-    });
-
-    it('persists the explicit transaction type', () => {
-      (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
-
-      const result = service.create(USER_A, {
-        type: 'income',
-        amount: 50000,
-        category: 'Salary',
-        merchant: 'Employer',
-        date: '2026-09-01',
-      } as any);
-
-      expect(result.type).toBe('income');
-    });
+  it('returns only rows supplied through the authenticated RLS query', async () => {
+    supabase.data.mockResolvedValue([row]);
+    await expect(service.findByUser('user-1', 'token')).resolves.toEqual([
+      expect.objectContaining({ id: 'expense-1', userId: 'user-1' }),
+    ]);
   });
 
-  describe('createBatch', () => {
-    it('validates once and persists the complete batch in one write', () => {
-      (mockedFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify([]));
-      const result = service.createBatch(USER_A, [
-        {
-          type: 'expense',
-          amount: 350,
-          category: 'Food & Dining',
-          merchant: 'Cafe',
-          date: '2026-11-10',
-        },
-        {
-          type: 'expense',
-          amount: 500,
-          category: 'Transport',
-          merchant: 'Petrol pump',
-          date: '2026-11-10',
-        },
-      ] as any);
-
-      expect(result).toHaveLength(2);
-      expect(result.every((expense) => expense.userId === USER_A)).toBe(true);
-      expect(mockedFs.writeFileSync).toHaveBeenCalledTimes(1);
-    });
+  it('maps an update note to description', async () => {
+    supabase.data.mockResolvedValue([{ ...row, description: 'Updated' }]);
+    await service.update('user-1', 'token', 'expense-1', { note: 'Updated' });
+    expect(supabase.data.mock.calls[0][2].body).toBe('{"description":"Updated"}');
   });
 
-  describe('findByUser', () => {
-    it('returns only expenses belonging to the requesting user', () => {
-      const results = service.findByUser(USER_A);
-
-      expect(results).toHaveLength(1);
-      expect(results[0].userId).toBe(USER_A);
-    });
-
-    it('normalizes legacy records without a type to expense', () => {
-      const [result] = service.findByUser(USER_A);
-
-      expect(result.type).toBe('expense');
-    });
-
-    it('enforces user isolation — user A cannot see user B expenses', () => {
-      const resultsA = service.findByUser(USER_A);
-      const resultsB = service.findByUser(USER_B);
-
-      expect(resultsA.every((e) => e.userId === USER_A)).toBe(true);
-      expect(resultsB.every((e) => e.userId === USER_B)).toBe(true);
-      expect(resultsA.some((e) => e.userId === USER_B)).toBe(false);
-    });
-
-    it('returns empty array when user has no expenses', () => {
-      const results = service.findByUser(999);
-
-      expect(results).toHaveLength(0);
-    });
-
-    it('returns empty array when data file does not exist', () => {
-      mockedFs.existsSync.mockReturnValue(false);
-
-      const results = service.findByUser(USER_A);
-
-      expect(results).toHaveLength(0);
-    });
-
-    it('returns empty array when data file is corrupt', () => {
-      (mockedFs.readFileSync as jest.Mock).mockReturnValue('not-valid-json');
-
-      const results = service.findByUser(USER_A);
-
-      expect(results).toHaveLength(0);
-    });
-  });
-
-  describe('findOne', () => {
-    it('returns the correct expense for the owning user', () => {
-      const result = service.findOne(USER_A, 'uuid-a1');
-
-      expect(result.id).toBe('uuid-a1');
-      expect(result.userId).toBe(USER_A);
-      expect(result.merchant).toBe('Swiggy');
-    });
-
-    it('throws NotFoundException for a missing ID', () => {
-      expect(() => service.findOne(USER_A, 'not-exist')).toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('throws NotFoundException when ID belongs to another user', () => {
-      expect(() => service.findOne(USER_A, 'uuid-b1')).toThrow(
-        NotFoundException,
-      );
-    });
-  });
-
-  describe('update', () => {
-    it('updates editable fields and returns the updated expense', () => {
-      const result = service.update(USER_A, 'uuid-a1', {
-        amount: 999,
-        merchant: 'NewMerchant',
-      });
-
-      expect(result.amount).toBe(999);
-      expect(result.merchant).toBe('NewMerchant');
-    });
-
-    it('supports partial updates — only supplied fields change', () => {
-      const result = service.update(USER_A, 'uuid-a1', { amount: 600 });
-
-      expect(result.amount).toBe(600);
-      expect(result.merchant).toBe('Swiggy');
-      expect(result.category).toBe('Food & Dining');
-    });
-
-    it('updates the transaction type', () => {
-      const result = service.update(USER_A, 'uuid-a1', {
-        type: 'income',
-      } as any);
-
-      expect(result.type).toBe('income');
-    });
-
-    it('preserves id, userId, and createdAt', () => {
-      const result = service.update(USER_A, 'uuid-a1', { amount: 600 });
-
-      expect(result.id).toBe('uuid-a1');
-      expect(result.userId).toBe(USER_A);
-      expect(result.createdAt).toBe('2026-09-17T10:00:00.000Z');
-    });
-
-    it('persists updated data to the JSON file', () => {
-      service.update(USER_A, 'uuid-a1', { amount: 777 });
-
-      expect(mockedFs.writeFileSync).toHaveBeenCalledTimes(1);
-    });
-
-    it('persists normalized types for legacy records on the next write', () => {
-      let written: any[] = [];
-      mockedFs.writeFileSync.mockImplementation((_path, data) => {
-        written = JSON.parse(data as string);
-      });
-
-      service.update(USER_A, 'uuid-a1', { amount: 777 });
-
-      expect(written.every((expense) => expense.type === 'expense')).toBe(true);
-    });
-
-    it('throws NotFoundException when ID belongs to another user', () => {
-      expect(() => service.update(USER_A, 'uuid-b1', { amount: 999 })).toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('throws NotFoundException for a missing expense', () => {
-      expect(() =>
-        service.update(USER_A, 'not-exist', { amount: 999 }),
-      ).toThrow(NotFoundException);
-    });
-  });
-
-  describe('remove', () => {
-    it('removes the requested expense and returns it', () => {
-      const result = service.remove(USER_A, 'uuid-a1');
-
-      expect(result.id).toBe('uuid-a1');
-      expect(result.userId).toBe(USER_A);
-    });
-
-    it('persists the remaining collection without the deleted expense', () => {
-      const written: any[] = [];
-      mockedFs.writeFileSync.mockImplementation((_path, data) => {
-        written.push(JSON.parse(data as string));
-      });
-
-      service.remove(USER_A, 'uuid-a1');
-
-      expect(written[0]).toHaveLength(1);
-      expect(written[0][0].id).toBe('uuid-b1');
-    });
-
-    it('throws NotFoundException when ID belongs to another user', () => {
-      expect(() => service.remove(USER_A, 'uuid-b1')).toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('throws NotFoundException for a missing expense', () => {
-      expect(() => service.remove(USER_A, 'not-exist')).toThrow(
-        NotFoundException,
-      );
-    });
+  it('does not pretend an RLS-hidden expense exists', async () => {
+    supabase.data.mockResolvedValue([]);
+    await expect(service.findOne('user-1', 'token', 'missing')).rejects.toThrow(NotFoundException);
   });
 });

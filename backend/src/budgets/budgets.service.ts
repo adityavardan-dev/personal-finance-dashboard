@@ -1,23 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
+/** Persists the authenticated user's budget through Supabase RLS and one atomic RPC. */
+import { Injectable } from '@nestjs/common';
+import { SupabaseService } from '../supabase/supabase.service';
 import { CurrencyCode } from './currency-code';
 import { UpsertBudgetDto } from './dto/upsert-budget.dto';
 
-export interface CategoryBudgetLimit {
-  category: string;
-  limit: number;
-}
-
-export interface Budget {
-  userId: number;
-  monthlyLimit: number | null;
-  categoryLimits: CategoryBudgetLimit[];
-  currency: CurrencyCode;
-  createdAt: string;
-  updatedAt: string;
-}
-
+export interface CategoryBudgetLimit { category: string; limit: number }
 export interface BudgetResponse {
   monthlyLimit: number | null;
   categoryLimits: CategoryBudgetLimit[];
@@ -26,79 +13,86 @@ export interface BudgetResponse {
   updatedAt: string | null;
 }
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'budgets.json');
-const EMPTY_BUDGET: BudgetResponse = {
-  monthlyLimit: null,
-  categoryLimits: [],
-  currency: CurrencyCode.INR,
-  createdAt: null,
-  updatedAt: null,
-};
+interface BudgetRow {
+  monthly_limit_minor: number | null;
+  currency: CurrencyCode;
+  created_at: string;
+  updated_at: string;
+  budget_category_limits: Array<{ category: string; limit_minor: number }>;
+}
 
 @Injectable()
 export class BudgetsService {
-  getMine(userId: number): BudgetResponse {
-    const budget = this.readAll().find((record) => record.userId === userId);
-    return budget ? this.toResponse(budget) : { ...EMPTY_BUDGET, categoryLimits: [] };
+  constructor(private readonly supabase: SupabaseService) {}
+
+  /** Returns the user's budget and category limits, or the canonical empty budget. */
+  async getMine(userId: string, accessToken: string): Promise<BudgetResponse> {
+    const rows = await this.supabase.data<BudgetRow[]>(
+      accessToken,
+      `budgets?user_id=eq.${encodeURIComponent(userId)}&select=monthly_limit_minor,currency,created_at,updated_at,budget_category_limits(category,limit_minor)`,
+    );
+    return rows[0]
+      ? this.toResponse(rows[0])
+      : {
+          monthlyLimit: null,
+          categoryLimits: [],
+          currency: CurrencyCode.INR,
+          createdAt: null,
+          updatedAt: null,
+        };
   }
 
-  upsert(userId: number, dto: UpsertBudgetDto): BudgetResponse {
-    if (dto.monthlyLimit === null && dto.categoryLimits.length > 0) {
-      throw new BadRequestException('Category limits require a monthly budget');
-    }
-
-    const categoryLimits = dto.categoryLimits.map((entry) => ({
-      category: entry.category.trim(),
-      limit: entry.limit,
-    }));
-    const names = categoryLimits.map((entry) => entry.category);
-    if (names.some((name) => !name)) {
-      throw new BadRequestException('Category budget names cannot be empty');
-    }
-    if (new Set(names).size !== names.length) {
-      throw new BadRequestException('Category budget names must be unique');
-    }
-
-    const budgets = this.readAll();
-    const index = budgets.findIndex((record) => record.userId === userId);
-    const now = new Date().toISOString();
-    const budget: Budget = {
-      userId,
-      monthlyLimit: dto.monthlyLimit,
-      categoryLimits,
-      currency: dto.currency,
-      createdAt: index === -1 ? now : budgets[index].createdAt,
-      updatedAt: now,
-    };
-
-    if (index === -1) budgets.push(budget);
-    else budgets[index] = budget;
-    this.writeAll(budgets);
-    return this.toResponse(budget);
-  }
-
-  private readAll(): Budget[] {
-    try {
-      if (!fs.existsSync(DATA_FILE)) return [];
-      return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8')) as Budget[];
-    } catch {
-      return [];
-    }
-  }
-
-  private writeAll(budgets: Budget[]): void {
-    const dir = path.dirname(DATA_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(budgets, null, 2), 'utf-8');
-  }
-
-  private toResponse(budget: Budget): BudgetResponse {
+  /** Replaces the budget and category limits in one PostgreSQL transaction. */
+  async upsert(
+    _userId: string,
+    accessToken: string,
+    dto: UpsertBudgetDto,
+  ): Promise<BudgetResponse> {
+    const row = await this.supabase.data<{
+      monthly_limit_minor: number | null;
+      currency: CurrencyCode;
+      created_at: string;
+      updated_at: string;
+      category_limits: Array<{ category: string; limit_minor: number }>;
+    }>(accessToken, 'rpc/upsert_my_budget', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_monthly_limit_minor:
+          dto.monthlyLimit === null ? null : toMinor(dto.monthlyLimit),
+        p_currency: dto.currency,
+        p_category_limits: dto.categoryLimits.map((item) => ({
+          category: item.category.trim(),
+          limit_minor: toMinor(item.limit),
+        })),
+      }),
+    });
     return {
-      monthlyLimit: budget.monthlyLimit,
-      categoryLimits: budget.categoryLimits,
-      currency: budget.currency,
-      createdAt: budget.createdAt,
-      updatedAt: budget.updatedAt,
+      monthlyLimit:
+        row.monthly_limit_minor === null ? null : fromMinor(row.monthly_limit_minor),
+      categoryLimits: row.category_limits.map((item) => ({
+        category: item.category,
+        limit: fromMinor(item.limit_minor),
+      })),
+      currency: row.currency,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private toResponse(row: BudgetRow): BudgetResponse {
+    return {
+      monthlyLimit:
+        row.monthly_limit_minor === null ? null : fromMinor(row.monthly_limit_minor),
+      categoryLimits: row.budget_category_limits.map((item) => ({
+        category: item.category,
+        limit: fromMinor(item.limit_minor),
+      })),
+      currency: row.currency,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
     };
   }
 }
+
+const toMinor = (amount: number) => Math.round((amount + Number.EPSILON) * 100);
+const fromMinor = (amount: number) => amount / 100;

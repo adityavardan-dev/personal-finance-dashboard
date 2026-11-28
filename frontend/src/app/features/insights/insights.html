@@ -1,35 +1,139 @@
 <app-app-layout>
-  <div class="space-y-6">
-    <header><p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">Financial insights</p><div class="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h2 class="text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">Understand your spending</h2><p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Deterministic insights calculated from your recorded transactions.</p></div><a routerLink="/expenses/new" class="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white hover:bg-emerald-400">Add expense</a></div></header>
+  <div class="insights-page">
+    <header class="insights-heading">
+      <div>
+        <p class="insights-eyebrow">FINANCIAL INSIGHTS</p>
+        <h1>Understand your spending</h1>
+        <p>Insights calculated from your recorded transactions.</p>
+      </div>
+      <a routerLink="/expenses/new" class="insights-add">Add expense</a>
+    </header>
 
     @if (metricsStore.status() === 'error') {
-      <section class="rounded-3xl border border-red-200 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950/30" role="alert"><p class="text-sm font-medium text-red-700 dark:text-red-300">{{ metricsStore.errorMessage() }}</p><button type="button" (click)="metricsStore.refresh()" class="mt-3 min-h-11 rounded-full px-4 text-sm font-semibold text-red-700">Retry</button></section>
-    } @else if (primaryInsight; as insight) {
-      <section class="rounded-3xl border p-6 shadow-sm dark:bg-zinc-900" [class.border-emerald-200]="insight.severity === 'positive'" [class.bg-emerald-50]="insight.severity === 'positive'" [class.border-amber-300]="insight.severity === 'warning'" [class.bg-amber-50]="insight.severity === 'warning'" [class.border-red-300]="insight.severity === 'critical'" [class.bg-red-50]="insight.severity === 'critical'" [class.border-zinc-200]="insight.severity === 'info'" [class.bg-white]="insight.severity === 'info'" [attr.role]="insight.severity === 'warning' || insight.severity === 'critical' ? 'alert' : 'status'" aria-labelledby="insight-summary-title"><div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Spending signal</p><h3 id="insight-summary-title" class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white">{{ insight.title }}</h3><p class="mt-1.5 text-sm text-zinc-600 dark:text-zinc-300">{{ insight.message }}</p></div>@if (budget !== null) {<div class="shrink-0 rounded-2xl bg-white px-4 py-3 shadow-sm dark:bg-zinc-950"><p class="text-xs text-zinc-500">Budget health</p><p class="mt-1 font-bold">{{ budgetUsedPercent | number:'1.0-0' }}% used</p></div>}</div></section>
+      <section class="insights-error" role="alert">
+        <p>{{ metricsStore.errorMessage() }}</p>
+        <button type="button" (click)="metricsStore.refresh()">Retry</button>
+      </section>
     }
 
-    @if (budget === null) {
-      <section class="rounded-3xl border border-dashed border-emerald-300 bg-emerald-50 p-6 dark:border-emerald-800 dark:bg-emerald-950/30"><h3 class="text-lg font-semibold">Set your monthly budget to begin.</h3><p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Budget comparisons will appear after setup.</p><a routerLink="/dashboard" class="mt-4 inline-flex min-h-11 items-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white">Set budget</a></section>
-    }
-
-    <section class="grid gap-4 sm:grid-cols-3" aria-label="Spending summary"><article class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"><p class="text-sm text-zinc-500">Spent this month</p><p class="mt-2 text-3xl font-bold">{{ currencySymbol }}{{ monthlySpend | number }}</p><p class="mt-2 text-xs text-zinc-500">{{ comparisonText }}</p></article><article class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"><p class="text-sm text-zinc-500">Budget remaining</p><p class="mt-2 text-3xl font-bold">{{ remaining === null ? '—' : currencySymbol + ((remaining < 0 ? -remaining : remaining) | number) }}</p><p class="mt-2 text-xs" [class.text-red-600]="remaining !== null && remaining < 0">{{ remaining === null ? 'Set a budget' : remaining < 0 ? 'Over budget' : 'Still available' }}</p></article><article class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"><p class="text-sm text-zinc-500">Average per day</p><p class="mt-2 text-3xl font-bold">{{ currencySymbol }}{{ averageDaily | number:'1.0-0' }}</p><p class="mt-2 text-xs text-zinc-500">Based on elapsed days this month</p></article></section>
-
-    <div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <section class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900" aria-labelledby="weekly-title">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Weekly view</p><h3 id="weekly-title" class="mt-1.5 text-lg font-semibold">Daily spending</h3><p class="mt-1 text-sm text-zinc-500">{{ selectedWeek?.label || 'No week available' }} · {{ currencySymbol }}{{ weeklyTotal | number }}</p></div><div class="flex items-center gap-2" aria-label="Select week"><button type="button" (click)="previousWeek()" [disabled]="effectiveWeekIndex === 0" class="min-h-11 rounded-xl border border-zinc-200 px-3 text-sm font-semibold disabled:opacity-40 dark:border-zinc-700" aria-label="Previous week">Previous</button><span class="min-w-16 text-center text-xs text-zinc-500">{{ effectiveWeekIndex + 1 }} / {{ monthWeeks.length }}</span><button type="button" (click)="nextWeek()" [disabled]="effectiveWeekIndex >= monthWeeks.length - 1" class="min-h-11 rounded-xl border border-zinc-200 px-3 text-sm font-semibold disabled:opacity-40 dark:border-zinc-700" aria-label="Next week">Next</button></div></div>
-        <div class="mt-6 flex h-52 items-end gap-2" role="img" [attr.aria-label]="'Daily expense trend for ' + (selectedWeek?.label || 'selected week')">
-          @for (day of selectedWeek?.days || []; track day.date) {
-            <div class="group relative flex h-full flex-1 flex-col justify-end focus-visible:outline-none" tabindex="0" [attr.aria-label]="day.label + ', ' + (day.date + 'T00:00:00' | date:'d MMM') + ': spent ' + currencySymbol + (day.amount | number)" [attr.aria-describedby]="'week-tooltip-' + $index">
-              <div [id]="'week-tooltip-' + $index" role="tooltip" class="pointer-events-none absolute left-1/2 z-20 w-max max-w-44 -translate-x-1/2 translate-y-[-0.5rem] rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-left text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" [style.bottom.%]="day.amount ? (day.amount / maxWeeklySpend) * 100 : 2">
-                <p class="font-medium text-zinc-300">{{ day.label }}, {{ day.date + 'T00:00:00' | date:'d MMM' }}</p>
-                <p class="mt-1 flex items-center gap-1.5 font-semibold"><span class="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true"></span>Spent {{ currencySymbol }}{{ day.amount | number }}</p>
-                <span class="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-zinc-700 bg-zinc-950" aria-hidden="true"></span>
-              </div>
-              <div class="mx-auto w-full max-w-10 rounded-t-xl bg-emerald-500 transition-[height,background-color] duration-300 group-hover:bg-emerald-400 group-focus-visible:bg-emerald-400" [style.height.%]="day.amount ? (day.amount / maxWeeklySpend) * 100 : 2"></div>
+    <section class="insight-gauge" aria-labelledby="gauge-title">
+      <div class="gauge-heading">
+        <div>
+          <p class="insights-eyebrow">MONTHLY PULSE</p>
+          <h2 id="gauge-title">Your spending at a glance</h2>
+          <p>{{ comparisonText || 'Your monthly picture will appear as transactions are added.' }}</p>
+        </div>
+        @if (budget === null) {
+          <a routerLink="/dashboard" class="gauge-budget-link">Set a budget</a>
+        }
+      </div>
+      <div class="gauge-content">
+        <div class="gauge-visual">
+          <svg viewBox="0 0 320 190" role="img" [attr.aria-label]="budget === null ? 'Budget usage unavailable until a budget is set' : (budgetUsedPercent | number:'1.0-0') + '% of monthly budget used'">
+            <path class="gauge-track" d="M 34 154 A 126 126 0 0 1 286 154" />
+            @if (budget !== null) {
+              <path class="gauge-safe" d="M 34 154 A 126 126 0 0 1 234 52" />
+              <path class="gauge-caution" d="M 234 52 A 126 126 0 0 1 280 115" />
+              <path class="gauge-limit" d="M 280 115 A 126 126 0 0 1 286 154" />
+              <g class="gauge-needle" [attr.transform]="'rotate(' + gaugeAngle + ' 160 154)'">
+                <path d="M 160 158 L 155 145 L 160 48 L 165 145 Z" />
+                <circle cx="160" cy="154" r="10" />
+                <circle class="gauge-needle-center" cx="160" cy="154" r="4" />
+              </g>
+            }
+          </svg>
+          <div class="gauge-readout">
+            @if (budget === null) {
+              <strong>No budget yet</strong>
+              <span>Set a monthly limit to see your pace</span>
+            } @else {
+              <strong>{{ budgetUsedPercent | number:'1.0-0' }}%</strong>
+              <span>of monthly budget used</span>
+            }
+          </div>
+        </div>
+        <div class="gauge-details">
+          @if (primaryInsight; as insight) {
+            <div class="gauge-signal" [class.gauge-signal--warning]="insight.severity === 'warning'" [class.gauge-signal--critical]="insight.severity === 'critical'" [attr.role]="insight.severity === 'warning' || insight.severity === 'critical' ? 'alert' : 'status'">
+              <span>SPENDING SIGNAL</span>
+              <h3>{{ insight.title }}</h3>
+              <p>{{ insight.message }}</p>
+            </div>
+          } @else {
+            <div class="gauge-signal">
+              <span>SPENDING SIGNAL</span>
+              <h3>Your month is taking shape</h3>
+              <p>Add expenses to see a tailored insight here.</p>
             </div>
           }
-        </div><div class="mt-2 grid grid-cols-7 text-center text-xs text-zinc-500">@for (label of weeklyLabels; track label) {<span>{{ label }}</span>}</div>
+          <div class="gauge-stats" aria-label="Spending summary">
+            <div>
+              <span>Spent this month</span>
+              <strong>{{ currencySymbol }}{{ monthlySpend | number }}</strong>
+            </div>
+            <div>
+              <span>{{ remaining !== null && remaining < 0 ? 'Over budget' : 'Budget remaining' }}</span>
+              <strong>{{ remaining === null ? '—' : currencySymbol + ((remaining < 0 ? -remaining : remaining) | number) }}</strong>
+            </div>
+            <div>
+              <span>Average per day</span>
+              <strong>{{ currencySymbol }}{{ averageDaily | number:'1.0-0' }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="insights-lower">
+      <section class="insights-panel" aria-labelledby="weekly-title">
+        <div class="weekly-heading">
+          <div>
+            <p class="insights-eyebrow">WEEKLY VIEW</p>
+            <h2 id="weekly-title">Daily spending</h2>
+            <p>{{ selectedWeek?.label || 'No week available' }} · {{ currencySymbol }}{{ weeklyTotal | number }}</p>
+          </div>
+          <div class="week-controls" aria-label="Select week">
+            <button type="button" (click)="previousWeek()" [disabled]="effectiveWeekIndex === 0" aria-label="Previous week">Previous</button>
+            <span>{{ effectiveWeekIndex + 1 }} / {{ monthWeeks.length }}</span>
+            <button type="button" (click)="nextWeek()" [disabled]="effectiveWeekIndex >= monthWeeks.length - 1" aria-label="Next week">Next</button>
+          </div>
+        </div>
+        <div class="weekly-bars" role="img" [attr.aria-label]="'Daily expense trend for ' + (selectedWeek?.label || 'selected week')">
+          @for (day of selectedWeek?.days || []; track day.date) {
+            <div class="weekly-day" tabindex="0" [attr.aria-label]="day.label + ', ' + (day.date + 'T00:00:00' | date:'d MMM') + ': spent ' + currencySymbol + (day.amount | number)" [attr.aria-describedby]="'week-tooltip-' + $index">
+              <div [id]="'week-tooltip-' + $index" role="tooltip" class="weekly-tooltip" [style.bottom.%]="day.amount ? (day.amount / maxWeeklySpend) * 100 : 2">
+                <p>{{ day.label }}, {{ day.date + 'T00:00:00' | date:'d MMM' }}</p>
+                <strong>Spent {{ currencySymbol }}{{ day.amount | number }}</strong>
+              </div>
+              <div class="weekly-bar" [style.height.%]="day.amount ? (day.amount / maxWeeklySpend) * 100 : 2"></div>
+            </div>
+          }
+        </div>
+        <div class="weekly-labels">
+          @for (label of weeklyLabels; track label) { <span>{{ label }}</span> }
+        </div>
       </section>
-      <section class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900" aria-labelledby="categories-title"><h3 id="categories-title" class="text-lg font-semibold">Where it goes</h3>@if (!categories.length) {<p class="mt-5 text-sm text-zinc-500">Add an expense to see category spending.</p>} @else {<div class="mt-5 space-y-4">@for (category of categories; track category.name) {<div class="flex items-center gap-3"><app-category-icon [category]="category.name" /><div class="flex-1"><div class="flex justify-between gap-3 text-sm"><span>{{ category.name }}</span><span>{{ currencySymbol }}{{ category.amount | number }}</span></div><div class="mt-2 h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800" role="progressbar" [attr.aria-label]="category.name + ': ' + (category.share | number:'1.0-0') + '% of spending'" [attr.aria-valuenow]="category.share" aria-valuemin="0" aria-valuemax="100"><div class="h-full rounded-full bg-emerald-500" [style.width.%]="category.share"></div></div>@if (category.limitUsedPercentage !== null) {<p class="mt-1 text-xs text-zinc-500">{{ category.limitUsedPercentage | number:'1.0-0' }}% of category limit</p>}</div></div>}</div>}</section></div>
+      <section class="insights-panel" aria-labelledby="categories-title">
+        <h2 id="categories-title">Where it goes</h2>
+        @if (!categories.length) {
+          <p class="category-empty">Add an expense to see category spending.</p>
+        } @else {
+          <div class="category-list">
+            @for (category of categories; track category.name) {
+              <div class="category-item">
+                <app-category-icon [category]="category.name" />
+                <div class="category-body">
+                  <div class="category-line"><span>{{ category.name }}</span><span>{{ currencySymbol }}{{ category.amount | number }}</span></div>
+                  <div class="category-progress" role="progressbar" [attr.aria-label]="category.name + ': ' + (category.share | number:'1.0-0') + '% of spending'" [attr.aria-valuenow]="category.share" aria-valuemin="0" aria-valuemax="100"><div [style.width.%]="category.share"></div></div>
+                  @if (category.limitUsedPercentage !== null) {
+                    <p>{{ category.limitUsedPercentage | number:'1.0-0' }}% of category limit</p>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    </div>
   </div>
 </app-app-layout>

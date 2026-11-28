@@ -1,3 +1,6 @@
+/**
+ * Purpose: Defines and validates the data shape accepted or returned by this backend feature.
+ */
 import type { CurrencyCode } from '../../budgets/currency-code';
 
 export type ParserStatus = 'READY' | 'NEEDS_CLARIFICATION';
@@ -18,6 +21,8 @@ export const PARSER_CATEGORIES = [
 export type ParserCategory = (typeof PARSER_CATEGORIES)[number];
 
 export interface ParseResultDto {
+  conversationId?: string;
+  requestId?: string;
   status: ParserStatus;
   draft: {
     amount: number | null;

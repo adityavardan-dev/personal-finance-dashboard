@@ -35,9 +35,8 @@ jobs:
         working-directory: frontend
         run: npm test -- --watch=false
 
-
   backend-build:
-    name: Build NestJS Backend  
+    name: Build NestJS Backend
     runs-on: ubuntu-latest
 
     steps:
@@ -49,17 +48,16 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            backend/package-lock.json 
+          cache-dependency-path: package-lock.json
 
-      - name: Install Backend Dependencies
-        working-directory: backend
+      - name: Install Backend And SDK Dependencies
         run: npm ci
 
+      - name: Build SDK Packages
+        run: npm run build:sdk
+
       - name: Build NestJS Application
-        working-directory: backend
-        run: npm run build
+        run: npm run build --workspace=backend
 
       - name: Run Backend Unit Tests
-        working-directory: backend
-        run: npm test
+        run: npm test --workspace=backend

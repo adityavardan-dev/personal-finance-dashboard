@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Complete — conversational multi-draft intake verified |
+| Status | Deterministic foundation complete - hybrid semantic lane planned |
 | Target branch | `feature/v3-context-parser-db` |
 | Base branch | `develop` |
 | Depends on | Existing JWT authentication and transaction contracts |
@@ -12,7 +12,7 @@
 
 ## 1. Objective
 
-Convert raw transaction text, natural-language sentences, and common UPI notification text into a typed transaction draft without paid APIs or automatic persistence. The parser is deterministic, low-latency TypeScript code. A user must review and confirm a draft before any expense or income record is created.
+Convert raw transaction text, natural-language sentences, and common UPI notification text into a typed transaction draft. The default path is deterministic, low-latency TypeScript code. An optional provider-neutral semantic lane may handle complex language, but its output is untrusted, must pass strict validation, and can never persist automatically. A user must review and confirm a draft before any expense or income record is created.
 
 Example input:
 
@@ -27,6 +27,9 @@ The parser computes a personal amount of `400`, preserves `originalAmount: 1200`
 ### In scope
 
 - Deterministic amount, split, category, merchant, and date extraction.
+- Optional AI semantic extraction for unsupported or complex phrasing, behind a feature flag.
+- Provider-neutral `SemanticIntentExtractor` interface so hosted and local models can be exchanged.
+- AI-generated explanations and clarification suggestions must be grounded in the typed draft.
 - Every currency supported by the application: INR (`₹`, `Rs`, `Rs.`, `INR`, `rupee(s)`), USD (`$`, `US$`, `USD`, `dollar(s)`), and EUR (`€`, `EUR`, `euro(s)`).
 - Comma-separated amounts and up to two decimal places.
 - Split forms `/ 3`, `split by 3`, `split between 3`, `among 3`, and `half`.
@@ -45,7 +48,8 @@ The parser computes a personal amount of `400`, preserves `originalAmount: 1200`
 
 ### Out of scope
 
-- Calling an LLM, paid API, bank, SMS provider, or UPI provider.
+- Automatic persistence from an LLM response.
+- Trusting model arithmetic, database IDs, participant identities, or financial advice.
 - Reading device notifications or SMS messages.
 - Automatically creating, updating, or deleting transactions.
 - Probabilistic merchant classification, currency conversion, or financial advice.
@@ -333,8 +337,8 @@ Target selection uses `for all`, a one-based transaction number, or bounded word
 - Unsaved messages and drafts are cached in browser `sessionStorage`; Redis and server-side chat sessions are not used.
 - The browser generates a conversation ID with `crypto.randomUUID()`.
 - Keys contain the authenticated JWT subject and conversation ID, preventing one signed-in user session from restoring another user's draft.
-- Every valid message or manual edit refreshes a 30-minute inactivity expiry.
-- Expired/corrupt caches, logout session removal, and `New conversation` prevent stale recovery. After completion, confirmed drafts are removed from the workspace; the compact saved summary may remain in the user-scoped conversation cache until the 30-minute inactivity expiry so navigation does not reopen saved forms or lose the conversational receipt.
+- Every valid message or manual edit refreshes a 5-minute inactivity expiry.
+- Expired/corrupt caches, logout session removal, and `New conversation` prevent stale recovery. After completion, confirmed drafts are removed from the workspace; the compact saved summary may remain in the user-scoped conversation cache until the 5-minute inactivity expiry so navigation does not reopen saved forms or lose the conversational receipt.
 - Confirmed transactions remain in the normal expense store; the temporary conversation is not a financial system of record and is not shared across browsers or devices.
 
 ### 7.6 Responsive and accessible behavior
@@ -383,7 +387,7 @@ Target selection uses `for all`, a one-based transaction number, or bounded word
 - [x] A precise trailing date can be applied safely to all batch drafts.
 - [x] Deterministic follow-ups can target all drafts, a numbered draft, or an identifiable draft.
 - [x] Manual accordion edits and conversational edits share one source of truth.
-- [x] Unsaved conversation recovery is user-scoped and expires after 30 minutes of inactivity.
+- [x] Unsaved conversation recovery is user-scoped and expires after 5 minutes of inactivity.
 - [x] Individual, selected, and all-ready saves are available without returning to manual entry.
 - [x] Batch persistence validates up to 50 transactions and writes the collection once.
 - [x] The chat/accordion workspace supports mobile, tablet, and large-screen layouts.
@@ -418,7 +422,7 @@ Manual API verification must cover a valid JWT, an unauthenticated rejection, a 
 | 4 | Implement Angular intake, clarification, editing, and confirmation | Complete |
 | 5 | Add frontend unit and Playwright journeys | Complete |
 | 6 | Add deterministic multi-clause parsing and shared-date propagation | Complete |
-| 7 | Add stateless follow-up commands and 30-minute session recovery | Complete |
+| 7 | Add stateless follow-up commands and 5-minute session recovery | Complete |
 | 8 | Replace intake with responsive chat and editable accordion workspace | Complete |
 | 9 | Add individual/selected/all-ready batch persistence | Complete |
 | 10 | Run full verification and synchronize completion evidence | Complete |
@@ -439,7 +443,7 @@ Manual API verification must cover a valid JWT, an unauthenticated rejection, a 
 
 - Incomplete parser results now render the backend `clarificationPrompt`, visually mark missing controls, and move keyboard focus to the first missing field after the draft renders.
 - Untargeted follow-ups no longer update several possible drafts. Multiple drafts require `for all`, a one-based transaction number, or a unique bounded merchant/category/note target.
-- Session-recovery language now reflects the implemented product behavior: confirmed cards leave the workspace while the compact conversational receipt remains user-scoped until the 30-minute inactivity expiry.
+- Session-recovery language now reflects the implemented product behavior: confirmed cards leave the workspace while the compact conversational receipt remains user-scoped until the 5-minute inactivity expiry.
 - Currency-mismatch and parser/batch-save failure Playwright journeys were added; all 4 Milestone 10 Chromium journeys passed.
 - Frontend Vitest: 26 files, 131 tests passed, including clarification focus, ambiguous-target rejection, and batch-save failure recovery.
 - Backend Jest: 15 suites, 164 tests passed. Backend and frontend production builds passed; the existing frontend initial-bundle warning remains (`546.61 kB` against `500 kB`).

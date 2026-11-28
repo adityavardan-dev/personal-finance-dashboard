@@ -1,6 +1,6 @@
 # XPENSE — Personal Finance Dashboard
 
-XPENSE is a full-stack personal finance dashboard built with Angular, NestJS, TypeScript, Tailwind CSS, and GitHub Actions. Version 1 uses local JSON files for development persistence; it does not currently use PostgreSQL, an ORM, or Docker.
+XPENSE is a full-stack personal finance dashboard built with Angular, NestJS, TypeScript, Tailwind CSS, and GitHub Actions. The product is evolving toward a hybrid finance assistant: deterministic finance logic remains the source of truth, while optional AI capabilities help interpret natural language, suggest UI improvements, and explain already-calculated insights.
 
 ## Development architecture
 
@@ -11,6 +11,7 @@ XPENSE is a full-stack personal finance dashboard built with Angular, NestJS, Ty
   - `expenses.json` — authenticated user transactions
   - `budgets.json` — authenticated per-user budgets introduced by the Milestone 5 specification
 - **Session:** JWT access token stored in browser `sessionStorage`
+- **AI boundary:** provider-neutral semantic extraction and explanation services; AI output is untrusted input and never performs arithmetic or persistence
 
 Local JSON persistence and plaintext development passwords are intentionally scoped for the V1 local-development implementation and must not be represented as production-grade authentication or storage.
 
@@ -32,5 +33,6 @@ Local JSON persistence and plaintext development passwords are intentionally sco
 ### V3 foundation specifications
 
 - [Milestone 10 — Zero-Prompt Context Parser Intake](docs/milestones/10-context-parser-intake-spec.md)
+- [AI assistance and model strategy](docs/architecture/ai-assistance-and-model-strategy.md)
 
-Milestone 10 implements deterministic, user-confirmed conversational intake: one message can create multiple editable transaction accordions, rule-based follow-ups can complete them, and ready drafts can be batch-saved after review. It uses no paid AI service or server-side chat cache. V2 AI assistance and automated transaction-source ingestion remain roadmap scope and are not part of the V1 implementation specifications.
+Milestone 10 provides the deterministic foundation for conversational intake. The next direction adds an optional semantic AI lane for complex language, while retaining local parsing, manual editing, explicit confirmation, and deterministic server-side validation. AI-assisted development is also part of the engineering workflow, but no model is allowed to bypass the accounting and persistence boundaries.

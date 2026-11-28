@@ -1,3 +1,6 @@
+/**
+ * Purpose: Handles transaction text parsing and optional AI-assisted transaction segmentation.
+ */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CurrencyCode } from '../budgets/currency-code';
 import {
@@ -202,15 +205,28 @@ type CurrencyAmount = {
 
 @Injectable()
 export class ParserService {
+  /** Handles parse batch. */
   parseBatch(
     rawText: string,
     referenceDate = new Date(),
     timeZone?: string,
   ): ParseBatchResultDto {
     const resolvedTimeZone = this.validateTimeZone(timeZone);
-    const clauses = this.splitTransactionClauses(rawText);
+    if (/^\s*(?:hi|hello|hey)(?:\s+there)?[!.,?\s]*$/i.test(rawText)) {
+      return {
+        intent: 'GREETING',
+        status: 'NEEDS_CLARIFICATION',
+        drafts: [],
+        clarificationPrompt: 'Hi! How much did you spend today?',
+      };
+    }
+    const transactionText = rawText.replace(
+      /^\s*(?:hi|hello|hey)(?:\s+there)?(?:\s*[,!.]\s*|\s+)(?=\S)/i,
+      '',
+    );
+    const clauses = this.splitTransactionClauses(transactionText);
     const sharedDate = this.extractDate(
-      this.normalizeCommonTypos(rawText).replace(/\s+/g, ' '),
+      this.normalizeCommonTypos(transactionText).replace(/\s+/g, ' '),
       referenceDate,
       resolvedTimeZone,
     );
@@ -249,7 +265,7 @@ export class ParserService {
 
     const hasUnclearBoundaries =
       clauses.length === 1 &&
-      this.extractAmount(this.normalizeCommonTypos(rawText)).ambiguous;
+      this.extractAmount(this.normalizeCommonTypos(transactionText)).ambiguous;
 
     return {
       status,
@@ -263,6 +279,7 @@ export class ParserService {
     };
   }
 
+  /** Handles parse. */
   parse(
     rawText: string,
     referenceDate = new Date(),
@@ -321,6 +338,7 @@ export class ParserService {
     return result;
   }
 
+  /** Handles split transaction clauses. */
   private splitTransactionClauses(rawText: string): string[] {
     const normalized = rawText.trim().replace(/\s+/g, ' ');
     const separator = new RegExp(
@@ -335,6 +353,7 @@ export class ParserService {
     return clauses.length ? clauses : [normalized];
   }
 
+  /** Handles split at repeated transaction verbs. */
   private splitAtRepeatedTransactionVerbs(clause: string): string[] {
     const verbPattern = new RegExp(
       `\\b(?:i\\s+)?${TRANSACTION_VERB_PATTERN}\\b`,
@@ -351,6 +370,7 @@ export class ParserService {
       .filter(Boolean);
   }
 
+  /** Handles extract transaction verb. */
   private extractTransactionVerb(text: string): string | null {
     const normalized = this.normalizeCommonTypos(text);
     const match = normalized.match(
@@ -359,10 +379,12 @@ export class ParserService {
     return match?.[1].toLowerCase() ?? null;
   }
 
+  /** Provides starts with amount continuation. */
   private startsWithAmountContinuation(text: string): boolean {
     return new RegExp(`^${AMOUNT_CONTINUATION_PATTERN}`, 'i').test(text.trim());
   }
 
+  /** Handles normalize common typos. */
   private normalizeCommonTypos(text: string): string {
     const tokens = Object.keys(COMMON_TOKEN_CORRECTIONS).join('|');
     return text.replace(
@@ -371,6 +393,7 @@ export class ParserService {
     );
   }
 
+  /** Handles extract amount. */
   private extractAmount(text: string): AmountParse {
     const currencyMatches = this.collectCurrencyAmounts(text);
 
@@ -417,6 +440,7 @@ export class ParserService {
     return this.resolveAmountCandidates(bareMatches);
   }
 
+  /** Handles collect numbers. */
   private collectNumbers(text: string, pattern: RegExp): number[] {
     const values: number[] = [];
     for (const match of text.matchAll(pattern)) {
@@ -426,6 +450,7 @@ export class ParserService {
     return values;
   }
 
+  /** Handles collect currency amounts. */
   private collectCurrencyAmounts(text: string): CurrencyAmount[] {
     const patterns: ReadonlyArray<{
       currency: CurrencyCode;
@@ -496,6 +521,7 @@ export class ParserService {
     return values;
   }
 
+  /** Handles resolve currency amount candidates. */
   private resolveCurrencyAmountCandidates(
     candidates: CurrencyAmount[],
   ): AmountParse {
@@ -517,6 +543,7 @@ export class ParserService {
     return { total: null, currency: null, ambiguous: true };
   }
 
+  /** Handles resolve amount candidates. */
   private resolveAmountCandidates(values: number[]): AmountParse {
     const unique = [...new Set(values)];
     if (unique.length === 1) {
@@ -528,6 +555,7 @@ export class ParserService {
     return { total: null, currency: null, ambiguous: false };
   }
 
+  /** Handles extract split factor. */
   private extractSplitFactor(text: string): number {
     const textWithoutHalfHour = text.replace(
       /\bhalf(?:\s+an?)?\s+hours?\b/gi,
@@ -551,6 +579,7 @@ export class ParserService {
     return 1;
   }
 
+  /** Checks whether has ambiguous shared expense. */
   private hasAmbiguousSharedExpense(
     text: string,
     splitFactor: number,
@@ -563,6 +592,7 @@ export class ParserService {
     );
   }
 
+  /** Handles extract date. */
   private extractDate(
     text: string,
     referenceDate: Date,
@@ -673,6 +703,7 @@ export class ParserService {
       : null;
   }
 
+  /** Provides vague context allows precise date. */
   private vagueContextAllowsPreciseDate(
     text: string,
     candidate: string,
@@ -736,6 +767,7 @@ export class ParserService {
     return true;
   }
 
+  /** Provides subtract relative date. */
   private subtractRelativeDate(
     referenceDate: Date,
     quantity: number,
@@ -772,6 +804,7 @@ export class ParserService {
     return this.formatDate(year, month + 1, day);
   }
 
+  /** Checks whether validate time zone. */
   private validateTimeZone(timeZone?: string): string | undefined {
     if (!timeZone) return undefined;
     try {
@@ -782,6 +815,7 @@ export class ParserService {
     }
   }
 
+  /** Returns get date parts. */
   private getDateParts(
     date: Date,
     timeZone?: string,
@@ -805,11 +839,13 @@ export class ParserService {
     return { year: value('year'), month: value('month'), day: value('day') };
   }
 
+  /** Handles format instant date. */
   private formatInstantDate(date: Date, timeZone?: string): string {
     const parts = this.getDateParts(date, timeZone);
     return this.formatDate(parts.year, parts.month, parts.day);
   }
 
+  /** Checks whether has vague date expression. */
   private hasVagueDateExpression(text: string): boolean {
     const vagueRelativeDate =
       /\b(?:(?:a\s+)?few|some|several)\s+days?\s+ago\b|\b(?:recently|the\s+other\s+day|sometime\s+(?:today|yesterday|last\s+(?:week|month)))\b|\blast\s+(?:week|month|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
@@ -818,6 +854,7 @@ export class ParserService {
     return vagueRelativeDate.test(text) || qualifiedDate.test(text);
   }
 
+  /** Provides valid date. */
   private validDate(year: number, month: number, day: number): string | null {
     const date = new Date(year, month - 1, day);
     if (
@@ -830,10 +867,12 @@ export class ParserService {
     return this.formatDate(year, month, day);
   }
 
+  /** Handles format date. */
   private formatDate(year: number, month: number, day: number): string {
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
 
+  /** Handles extract category. */
   private extractCategory(text: string): ParserCategory | null {
     const normalized = text.toLowerCase();
     const matches = (
@@ -849,6 +888,7 @@ export class ParserService {
     return matches.length === 1 ? matches[0] : null;
   }
 
+  /** Checks whether has token. */
   private hasToken(text: string, token: string): boolean {
     const escaped = token
       .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -858,6 +898,7 @@ export class ParserService {
     );
   }
 
+  /** Handles extract merchant. */
   private extractMerchant(text: string): string | null {
     const match = text.match(
       /\b(?:at|to|from|merchant)\s+([a-z0-9][a-z0-9&.'-]*(?:\s+[a-z0-9][a-z0-9&.'-]*){0,5}?)(?=\s+(?:₹|rs\.?\b|inr\b|us\$|\$|usd\b|€|eur\b|\d[\d,]*(?:\.\d{1,2})?\b|on\b|today\b|yesterday\b|split\b|among\b|between\b|from\b|using\b|via\b)|[;,]|$)/i,
@@ -876,10 +917,12 @@ export class ParserService {
     return null;
   }
 
+  /** Provides round money. */
   private roundMoney(value: number): number {
     return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
+  /** Handles build clarification prompt. */
   private buildClarificationPrompt(fields: ParserMissingField[]): string {
     if (fields.length === 1) {
       if (fields[0] === 'date')

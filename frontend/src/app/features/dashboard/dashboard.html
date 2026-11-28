@@ -6,6 +6,6 @@
     <section class="min-w-0" aria-label="Monthly spending overview"><app-hero-card [spent]="totalSpent()" [budget]="budgetStore.monthlyLimit()" [currencySymbol]="currencySymbol()" (budgetSetupRequested)="scrollToBudget()" /></section>
     <app-budget-editor class="block" />
     <app-insight-banner class="block" [insight]="primaryInsight()" />
-    <div class="grid min-w-0 gap-6 lg:grid-cols-[1.2fr_0.95fr] lg:items-stretch"><div class="min-w-0"><app-spending-trend [points]="trend()" [currencySymbol]="currencySymbol()" /></div><div class="min-w-0"><app-recent-activity [transactions]="recentTransactions()" [currencySymbol]="currencySymbol()" /></div></div>
+    <div class="grid min-w-0 gap-6 lg:grid-cols-[1.2fr_0.95fr] lg:items-stretch"><div class="min-w-0"><app-spending-trend [points]="trend()" [currencySymbol]="currencySymbol()" /></div><section class="peer-dashboard-card" aria-labelledby="peer-dashboard-title"><div class="peer-dashboard-glow"></div><div class="peer-dashboard-inner"><p class="peer-kicker">SHARED EXPENSES</p><h2 id="peer-dashboard-title">Your splits,<br><span>beautifully clear.</span></h2><p>Review groups and see who owes whom. Create a new split from a sentence when you're ready.</p><div class="peer-dashboard-avatars" aria-hidden="true"><span>Y</span><span>H</span><span>J</span><span>+</span></div><a routerLink="/peer-splits">View splits <span>→</span></a><div class="peer-dashboard-footer"><span>Split preview workspace</span><a routerLink="/history">Recent transactions ↗</a></div></div></section></div>
   </div>
 </app-app-layout>

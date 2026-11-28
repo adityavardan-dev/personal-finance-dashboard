@@ -82,6 +82,17 @@ describe('HistoryComponent', () => {
     expect(text).toContain('Swiggy');
   });
 
+  it('shows an expense category donut and an inset search instead of the filter card', () => {
+    expect(c.donutSegments()).toEqual([
+      expect.objectContaining({ name: 'Food & Dining', amount: 500, percentage: 100 }),
+    ]);
+    expect(fixture.nativeElement.querySelector('.history-donut')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('input[aria-label="Search transactions"]')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).not.toContain('Refine activity');
+    c.setSearch('Swiggy');
+    expect(c.filteredTransactions().map((item: any) => item.id)).toEqual(['a']);
+  });
+
   it('renders one clickable row per transaction without inline edit or delete actions', () => {
     const rows = fixture.nativeElement.querySelectorAll('a[aria-label^="View transaction from"]');
     expect(rows).toHaveLength(2);

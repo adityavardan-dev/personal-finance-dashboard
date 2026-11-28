@@ -13,9 +13,9 @@
 
 ## 1. Objective
 
-Replace every static spending value, chart series, category total, comparison, and insight banner on `/dashboard` and `/insights` with deterministic values calculated from the authenticated user's transactions and budget. Dashboard and Insights must share one calculation layer so identical financial concepts cannot drift between pages.
+Replace every static spending value, chart series, category total, comparison, and insight banner on `/dashboard` and `/insights` with deterministic values calculated from the authenticated user's transactions and budget. Optional AI explanations may be layered on top of those facts, but Dashboard and Insights must share one calculation layer so identical financial concepts cannot drift between pages.
 
-All calculations are local application logic. V1 has zero LLM, AI provider, conversational assistant, or generated financial advice dependency.
+All calculations remain local application logic. AI is optional and may explain validated metrics, but it cannot calculate, mutate, or provide authoritative financial advice.
 
 ## 2. Scope
 
@@ -34,10 +34,11 @@ All calculations are local application logic. V1 has zero LLM, AI provider, conv
 - Dynamic accessible chart labels.
 - Empty, insufficient-data, and API-error states.
 - Removal of hardcoded demonstration values and AI-promissory banner text.
+- Optional grounded explanations based only on validated metric DTOs.
 
 ### Out of scope
 
-- LLMs, AI SDKs, model calls, prompt engineering, or conversational UI.
+- AI-generated numbers, financial advice, autonomous actions, or model-owned calculation logic.
 - Forecasting beyond the exact deterministic pace formula in this specification.
 - Financial advice, debt inference, credit scoring, or investment guidance.
 - Backend analytics endpoints, data warehouse, database, ORM, or pagination.
@@ -46,6 +47,8 @@ All calculations are local application logic. V1 has zero LLM, AI provider, conv
 - External charting or UI libraries.
 
 ## 3. Authoritative input contracts
+
+AI explanations must receive validated metric DTOs rather than raw transaction history whenever possible. The model may summarize or explain supplied facts, but it must not recalculate spending, infer debt, or produce recommendations that the application treats as authoritative.
 
 This milestone adds no backend DTO and no persisted JSON schema. It consumes the normalized Milestone 4 transaction records and Milestone 5 budget records without changing those persistence contracts.
 

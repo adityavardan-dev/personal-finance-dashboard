@@ -10,6 +10,18 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
+    path: 'peer-splits',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'peer-splits/new',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'peer-splits/:id',
+    renderMode: RenderMode.Client,
+  },
+  {
     path: 'expenses/new',
     renderMode: RenderMode.Client,
   },

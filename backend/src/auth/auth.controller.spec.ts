@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -7,12 +10,14 @@ describe('AuthController', () => {
   let authService: {
     login: jest.Mock;
     signup: jest.Mock;
+    resendConfirmation: jest.Mock;
   };
 
   beforeEach(async () => {
     authService = {
       login: jest.fn(),
       signup: jest.fn(),
+      resendConfirmation: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -23,11 +28,11 @@ describe('AuthController', () => {
     controller = module.get<AuthController>(AuthController);
   });
 
-  it('should be defined', () => {
+  it('should be defined' /** Checks that should be defined. */, () => {
     expect(controller).toBeDefined();
   });
 
-  it('delegates login to AuthService', () => {
+  it('delegates login to AuthService' /** Checks that delegates login to AuthService. */, () => {
     const dto = { email: 'user@example.com', password: 'password123' };
     const response = { message: 'Login successful', accessToken: 'token' };
     authService.login.mockReturnValue(response);
@@ -36,7 +41,7 @@ describe('AuthController', () => {
     expect(authService.login).toHaveBeenCalledWith(dto);
   });
 
-  it('delegates signup to AuthService', () => {
+  it('delegates signup to AuthService' /** Checks that delegates signup to AuthService. */, () => {
     const dto = {
       username: 'Test User',
       email: 'user@example.com',
@@ -51,5 +56,14 @@ describe('AuthController', () => {
 
     expect(controller.signup(dto)).toBe(response);
     expect(authService.signup).toHaveBeenCalledWith(dto);
+  });
+
+  it('delegates confirmation resend to AuthService', () => {
+    const dto = { email: 'user@example.com' };
+    const response = { message: 'Confirmation requested' };
+    authService.resendConfirmation.mockReturnValue(response);
+
+    expect(controller.resendConfirmation(dto)).toBe(response);
+    expect(authService.resendConfirmation).toHaveBeenCalledWith(dto);
   });
 });

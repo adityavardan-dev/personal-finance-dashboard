@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { Test } from '@nestjs/testing';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BudgetsController } from './budgets.controller';
@@ -13,23 +16,31 @@ describe('BudgetsController', () => {
     const module = await Test.createTestingModule({
       controllers: [BudgetsController],
       providers: [{ provide: BudgetsService, useValue: service }],
-    }).overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
     controller = module.get(BudgetsController);
   });
 
-  it('gets the budget using JWT user identity', () => {
-    controller.getMine({ user: { userId: 42 } } as any);
-    expect(service.getMine).toHaveBeenCalledWith(42);
+  it('gets the budget using JWT user identity' /** Checks that gets the budget using JWT user identity. */, () => {
+    controller.getMine({ user: { userId: 'user-42', accessToken: 'token-42' } } as any);
+    expect(service.getMine).toHaveBeenCalledWith('user-42', 'token-42');
   });
 
-  it('upserts the budget using JWT user identity', () => {
-    const dto = { monthlyLimit: 1000, categoryLimits: [], currency: CurrencyCode.INR };
-    controller.upsert({ user: { userId: 42 } } as any, dto);
-    expect(service.upsert).toHaveBeenCalledWith(42, dto);
+  it('upserts the budget using JWT user identity' /** Checks that upserts the budget using JWT user identity. */, () => {
+    const dto = {
+      monthlyLimit: 1000,
+      categoryLimits: [],
+      currency: CurrencyCode.INR,
+    };
+    controller.upsert({ user: { userId: 'user-42', accessToken: 'token-42' } } as any, dto);
+    expect(service.upsert).toHaveBeenCalledWith('user-42', 'token-42', dto);
   });
 
-  it('is protected at controller level', () => {
-    const guards: any[] = Reflect.getMetadata('__guards__', BudgetsController) ?? [];
+  it('is protected at controller level' /** Checks that is protected at controller level. */, () => {
+    const guards: any[] =
+      Reflect.getMetadata('__guards__', BudgetsController) ?? [];
     expect(guards).toContain(JwtAuthGuard);
   });
 });

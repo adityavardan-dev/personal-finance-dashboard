@@ -1,1 +1,9 @@
 <router-outlet></router-outlet>
+@if (apiLoading.loading()) {
+  <div class="fixed inset-0 z-[100] overflow-auto bg-zinc-50 dark:bg-zinc-950" aria-label="Loading application">
+    <app-page-skeleton label="Waiting for request" [kind]="skeletonKind()" />
+  </div>
+}
+@if (showBottomNav()) {
+  <div class="md:hidden"><app-bottom-nav /></div>
+}

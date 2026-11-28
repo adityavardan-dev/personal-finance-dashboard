@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1220" viewBox="0 0 1600 1220" role="img" aria-labelledby="title desc">
+  <title id="title">XPENSE peer-split semantic SDK and ledger flow</title>
+  <desc id="desc">A user message enters the semantic SDK, uses bounded local recognition or primary and fallback models, passes deterministic validation and identity resolution, then reaches the ledger solver, editable review, confirmation, transactional persistence, and account notifications.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f4fbf6"/><stop offset="1" stop-color="#f7f5ff"/></linearGradient>
+    <linearGradient id="sdk" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e9f8ef"/><stop offset="1" stop-color="#e8f1ff"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#193b2b" flood-opacity=".12"/></filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M1 1l10 5-10 5z" fill="#466556"/></marker>
+    <style>
+      .title{font:700 34px Inter,Segoe UI,sans-serif;fill:#153b2a}.subtitle{font:400 17px Inter,Segoe UI,sans-serif;fill:#587064}.section{font:700 18px Inter,Segoe UI,sans-serif;fill:#174b34;letter-spacing:.08em}.head{font:700 20px Inter,Segoe UI,sans-serif;fill:#18372a}.body{font:400 15px Inter,Segoe UI,sans-serif;fill:#4b6257}.small{font:600 13px Inter,Segoe UI,sans-serif;fill:#587064}.box{fill:#fff;stroke:#c9ded1;stroke-width:2;rx:20;filter:url(#shadow)}.green{fill:#e8f7ed;stroke:#69b985}.blue{fill:#eaf2ff;stroke:#79a6e8}.purple{fill:#f3edff;stroke:#a98ce1}.orange{fill:#fff4e5;stroke:#e6ad58}.red{fill:#fff0ef;stroke:#df827b}.arrow{fill:none;stroke:#466556;stroke-width:3;marker-end:url(#arrow)}.dash{fill:none;stroke:#789387;stroke-width:2.5;stroke-dasharray:8 8;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1600" height="1220" fill="url(#bg)"/>
+  <text x="800" y="58" text-anchor="middle" class="title">XPENSE peer-split flow</text>
+  <text x="800" y="88" text-anchor="middle" class="subtitle">AI interprets language · deterministic code protects money · users confirm before persistence</text>
+
+  <rect x="580" y="120" width="440" height="86" class="box green"/>
+  <text x="800" y="154" text-anchor="middle" class="head">User message or structured form</text>
+  <text x="800" y="181" text-anchor="middle" class="body">“Split ₹5,000 with Katty and Sridevi three days ago”</text>
+  <path d="M800 206v42" class="arrow"/>
+
+  <rect x="90" y="250" width="1420" height="330" rx="28" fill="url(#sdk)" stroke="#75a98a" stroke-width="3" filter="url(#shadow)"/>
+  <text x="125" y="290" class="section">SEMANTIC UNDERSTANDING SDK</text>
+  <text x="125" y="318" class="body">One TypeScript entry point hides routing, provider choice, schema parsing, and evidence checks from controllers and UI code.</text>
+
+  <rect x="125" y="350" width="300" height="155" class="box green"/>
+  <text x="275" y="385" text-anchor="middle" class="head">1 · Small local layer</text>
+  <text x="150" y="416" class="body">• Personal fast path</text><text x="150" y="443" class="body">• Structured/manual input</text><text x="150" y="470" class="body">• Stable normalization only</text>
+
+  <path d="M425 428h70" class="arrow"/>
+  <rect x="495" y="350" width="280" height="155" class="box blue"/>
+  <text x="635" y="385" text-anchor="middle" class="head">2 · Primary model</text>
+  <text x="520" y="416" class="body">Cloudflare + Gemma</text><text x="520" y="443" class="body">Typed facts, not arithmetic</text><text x="520" y="470" class="small">Free-form peer language</text>
+
+  <path d="M775 428h70" class="dash"/>
+  <rect x="845" y="350" width="280" height="155" class="box purple"/>
+  <text x="985" y="385" text-anchor="middle" class="head">3 · Fallback model</text>
+  <text x="870" y="416" class="body">Second provider + API key</text><text x="870" y="443" class="body">Quota / timeout / outage only</text><text x="870" y="470" class="small">One bounded fallback attempt</text>
+
+  <path d="M1125 428h70" class="arrow"/>
+  <rect x="1195" y="350" width="280" height="155" class="box orange"/>
+  <text x="1335" y="385" text-anchor="middle" class="head">4 · Typed intent</text>
+  <text x="1220" y="416" class="body">Amounts · names · payer</text><text x="1220" y="443" class="body">Per-draft dates · split rules</text><text x="1220" y="470" class="small">Missing facts stay unresolved</text>
+  <text x="800" y="548" text-anchor="middle" class="small">Providers are replaceable adapters. Neither provider can approve, calculate, identify accounts, or save.</text>
+
+  <path d="M800 580v22H320v20" class="arrow"/>
+  <rect x="140" y="625" width="360" height="155" class="box orange"/>
+  <text x="320" y="660" text-anchor="middle" class="head">Deterministic validation</text>
+  <text x="165" y="691" class="body">Schema · evidence · safe defaults</text><text x="165" y="718" class="body">Payer · totals · allocation constraints</text><text x="165" y="745" class="small">No model call and no token cost</text>
+
+  <path d="M500 702h70" class="arrow"/>
+  <rect x="570" y="625" width="460" height="155" class="box blue"/>
+  <text x="800" y="660" text-anchor="middle" class="head">Participant identity resolution</text>
+  <text x="595" y="691" class="body">SELF → authenticated user</text><text x="595" y="718" class="body">Unique XPENSE handle → registered account</text><text x="595" y="745" class="body">No unique match → local named placeholder</text>
+
+  <path d="M1030 702h70" class="arrow"/>
+  <rect x="1100" y="625" width="360" height="155" class="box green"/>
+  <text x="1280" y="660" text-anchor="middle" class="head">Ledger solver</text>
+  <text x="1125" y="691" class="body">Integer minor-unit arithmetic</text><text x="1125" y="718" class="body">Shares · balances · obligations</text><text x="1125" y="745" class="small">No language interpretation</text>
+
+  <path d="M320 780v64h308" class="dash"/>
+  <rect x="590" y="815" width="420" height="92" class="box red"/>
+  <text x="800" y="850" text-anchor="middle" class="head">Clarification when unsafe or incomplete</text>
+  <text x="800" y="878" text-anchor="middle" class="body">Ask one targeted question; never guess or loop through models.</text>
+  <path d="M1010 861h270v-81" class="dash"/>
+
+  <path d="M1280 780v154H800v38" class="arrow"/>
+  <rect x="530" y="974" width="540" height="100" class="box purple"/>
+  <text x="800" y="1010" text-anchor="middle" class="head">Editable review draft</text>
+  <text x="800" y="1038" text-anchor="middle" class="body">User can change dates, people, payer, amount, or allocation before confirming.</text>
+  <path d="M800 1074v42" class="arrow"/>
+
+  <rect x="85" y="1118" width="330" height="76" class="box green"/>
+  <text x="250" y="1151" text-anchor="middle" class="head">Explicit confirmation</text><text x="250" y="1176" text-anchor="middle" class="small">Idempotency key + latest version</text>
+  <path d="M415 1156h90" class="arrow"/>
+  <rect x="505" y="1118" width="430" height="76" class="box blue"/>
+  <text x="720" y="1151" text-anchor="middle" class="head">Atomic persistence transaction</text><text x="720" y="1176" text-anchor="middle" class="small">Expense · participants · rules · obligations</text>
+  <path d="M935 1156h90" class="arrow"/>
+  <rect x="1025" y="1118" width="490" height="76" class="box orange"/>
+  <text x="1270" y="1151" text-anchor="middle" class="head">Notification outbox</text><text x="1270" y="1176" text-anchor="middle" class="small">Notify registered accounts only; placeholders receive nothing</text>
+</svg>

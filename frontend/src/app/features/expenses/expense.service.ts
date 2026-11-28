@@ -8,7 +8,7 @@ export interface CreateExpensePayload {
   type: TransactionType;
   amount: number;
   category: string;
-  merchant: string;
+  merchant?: string;
   date: string;
   note?: string;
 }

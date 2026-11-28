@@ -42,6 +42,18 @@ describe('HeroCard', () => {
     expect(alert.textContent).toContain('50');
   });
 
+  it('keeps budget usage on the bar for hover and keyboard focus', () => {
+    fixture.componentRef.setInput('spent', 300);
+    fixture.componentRef.setInput('budget', 1000);
+    fixture.detectChanges();
+
+    const progress = fixture.nativeElement.querySelector('.budget-progress') as HTMLElement;
+    expect(progress.getAttribute('tabindex')).toBe('0');
+    expect(progress.getAttribute('aria-valuetext')).toBe('30% spent');
+    expect(progress.querySelector('.budget-progress__tooltip')?.textContent).toContain('30% used');
+    expect(fixture.nativeElement.querySelector('svg circle')).toBeNull();
+  });
+
   it('emits a setup request without navigating', () => {
     const emit = vi.spyOn(component.budgetSetupRequested, 'emit');
     const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;

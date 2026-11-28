@@ -1,375 +1,93 @@
 <app-app-layout>
-  <div class="space-y-6">
-    <header>
-      <p
-        class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400"
-      >
-        Your activity
-      </p>
-      <div class="mt-1.5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 class="text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">
-            Transaction history
-          </h2>
-          <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Every expense and income, kept in one clear timeline.
-          </p>
-        </div>
-        <a
-          routerLink="/expenses/new"
-          class="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
-          >Add transaction</a
-        >
+  <div class="history-page">
+    <header class="history-heading">
+      <div>
+        <p class="history-eyebrow">YOUR ACTIVITY</p>
+        <h1>Transaction history</h1>
+        <p>Every expense and income, kept in one clear timeline.</p>
       </div>
+      <a class="history-add" routerLink="/expenses/new">Add transaction</a>
     </header>
 
-    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Transaction summary">
-      <article
-        class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-      >
-        <p class="text-sm text-zinc-500 dark:text-zinc-400">All activity</p>
-        <p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">
-          {{ transactions().length }}
-        </p>
-        <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Transactions</p>
-      </article>
-      <article
-        class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-      >
-        <p class="text-sm text-zinc-500 dark:text-zinc-400">Expenses</p>
-        <p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">
-          {{ currencySymbol() }}{{ totalExpenses() | number }}
-        </p>
-        <p class="mt-1 text-xs text-red-600 dark:text-red-400">Money out</p>
-      </article>
-      <article
-        class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-      >
-        <p class="text-sm text-zinc-500 dark:text-zinc-400">Income</p>
-        <p class="mt-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">
-          {{ currencySymbol() }}{{ totalIncome() | number }}
-        </p>
-        <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">Money in</p>
-      </article>
-      <article
-        class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-      >
-        <p class="text-sm text-zinc-500 dark:text-zinc-400">Net activity</p>
-        <p
-          class="mt-2 text-3xl font-bold tracking-tight"
-          [class.text-emerald-600]="netActivity() >= 0"
-          [class.dark:text-emerald-400]="netActivity() >= 0"
-          [class.text-red-600]="netActivity() < 0"
-          [class.dark:text-red-400]="netActivity() < 0"
-        >
-          {{ netActivity() >= 0 ? '+' : '-' }}{{ currencySymbol()
-          }}{{ (netActivity() < 0 ? -netActivity() : netActivity()) | number }}
-        </p>
-        <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Income minus expenses</p>
-      </article>
+    <section class="history-donut-card xp-glass-card" aria-labelledby="history-donut-title">
+      <div class="history-donut-heading">
+        <p class="history-eyebrow">SPENDING MIX</p>
+        <h2 id="history-donut-title">Where your money went</h2>
+        <p>Expense categories across your transaction history</p>
+      </div>
+      <div class="history-donut-layout">
+        <div class="history-donut" [style.background]="donutGradient()" role="img" [attr.aria-label]="'Total expenses ' + currencySymbol() + (totalExpenses() | number) + ' across ' + donutSegments().length + ' categories'">
+          <div class="history-donut-center">
+            <span>Total spent</span>
+            <strong>{{ currencySymbol() }}{{ totalExpenses() | number }}</strong>
+          </div>
+        </div>
+        <div class="history-legend" aria-label="Expense category breakdown">
+          @for (segment of donutSegments(); track segment.name) {
+            <div class="history-legend-item">
+              <span class="history-legend-dot" [style.background]="segment.color" aria-hidden="true"></span>
+              <span>{{ segment.name }}</span>
+              <strong>{{ segment.percentage | number:'1.0-0' }}%</strong>
+              <small>{{ currencySymbol() }}{{ segment.amount | number }}</small>
+            </div>
+          } @empty {
+            <p class="history-empty-legend">Add an expense to see the category breakdown.</p>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="history-summary" aria-label="Transaction summary">
+      <article class="xp-glass-card"><span>All activity</span><strong>{{ transactions().length }}</strong><small>Transactions</small></article>
+      <article class="xp-glass-card"><span>Expenses</span><strong>{{ currencySymbol() }}{{ totalExpenses() | number }}</strong><small>Money out</small></article>
+      <article class="xp-glass-card"><span>Income</span><strong>{{ currencySymbol() }}{{ totalIncome() | number }}</strong><small>Money in</small></article>
+      <article class="xp-glass-card"><span>Net activity</span><strong [class.negative]="netActivity() < 0">{{ netActivity() >= 0 ? '+' : '-' }}{{ currencySymbol() }}{{ (netActivity() < 0 ? -netActivity() : netActivity()) | number }}</strong><small>Income minus expenses</small></article>
     </section>
 
     @if (!isLoading() && !loadError() && transactions().length > 0) {
-      <section
-        class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-        aria-labelledby="filters-title"
-      >
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p
-              class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400"
-            >
-              Refine activity
-            </p>
-            <h3
-              id="filters-title"
-              class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white"
-            >
-              Filter transactions
-            </h3>
-          </div>
-          @if (hasActiveFilters()) {
-            <button
-              type="button"
-              (click)="clearFilters()"
-              class="min-h-11 rounded-full px-4 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
-            >
-              Clear filters
-            </button>
-          }
-        </div>
-
-        <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-[auto_1fr_1fr_1fr] xl:items-end">
-          <div>
-            <p class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200">Type</p>
-            <div
-              class="flex rounded-2xl bg-zinc-100 p-1 dark:bg-zinc-950"
-              role="group"
-              aria-label="Filter by transaction type"
-            >
-              @for (
-                option of [
-                  { key: 'all', label: 'All' },
-                  { key: 'expense', label: 'Expenses' },
-                  { key: 'income', label: 'Income' },
-                ];
-                track option.key
-              ) {
-                <button
-                  type="button"
-                  (click)="setFilter($any(option.key))"
-                  [attr.aria-pressed]="filter() === option.key"
-                  class="min-h-11 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-                  [class.bg-white]="filter() === option.key"
-                  [class.text-zinc-950]="filter() === option.key"
-                  [class.shadow-sm]="filter() === option.key"
-                  [class.dark:bg-zinc-800]="filter() === option.key"
-                  [class.dark:text-white]="filter() === option.key"
-                  [class.text-zinc-500]="filter() !== option.key"
-                  [class.dark:text-zinc-400]="filter() !== option.key"
-                >
-                  {{ option.label }}
-                </button>
-              }
-            </div>
-          </div>
-          <div>
-            <label
-              for="history-category"
-              class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200"
-              >Category</label
-            >
-            <select
-              id="history-category"
-              [ngModel]="categoryFilter()"
-              (ngModelChange)="setCategoryFilter($event)"
-              class="min-h-11 w-full rounded-2xl border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-            >
-              <option value="">All categories</option>
-              @for (category of categoryOptions(); track category) {
-                <option [value]="category">{{ category }}</option>
-              }
-            </select>
-          </div>
-          <div>
-            <label
-              for="history-from"
-              class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200"
-              >From</label
-            >
-            <input
-              id="history-from"
-              type="date"
-              [ngModel]="fromDate()"
-              (ngModelChange)="setFromDate($event)"
-              class="min-h-11 w-full rounded-2xl border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-            />
-          </div>
-          <div>
-            <label
-              for="history-to"
-              class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200"
-              >To</label
-            >
-            <input
-              id="history-to"
-              type="date"
-              [ngModel]="toDate()"
-              (ngModelChange)="setToDate($event)"
-              class="min-h-11 w-full rounded-2xl border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-            />
-          </div>
-        </div>
-
-        @if (filterError()) {
-          <p class="mt-4 text-sm font-medium text-red-600 dark:text-red-400" role="alert">
-            {{ filterError() }}
-          </p>
-        }
-      </section>
+      <label class="history-search glass-inset">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
+        <input type="search" aria-label="Search transactions" placeholder="Search merchant, category, type or amount" [ngModel]="search()" (ngModelChange)="setSearch($event)" />
+      </label>
     }
 
-    <section
-      class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-      aria-labelledby="transactions-title"
-    >
-      <div>
-        <p
-          class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400"
-        >
-          Activity
-        </p>
-        <h3
-          id="transactions-title"
-          class="mt-1.5 text-lg font-semibold text-zinc-950 dark:text-white"
-        >
-          Recent transactions
-        </h3>
+    <section class="history-transactions xp-glass-card" aria-labelledby="transactions-title">
+      <div class="history-list-heading">
+        <p class="history-eyebrow">ACTIVITY</p>
+        <h2 id="transactions-title">Recent transactions</h2>
       </div>
-
       @if (isLoading()) {
-        <div class="py-10 text-center" aria-busy="true">
-          <p class="text-sm text-zinc-500 dark:text-zinc-400">Loading transactions…</p>
-        </div>
+        <p class="history-message" aria-busy="true">Loading transactions…</p>
       } @else if (loadError()) {
-        <div
-          class="mt-5 rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-900/70 dark:bg-red-950/30"
-          role="alert"
-        >
-          <p class="text-sm font-medium text-red-700 dark:text-red-400">
-            Unable to load transactions. Please refresh to try again.
-          </p>
-        </div>
+        <p class="history-message" role="alert">Unable to load transactions. Please refresh to try again.</p>
       } @else if (transactions().length === 0) {
-        <div class="py-10 text-center">
-          <h4 class="text-lg font-semibold text-zinc-950 dark:text-white">
-            Start tracking your first transaction.
-          </h4>
-          <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            Your monthly journey starts here.
-          </p>
-          <a
-            routerLink="/expenses/new"
-            class="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >Add transaction</a
-          >
+        <div class="history-message">
+          <h3>Start tracking your first transaction.</h3>
+          <p>Your monthly journey starts here.</p>
+          <a routerLink="/expenses/new">Add transaction</a>
         </div>
       } @else if (filteredTransactions().length === 0) {
-        <div class="py-10 text-center">
-          <h4 class="text-lg font-semibold text-zinc-950 dark:text-white">
-            No transactions match these filters.
-          </h4>
-          <button
-            type="button"
-            (click)="clearFilters()"
-            class="mt-5 min-h-11 rounded-full px-5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
-          >
-            Clear filters
-          </button>
+        <div class="history-message">
+          <h3>No transactions match your search.</h3>
+          <button type="button" (click)="clearFilters()">Clear search</button>
         </div>
       } @else {
-        <div class="mt-5 space-y-1">
+        <div class="history-list">
           @for (item of paginatedTransactions(); track item.id) {
-            <a
-              [routerLink]="['/history', item.id]"
-              [attr.aria-label]="'View transaction from ' + item.merchant"
-              class="group grid min-h-[4.5rem] grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl px-2 py-2.5 transition-colors duration-150 hover:bg-white/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 motion-reduce:transition-none dark:hover:bg-white/[0.045] sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:px-3"
-            >
-              <span
-                class="flex size-11 shrink-0 items-center justify-center rounded-2xl"
-                [class.bg-amber-100]="item.category === 'Food & Dining'"
-                [class.text-amber-700]="item.category === 'Food & Dining'"
-                [class.dark:bg-amber-950/50]="item.category === 'Food & Dining'"
-                [class.dark:text-amber-300]="item.category === 'Food & Dining'"
-                [class.bg-blue-100]="item.category === 'Transport'"
-                [class.text-blue-700]="item.category === 'Transport'"
-                [class.dark:bg-blue-950/50]="item.category === 'Transport'"
-                [class.dark:text-blue-300]="item.category === 'Transport'"
-                [class.bg-emerald-100]="item.type === 'income'"
-                [class.text-emerald-700]="item.type === 'income'"
-                [class.dark:bg-emerald-950/50]="item.type === 'income'"
-                [class.dark:text-emerald-300]="item.type === 'income'"
-                [class.bg-zinc-100]="
-                  item.category !== 'Food & Dining' &&
-                  item.category !== 'Transport' &&
-                  item.type !== 'income'
-                "
-                [class.text-zinc-600]="
-                  item.category !== 'Food & Dining' &&
-                  item.category !== 'Transport' &&
-                  item.type !== 'income'
-                "
-                [class.dark:bg-zinc-800]="
-                  item.category !== 'Food & Dining' &&
-                  item.category !== 'Transport' &&
-                  item.type !== 'income'
-                "
-                [class.dark:text-zinc-300]="
-                  item.category !== 'Food & Dining' &&
-                  item.category !== 'Transport' &&
-                  item.type !== 'income'
-                "
-              >
-                <app-category-icon [category]="item.category" />
-              </span>
-              <span class="min-w-0">
-                <span
-                  class="block truncate text-sm font-semibold text-zinc-900 group-hover:text-zinc-950 dark:text-white"
-                >
-                  {{ item.merchant }}
-                </span>
-                <span class="mt-0.5 block truncate text-xs text-zinc-500 dark:text-zinc-400">
-                  {{ item.category }} · {{ item.displayDate }}
-                </span>
-              </span>
-              <span
-                class="shrink-0 pl-2 text-right text-sm font-semibold tabular-nums sm:text-base"
-                [class.text-blue-600]="item.type === 'income'"
-                [class.dark:text-blue-400]="item.type === 'income'"
-                [class.text-red-600]="item.type === 'expense'"
-                [class.dark:text-red-400]="item.type === 'expense'"
-              >
-                {{ item.type === 'income' ? '+' : '-' }}{{ currencySymbol()
-                }}{{ item.amount | number: '1.2-2' }}
-              </span>
+            <a class="history-row" [routerLink]="['/history', item.id]" [attr.aria-label]="'View transaction from ' + (item.merchant || item.category)">
+              <span class="history-row-icon"><app-category-icon [category]="item.category" /></span>
+              <span class="history-row-main"><b>{{ item.merchant || item.category }}</b><small>{{ item.category }} · {{ item.displayDate }}</small></span>
+              <strong [class.income]="item.type === 'income'">{{ item.type === 'income' ? '+' : '-' }}{{ currencySymbol() }}{{ item.amount | number:'1.2-2' }}</strong>
             </a>
           }
         </div>
-
         @if (filteredTransactions().length > pageSize) {
-          <nav
-            aria-label="Transaction pages"
-            class="mt-4 flex min-h-12 items-center justify-between gap-3 border-t border-zinc-200/70 pt-4 dark:border-zinc-800"
-          >
-            <p class="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
-              {{ pageStart() }}–{{ pageEnd() }} of {{ filteredTransactions().length }}
-            </p>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                (click)="previousPage()"
-                [disabled]="currentPage() === 1"
-                aria-label="Previous transaction page"
-                class="inline-flex size-11 items-center justify-center rounded-full border border-zinc-200 bg-white/40 text-zinc-700 transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-35 dark:border-zinc-700 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:bg-white/[0.08]"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  class="size-5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="m15 18-6-6 6-6" />
-                </svg>
-              </button>
-              <span
-                class="min-w-14 text-center text-xs font-medium tabular-nums text-zinc-600 dark:text-zinc-300"
-              >
-                {{ currentPage() }} / {{ pageCount() }}
-              </span>
-              <button
-                type="button"
-                (click)="nextPage()"
-                [disabled]="currentPage() === pageCount()"
-                aria-label="Next transaction page"
-                class="inline-flex size-11 items-center justify-center rounded-full border border-zinc-200 bg-white/40 text-zinc-700 transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-35 dark:border-zinc-700 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:bg-white/[0.08]"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  class="size-5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="m9 18 6-6-6-6" />
-                </svg>
-              </button>
+          <nav class="history-pages" aria-label="Transaction pages">
+            <p>{{ pageStart() }}–{{ pageEnd() }} of {{ filteredTransactions().length }}</p>
+            <div>
+              <button type="button" (click)="previousPage()" [disabled]="currentPage() === 1" aria-label="Previous transaction page">‹</button>
+              <span>{{ currentPage() }} / {{ pageCount() }}</span>
+              <button type="button" (click)="nextPage()" [disabled]="currentPage() === pageCount()" aria-label="Next transaction page">›</button>
             </div>
           </nav>
         }

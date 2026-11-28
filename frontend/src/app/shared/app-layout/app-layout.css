@@ -7,8 +7,8 @@
   isolation: isolate;
   background:
     radial-gradient(circle at 14% 8%, rgb(209 250 229 / 0.72), transparent 28rem),
-    radial-gradient(circle at 86% 18%, rgb(224 231 255 / 0.68), transparent 30rem),
-    radial-gradient(circle at 54% 94%, rgb(254 243 199 / 0.45), transparent 28rem), #f4f4f5;
+    radial-gradient(circle at 86% 18%, rgb(226 238 225 / 0.68), transparent 30rem),
+    radial-gradient(circle at 54% 94%, rgb(254 249 231 / 0.45), transparent 28rem), #fafaf8;
 }
 
 .glass-layout::before {
@@ -23,8 +23,7 @@
 }
 
 :host ::ng-deep .glass-layout app-header > header,
-:host ::ng-deep .glass-layout app-sidebar nav > div,
-:host ::ng-deep .glass-layout app-bottom-nav > nav {
+:host ::ng-deep .glass-layout app-sidebar nav > div {
   border-color: rgb(255 255 255 / 0.72);
   background: rgb(255 255 255 / 0.5);
   box-shadow:
@@ -92,8 +91,7 @@
   }
 
   :host ::ng-deep .glass-layout app-header > header,
-  :host ::ng-deep .glass-layout app-sidebar nav > div,
-  :host ::ng-deep .glass-layout app-bottom-nav > nav {
+  :host ::ng-deep .glass-layout app-sidebar nav > div {
     border-color: rgb(255 255 255 / 0.1);
     background: rgb(24 24 27 / 0.58);
     box-shadow:

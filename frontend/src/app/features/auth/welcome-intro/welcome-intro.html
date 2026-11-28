@@ -1,0 +1,20 @@
+@if (active()) {
+  <div class="xp-welcome" [class.xp-welcome--revealing]="revealing()" aria-hidden="true">
+    <div class="xp-welcome__ambient"></div>
+    <div class="xp-welcome__content">
+      <div class="xp-welcome__brand">XPENSE <span>·</span> Expenses shown better</div>
+      <div class="xp-welcome__art" aria-hidden="true">
+        <img class="xp-welcome__gesture" src="/card-hand-v2.webp" alt="" width="880" height="458" decoding="async" fetchpriority="high" />
+      </div>
+      <div class="xp-welcome__approval"><span class="xp-welcome__check">✓</span> Transaction approved</div>
+      <div class="xp-welcome__progress" aria-hidden="true">
+        <svg viewBox="0 0 80 80" focusable="false">
+          <circle class="xp-welcome__track" cx="40" cy="40" r="34" />
+          <circle class="xp-welcome__meter" cx="40" cy="40" r="34" [attr.stroke-dasharray]="(progress() * 2.136) + ' 213.6'" />
+        </svg>
+        <span>{{ progress() }}%</span>
+      </div>
+      <p class="xp-welcome__caption">Entering your space</p>
+    </div>
+  </div>
+}

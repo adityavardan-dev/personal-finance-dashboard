@@ -6,10 +6,6 @@ import { BudgetStore } from '../../core/budget/budget.store';
 import { FinanceMetricsStore } from '../../core/finance/finance-metrics.store';
 import { DashboardComponent } from './dashboard';
 
-const transactions = [
-  { id: 'a', type: 'expense' as const, amount: 500, category: 'Food', merchant: 'Cafe', date: '2026-09-16' },
-  { id: 'b', type: 'income' as const, amount: 1200, category: 'Salary', merchant: 'Employer', date: '2026-09-17' },
-];
 const metrics = {
   currentMonthSpend: 500,
   sixMonthTrend: [{ year: 2026, month: 9, label: 'Sept', amount: 500 }],
@@ -20,13 +16,11 @@ describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
   let component: any;
   const metricsSignal = signal<any>(metrics);
-  const transactionSignal = signal<any>(transactions);
-  const metricsStore = { metrics: metricsSignal, transactions: transactionSignal, status: signal('loaded'), errorMessage: signal(null), load: vi.fn(), refresh: vi.fn() };
+  const metricsStore = { metrics: metricsSignal, status: signal('loaded'), errorMessage: signal(null), load: vi.fn(), refresh: vi.fn() };
   const budgetStore = { budget: signal(null), status: signal('loaded'), hasBudget: signal(false), monthlyLimit: signal(1000), currency: signal('INR'), load: vi.fn(), save: vi.fn() };
 
   beforeEach(async () => {
     metricsSignal.set(metrics);
-    transactionSignal.set(transactions);
     metricsStore.load.mockClear();
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
@@ -52,16 +46,15 @@ describe('DashboardComponent', () => {
     expect(component.primaryInsight()?.code).toBe('WITHIN_BUDGET');
   });
 
-  it('preserves newest-first expense and income activity', () => {
-    expect(component.recentTransactions().map((item: any) => item.type)).toEqual(['income', 'expense']);
-    expect(component.recentTransactions()[0].merchant).toBe('Employer');
+  it('links to split groups and keeps transaction history accessible', () => {
+    const card = fixture.nativeElement.querySelector('.peer-dashboard-card') as HTMLElement;
+    expect(card.querySelector('a[href="/peer-splits"]')).toBeTruthy();
+    expect(card.querySelector('a[href="/history"]')).toBeTruthy();
   });
 
-  it('handles empty metrics and transactions', () => {
+  it('handles empty metrics', () => {
     metricsSignal.set(null);
-    transactionSignal.set([]);
     expect(component.totalSpent()).toBe(0);
     expect(component.trend()).toEqual([]);
-    expect(component.recentTransactions()).toEqual([]);
   });
 });

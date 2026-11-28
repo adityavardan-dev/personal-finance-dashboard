@@ -7,12 +7,19 @@ import { vi } from 'vitest';
 import { ExpenseService } from '../expense.service';
 import { FinanceMetricsStore } from '../../../core/finance/finance-metrics.store';
 import { NewExpenseComponent } from './new-expense';
+import { PeerSplitsService, SplitGroup } from '../../peer-splits/peer-splits.service';
 
 describe('NewExpenseComponent', () => {
   let component: NewExpenseComponent;
   let fixture: ComponentFixture<NewExpenseComponent>;
-  let mockExpenseService: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+  let mockExpenseService: {
+    create: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    getById: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+  };
   let router: Router;
+  let splitService: { preview: ReturnType<typeof vi.fn>; addPreview: ReturnType<typeof vi.fn>; groups: ReturnType<typeof signal<SplitGroup[]>> };
 
   const validExpenseResponse = {
     id: 'uuid-1',
@@ -27,15 +34,20 @@ describe('NewExpenseComponent', () => {
 
   beforeEach(async () => {
     mockExpenseService = { create: vi.fn(), list: vi.fn(), getById: vi.fn(), update: vi.fn() };
+    splitService = { preview: vi.fn(), addPreview: vi.fn().mockReturnValue('split-1'), groups: signal<SplitGroup[]>([]) };
 
     await TestBed.configureTestingModule({
       imports: [NewExpenseComponent],
       providers: [
         provideRouter([]),
         { provide: ExpenseService, useValue: mockExpenseService },
+        { provide: PeerSplitsService, useValue: splitService },
         { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
         { provide: BudgetStore, useValue: { currency: signal('INR'), load: vi.fn() } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(null) } } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(null) } } },
+        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -47,8 +59,121 @@ describe('NewExpenseComponent', () => {
     fixture.detectChanges();
   });
 
+  it('previews a split from the existing form without saving a personal expense', () => {
+    component['isSplitMode'] = true;
+    component['amount'] = 1800 as unknown as string;
+    component['groupName'] = 'Bowling';
+    component['splitPeople'][1].name = 'Harsha';
+    splitService.preview.mockReturnValue(
+      of({
+        totalAmountMinor: 180000,
+        currency: 'INR',
+        allocations: [],
+        balances: [],
+        obligations: [],
+      }),
+    );
+
+    fixture.detectChanges();
+    const addButton = fixture.nativeElement.querySelector('.split-people .split-add-action button[type="submit"]') as HTMLButtonElement;
+    expect(addButton.textContent?.trim()).toBe('Add');
+    expect(fixture.nativeElement.querySelector('.entry-actions')).toBeNull();
+
+    component['saveExpense']();
+
+    expect(splitService.preview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalAmountMinor: 180000,
+        participants: [
+          { id: 'self', displayName: 'You' },
+          { id: component['splitPeople'][1].id, displayName: 'Harsha' },
+        ],
+        contributions: [{ participantId: 'self', amountMinor: 180000 }],
+      }),
+    );
+    expect(mockExpenseService.create).not.toHaveBeenCalled();
+    expect(splitService.addPreview).toHaveBeenCalledWith(
+      'Bowling',
+      expect.any(Array),
+      expect.any(Object),
+      expect.objectContaining({ category: 'Bowling', merchant: null }),
+    );
+    expect(router.navigate).toHaveBeenCalledWith(['/peer-splits', 'split-1']);
+  });
+
+  it('adds multiple people from a recent group in one confirmation', () => {
+    component['isSplitMode'] = true;
+    splitService.groups.set([{
+      id: 'recent-1', title: 'Weekend trip', example: false,
+      participants: [
+        { id: 'self', displayName: 'You' },
+        { id: 'friend-1', displayName: 'Harsha' },
+        { id: 'friend-2', displayName: 'Khyathi' },
+      ],
+      result: { totalAmountMinor: 300000, currency: 'INR', allocations: [], balances: [], obligations: [] },
+    }]);
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('#add-people-trigger') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const group = [...fixture.nativeElement.querySelectorAll('.people-picker-row')]
+      .find((row: Element) => row.textContent?.includes('Weekend trip')) as HTMLButtonElement;
+    group.click();
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.people-picker-footer button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(component['splitPeople'].map((person) => person.name)).toEqual(['You', 'Harsha', 'Khyathi']);
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('adds a typed name without a saved contact', async () => {
+    component['isSplitMode'] = true;
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('#add-people-trigger') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const search = fixture.nativeElement.querySelector('#people-search') as HTMLInputElement;
+    search.value = 'Jaswanth';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.people-picker-create') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.people-picker-footer button') as HTMLButtonElement).click();
+
+    expect(component['splitPeople'][1].name).toBe('Jaswanth');
+  });
+
+  it('shows ten people in seven-person pages and calculates shares across pages', () => {
+    component['isSplitMode'] = true;
+    component['amount'] = 5000 as unknown as string;
+    component['splitPeople'] = [
+      { id: 'self', name: 'You', paid: '', fixed: '' },
+      ...Array.from({ length: 9 }, (_, index) => ({ id: `person-${index + 1}`, name: `Person ${index + 1}`, paid: '0', fixed: '0' })),
+    ];
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('.split-person-row')).toHaveLength(7);
+    expect(fixture.nativeElement.querySelector('.split-people-pagination').textContent).toContain('1–7 of 10');
+    (fixture.nativeElement.querySelector('button[aria-label="Next participants"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.split-person-row')).toHaveLength(3);
+    expect(fixture.nativeElement.querySelector('.split-people-pagination').textContent).toContain('8–10 of 10');
+    expect(component['estimatedShare'](component['splitPeople'][9])).toContain('500.00');
+
+    const amountTab = [...fixture.nativeElement.querySelectorAll('[role="tab"]')]
+      .find((tab: Element) => tab.textContent?.includes('By amount')) as HTMLButtonElement;
+    amountTab.click();
+    fixture.detectChanges();
+    component['splitPeople'][9].fixed = '1000';
+    expect(component['estimatedShare'](component['splitPeople'][9])).toContain('1,000.00');
+    expect(component['estimatedShare'](component['splitPeople'][0])).toContain('444.44');
+  });
+
   it('lets the user select income and resets to an income category', () => {
-    const typeSelect = fixture.nativeElement.querySelector('#transaction-type') as HTMLSelectElement;
+    const typeSelect = fixture.nativeElement.querySelector(
+      '#transaction-type',
+    ) as HTMLSelectElement;
 
     expect(typeSelect.value).toBe('expense');
     typeSelect.value = 'income';
@@ -76,11 +201,14 @@ describe('NewExpenseComponent', () => {
       expect(mockExpenseService.create).not.toHaveBeenCalled();
     });
 
-    it('does not call API when merchant is blank', () => {
+    it('allows an expense without a merchant', () => {
+      mockExpenseService.create.mockReturnValue(of(validExpenseResponse));
       component['amount'] = '500';
       component['merchant'] = '   ';
       component['saveExpense']();
-      expect(mockExpenseService.create).not.toHaveBeenCalled();
+      expect(mockExpenseService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ merchant: '' }),
+      );
     });
   });
 
@@ -119,11 +247,13 @@ describe('NewExpenseComponent', () => {
     });
 
     it('sends an explicit income type and category', () => {
-      mockExpenseService.create.mockReturnValue(of({
-        ...validExpenseResponse,
-        type: 'income',
-        category: 'Salary',
-      }));
+      mockExpenseService.create.mockReturnValue(
+        of({
+          ...validExpenseResponse,
+          type: 'income',
+          category: 'Salary',
+        }),
+      );
       component['type'] = 'income';
       component['category'] = 'Salary';
       component['amount'] = '50000';
@@ -228,7 +358,12 @@ describe('NewExpenseComponent — edit mode', () => {
   };
 
   let component: NewExpenseComponent;
-  let mockExpenseService: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+  let mockExpenseService: {
+    create: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    getById: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+  };
   let router: Router;
 
   async function setupEditMode(id: string, updateMock?: ReturnType<typeof vi.fn>) {
@@ -246,7 +381,10 @@ describe('NewExpenseComponent — edit mode', () => {
         { provide: ExpenseService, useValue: mockExpenseService },
         { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
         { provide: BudgetStore, useValue: { currency: signal('INR'), load: vi.fn() } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(id) } } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue(id) } } },
+        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -306,7 +444,10 @@ describe('NewExpenseComponent — edit mode', () => {
   });
 
   it('sets errorMessage when update fails', async () => {
-    await setupEditMode('uuid-edit-1', vi.fn().mockReturnValue(throwError(() => new Error('Server error'))));
+    await setupEditMode(
+      'uuid-edit-1',
+      vi.fn().mockReturnValue(throwError(() => new Error('Server error'))),
+    );
 
     component['saveExpense']();
 
@@ -315,7 +456,10 @@ describe('NewExpenseComponent — edit mode', () => {
   });
 
   it('resets isSubmitting to false after update failure', async () => {
-    await setupEditMode('uuid-edit-1', vi.fn().mockReturnValue(throwError(() => new Error('Server error'))));
+    await setupEditMode(
+      'uuid-edit-1',
+      vi.fn().mockReturnValue(throwError(() => new Error('Server error'))),
+    );
 
     component['saveExpense']();
 
@@ -338,7 +482,10 @@ describe('NewExpenseComponent — edit mode', () => {
         { provide: ExpenseService, useValue: mockExpenseService },
         { provide: FinanceMetricsStore, useValue: { refresh: vi.fn() } },
         { provide: BudgetStore, useValue: { currency: signal('INR'), load: vi.fn() } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue('bad-id') } } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue('bad-id') } } },
+        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();

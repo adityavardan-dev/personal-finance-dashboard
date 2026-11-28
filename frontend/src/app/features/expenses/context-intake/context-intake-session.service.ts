@@ -2,7 +2,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { AuthService } from '../../auth/auth';
 
-export const INTAKE_SESSION_TTL_MS = 30 * 60 * 1000;
+export const INTAKE_SESSION_TTL_MS = 5 * 60 * 1000;
 
 export interface CachedConversation<T> {
   conversationId: string;
@@ -30,7 +30,8 @@ export class ContextIntakeSessionService {
 
     try {
       const cached = JSON.parse(raw) as CachedConversation<T>;
-      if (Date.parse(cached.expiresAt) <= Date.now()) {
+      const lastActivityAt = Date.parse(cached.lastActivityAt);
+      if (!Number.isFinite(lastActivityAt) || lastActivityAt + INTAKE_SESSION_TTL_MS <= Date.now()) {
         this.clear();
         return null;
       }

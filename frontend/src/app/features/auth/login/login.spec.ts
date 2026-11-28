@@ -58,4 +58,34 @@ describe('LoginComponent', () => {
     expect(submit.disabled).toBe(false);
     expect(fixture.nativeElement.querySelector('form').getAttribute('aria-busy')).toBe('false');
   });
+
+  it('offers and sends a confirmation resend after an unconfirmed login', async () => {
+    const email = fixture.nativeElement.querySelector('#email') as HTMLInputElement;
+    const password = fixture.nativeElement.querySelector('#password') as HTMLInputElement;
+    email.value = 'pending@example.com';
+    email.dispatchEvent(new Event('input'));
+    password.value = 'password123';
+    password.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    http.expectOne((req) => req.url.endsWith('/auth/login')).flush(
+      { message: 'Confirm your email before signing in.', code: 'EMAIL_NOT_CONFIRMED' },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const resend = fixture.nativeElement.querySelector('#resend-confirmation') as HTMLButtonElement;
+    expect(resend).toBeTruthy();
+    resend.click();
+    http.expectOne((req) => req.url.endsWith('/auth/resend-confirmation')).flush({
+      message: 'If an unconfirmed account exists, a new confirmation email has been sent.',
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#confirmation-message')?.textContent)
+      .toContain('new confirmation email');
+  });
 });

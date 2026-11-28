@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
@@ -50,14 +53,14 @@ describe('ParserController (e2e)', () => {
     await Promise.all([guardedApp.close(), authenticatedApp.close()]);
   });
 
-  it('rejects unauthenticated financial text', async () => {
+  it('rejects unauthenticated financial text' /** Checks that rejects unauthenticated financial text. */, async () => {
     await request(guardedApp.getHttpServer())
       .post('/parser/parse')
       .send({ text: 'Lunch INR 200 today' })
       .expect(401);
   });
 
-  it('returns a ready authenticated draft without persistence', async () => {
+  it('returns a ready authenticated draft without persistence' /** Checks that returns a ready authenticated draft without persistence. */, async () => {
     const response = await request(authenticatedApp.getHttpServer())
       .post('/parser/parse')
       .send({ text: 'Lunch at Bistro USD 20 on 2026-11-09' })
@@ -77,7 +80,7 @@ describe('ParserController (e2e)', () => {
     expect(expenseCreateSpy).not.toHaveBeenCalled();
   });
 
-  it('returns date and split clarification for vague shared spending', async () => {
+  it('returns date and split clarification for vague shared spending' /** Checks that returns date and split clarification for vague shared spending. */, async () => {
     const response = await request(authenticatedApp.getHttpServer())
       .post('/parser/parse')
       .send({
@@ -97,7 +100,7 @@ describe('ParserController (e2e)', () => {
     expect(expenseCreateSpy).not.toHaveBeenCalled();
   });
 
-  it('resolves sub-day relative time in the user timezone', async () => {
+  it('resolves sub-day relative time in the user timezone' /** Checks that resolves sub-day relative time in the user timezone. */, async () => {
     const response = await request(authenticatedApp.getHttpServer())
       .post('/parser/parse')
       .send({
@@ -120,7 +123,7 @@ describe('ParserController (e2e)', () => {
     expect(expenseCreateSpy).not.toHaveBeenCalled();
   });
 
-  it('rejects an invalid IANA timezone', async () => {
+  it('rejects an invalid IANA timezone' /** Checks that rejects an invalid IANA timezone. */, async () => {
     await request(authenticatedApp.getHttpServer())
       .post('/parser/parse')
       .send({
@@ -131,7 +134,7 @@ describe('ParserController (e2e)', () => {
       .expect(400);
   });
 
-  it('returns multiple non-persisted drafts with a shared trailing date', async () => {
+  it('returns multiple non-persisted drafts with a shared trailing date' /** Checks that returns multiple non-persisted drafts with a shared trailing date. */, async () => {
     const response = await request(authenticatedApp.getHttpServer())
       .post('/parser/parse-batch')
       .send({
@@ -153,7 +156,7 @@ describe('ParserController (e2e)', () => {
     expect(expenseCreateSpy).not.toHaveBeenCalled();
   });
 
-  it('inherits a repeated expense verb for a shortened batch clause', async () => {
+  it('inherits a repeated expense verb for a shortened batch clause' /** Checks that inherits a repeated expense verb for a shortened batch clause. */, async () => {
     const response = await request(authenticatedApp.getHttpServer())
       .post('/parser/parse-batch')
       .send({

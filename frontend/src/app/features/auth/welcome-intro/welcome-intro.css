@@ -1,0 +1,42 @@
+:host { display: contents; }
+.xp-welcome {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  color: var(--xp-ink);
+  background: var(--xp-surface);
+  transform-origin: 50% 48%;
+  animation: xp-welcome-in 420ms ease-out both;
+}
+.xp-welcome--revealing { animation: xp-welcome-out 480ms cubic-bezier(.2,.8,.2,1) both; }
+.xp-welcome__ambient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 37%, var(--xp-action-soft), transparent 57%);
+  opacity: .62;
+}
+.xp-welcome__content { position: relative; width: min(100% - 32px, 480px); text-align: center; }
+.xp-welcome__brand { color: var(--xp-action-hover); font-size: 11px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.xp-welcome__art { position: relative; width: min(100%, 440px); margin: 18px auto 0; aspect-ratio: 440 / 230; }
+.xp-welcome__gesture { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; mask-image: linear-gradient(to right, #000 0%, #000 68%, transparent 94%); filter: drop-shadow(0 16px 22px #092d2638); animation: xp-card-swipe 1380ms cubic-bezier(.24,.75,.23,1) both; }
+.dark .xp-welcome__gesture { filter: brightness(.84) saturate(.86) drop-shadow(0 20px 26px #0007); }
+.xp-welcome__approval { min-height: 28px; color: var(--xp-action-hover); font-size: clamp(16px, 4vw, 20px); font-weight: 750; letter-spacing: -.02em; opacity: 0; transform: translateY(9px); animation: xp-approval 480ms 1260ms ease-out both; }
+.xp-welcome__check { display: inline-grid; width: 22px; height: 22px; margin-right: 7px; place-items: center; border-radius: 50%; background: var(--xp-action); color: var(--xp-surface); font-size: 13px; vertical-align: 1px; }
+.xp-welcome__progress { position: relative; width: 78px; height: 78px; margin: 17px auto 0; display: grid; place-items: center; font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 700; }
+.xp-welcome__progress svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); fill: none; stroke-width: 3; }
+.xp-welcome__track { stroke: var(--xp-border); }.xp-welcome__meter { stroke: var(--xp-action); stroke-linecap: round; transition: stroke-dasharray 48ms linear; }
+.xp-welcome__caption { margin: 9px 0 0; color: var(--xp-muted); font-size: 12px; }
+@keyframes xp-welcome-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes xp-welcome-out { to { opacity: 0; transform: scale(1.12); visibility: hidden; } }
+@keyframes xp-card-swipe { 0% { transform: translate(-48px, 16px) rotate(-8deg); } 55% { transform: translate(8px, 0) rotate(0); } 100% { transform: translate(20px, -2px) rotate(0); } }
+@keyframes xp-approval { to { opacity: 1; transform: translateY(0); } }
+@media (prefers-color-scheme: dark) { .xp-welcome__gesture { filter: brightness(.84) saturate(.86) drop-shadow(0 20px 26px #0007); } }
+@media (max-width: 600px) { .xp-welcome__art { width: calc(100% - 20px); }.xp-welcome__gesture { animation-name: xp-card-swipe-mobile; } }
+@media (max-width: 380px) { .xp-welcome__content { width: min(100% - 20px, 440px); }.xp-welcome__art { margin-top: 8px; }.xp-welcome__progress { width: 65px; height: 65px; margin-top: 10px; } }
+@keyframes xp-card-swipe-mobile { 0% { transform: translate(-22px, 10px) rotate(-7deg); } 55% { transform: translate(-5px, 0) rotate(0); } 100% { transform: translate(0, -2px) rotate(0); } }
+@media (max-height: 480px) { .xp-welcome__content { transform: scale(.76); }.xp-welcome__art { margin-top: 2px; }.xp-welcome__progress { margin-top: 4px; } }
+@media (prefers-reduced-motion: reduce) { .xp-welcome, .xp-welcome * { animation: none !important; transition: none !important; } }

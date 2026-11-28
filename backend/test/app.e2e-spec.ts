@@ -1,3 +1,6 @@
+/**
+ * Purpose: Tests the behavior of the related backend feature.
+ */
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -16,7 +19,7 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('/ (GET)' /** Checks that / (GET). */, () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)

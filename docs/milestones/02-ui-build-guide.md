@@ -260,3 +260,16 @@ Generate code.
 ↓
 
 Explain why the changes follow the Design System.
+
+## AI-powered product UI rules
+
+AI features must feel like reviewable assistance, not automatic control.
+
+- Show the extracted facts and the generated suggestion separately.
+- Keep all AI-extracted transaction fields editable.
+- Require explicit confirmation before saving any transaction, split, settlement, or budget change.
+- Provide visible loading, unavailable, invalid-response, retry, and manual-entry states.
+- Label AI-generated text clearly and avoid presenting it as authoritative financial advice.
+- Do not expose provider names, API keys, or raw model errors in the user interface.
+- Preserve the existing mobile-first layout and accessibility requirements for conversational intake, draft accordions, peer balances, and insight explanations.
+- When an AI response is unavailable, the same task must remain possible through deterministic parsing or a structured manual form.

@@ -1,0 +1,142 @@
+[
+  {
+    "id": "bowling-fixed-plus-remainder",
+    "description": "Self paid INR 1800; Jaswanth owes INR 400; Self and Harsha split the remainder.",
+    "input": {
+      "totalAmountMinor": 180000,
+      "currency": "INR",
+      "participants": [
+        { "id": "self", "displayName": "Self" },
+        { "id": "jaswanth", "displayName": "Jaswanth" },
+        { "id": "harsha", "displayName": "Harsha" }
+      ],
+      "contributions": [{ "participantId": "self", "amountMinor": 180000 }],
+      "allocationRules": [
+        {
+          "kind": "FIXED_AMOUNT",
+          "participantId": "jaswanth",
+          "amountMinor": 40000
+        },
+        {
+          "kind": "EQUAL_REMAINDER",
+          "participantIds": ["self", "harsha"]
+        }
+      ]
+    },
+    "expected": {
+      "allocations": {
+        "self": 70000,
+        "jaswanth": 40000,
+        "harsha": 70000
+      },
+      "balances": {
+        "self": 110000,
+        "jaswanth": -40000,
+        "harsha": -70000
+      },
+      "obligations": [
+        {
+          "fromParticipantId": "jaswanth",
+          "toParticipantId": "self",
+          "amountMinor": 40000
+        },
+        {
+          "fromParticipantId": "harsha",
+          "toParticipantId": "self",
+          "amountMinor": 70000
+        }
+      ]
+    }
+  },
+  {
+    "id": "equal-three-way-rounding",
+    "description": "Self paid INR 1000 and three people split equally; the payer receives the rounding paisa.",
+    "input": {
+      "totalAmountMinor": 100000,
+      "currency": "INR",
+      "participants": [
+        { "id": "self", "displayName": "Self" },
+        { "id": "a", "displayName": "A" },
+        { "id": "b", "displayName": "B" }
+      ],
+      "contributions": [{ "participantId": "self", "amountMinor": 100000 }],
+      "allocationRules": [
+        {
+          "kind": "EQUAL_REMAINDER",
+          "participantIds": ["self", "a", "b"]
+        }
+      ]
+    },
+    "expected": {
+      "allocations": {
+        "self": 33334,
+        "a": 33333,
+        "b": 33333
+      },
+      "balances": {
+        "self": 66666,
+        "a": -33333,
+        "b": -33333
+      },
+      "obligations": [
+        {
+          "fromParticipantId": "a",
+          "toParticipantId": "self",
+          "amountMinor": 33333
+        },
+        {
+          "fromParticipantId": "b",
+          "toParticipantId": "self",
+          "amountMinor": 33333
+        }
+      ]
+    }
+  },
+  {
+    "id": "multiple-payers",
+    "description": "A paid INR 600, B paid INR 400, and A/B/C split INR 1000 equally.",
+    "input": {
+      "totalAmountMinor": 100000,
+      "currency": "INR",
+      "participants": [
+        { "id": "a", "displayName": "A" },
+        { "id": "b", "displayName": "B" },
+        { "id": "c", "displayName": "C" }
+      ],
+      "contributions": [
+        { "participantId": "a", "amountMinor": 60000 },
+        { "participantId": "b", "amountMinor": 40000 }
+      ],
+      "allocationRules": [
+        {
+          "kind": "EQUAL_REMAINDER",
+          "participantIds": ["a", "b", "c"]
+        }
+      ]
+    },
+    "expected": {
+      "allocations": {
+        "a": 33334,
+        "b": 33333,
+        "c": 33333
+      },
+      "balances": {
+        "a": 26666,
+        "b": 6667,
+        "c": -33333
+      },
+      "obligations": [
+        {
+          "fromParticipantId": "c",
+          "toParticipantId": "a",
+          "amountMinor": 26666
+        },
+        {
+          "fromParticipantId": "c",
+          "toParticipantId": "b",
+          "amountMinor": 6667
+        }
+      ]
+    }
+  }
+]

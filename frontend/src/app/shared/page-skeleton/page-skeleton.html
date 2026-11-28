@@ -1,0 +1,64 @@
+<div class="skeleton-root" role="status" aria-live="polite" aria-busy="true">
+  <span class="sr-only">{{ label() }}</span>
+
+  @if (kind() === 'auth') {
+    <main class="auth-skeleton" aria-hidden="true">
+      <div class="auth-stack">
+        <span class="sk sk-logo"></span><span class="sk sk-kicker"></span>
+        <span class="sk sk-auth-title"></span><span class="sk sk-auth-copy"></span>
+        <section class="sk-card auth-card-skeleton">
+          @for (field of [1, 2, 3]; track field) {
+            <div class="field-skeleton"><span class="sk sk-label"></span><span class="sk sk-input"></span></div>
+          }
+          <span class="sk sk-button"></span>
+        </section>
+      </div>
+    </main>
+  } @else {
+    <div class="app-frame" aria-hidden="true">
+      <header class="app-header-skeleton"><span class="sk sk-brand"></span><span class="sk sk-header-control"></span></header>
+      <div class="app-grid">
+        <aside class="sidebar-skeleton">
+          @for (item of [1, 2, 3, 4, 5]; track item) { <span class="sk sk-nav"></span> }
+        </aside>
+        <main class="page-content">
+          @switch (kind()) {
+            @case ('dashboard') {
+              <section class="sk-card hero-skeleton"><span class="sk sk-kicker"></span><span class="sk sk-heading-wide"></span><span class="sk sk-copy"></span><span class="sk sk-stat"></span></section>
+              <section class="sk-card budget-skeleton"><div><span class="sk sk-kicker"></span><span class="sk sk-title"></span><span class="sk sk-copy"></span></div><span class="sk sk-input"></span></section>
+              <span class="sk sk-banner"></span>
+              <div class="dashboard-lower"><section class="sk-card chart-skeleton"><span class="sk sk-title"></span><div class="chart-bars">@for (bar of [48, 72, 38, 86, 58, 66]; track $index) { <i class="sk" [style.height.%]="bar"></i> }</div></section><section class="sk-card split-promo-skeleton"><span class="sk sk-kicker"></span><span class="sk sk-heading-wide"></span><span class="sk sk-copy"></span><span class="sk sk-button-short"></span></section></div>
+            }
+            @case ('insights') {
+              <div class="page-heading-skeleton"><div><span class="sk sk-kicker"></span><span class="sk sk-heading"></span><span class="sk sk-copy"></span></div><span class="sk sk-button-short"></span></div>
+              <section class="sk-card gauge-skeleton"><div class="gauge-circle sk"></div><div class="gauge-details-skeleton"><span class="sk sk-title"></span><span class="sk sk-copy"></span><div class="stats-row">@for (stat of [1, 2, 3]; track stat) { <span class="sk sk-stat-card"></span> }</div></div></section>
+              <div class="two-panel-grid"><section class="sk-card panel-skeleton"><span class="sk sk-title"></span><span class="sk sk-chart"></span></section><section class="sk-card panel-skeleton"><span class="sk sk-title"></span>@for (row of [1, 2, 3, 4]; track row) { <span class="sk sk-list-line"></span> }</section></div>
+            }
+            @case ('history') {
+              <div class="page-heading-skeleton"><div><span class="sk sk-kicker"></span><span class="sk sk-heading"></span><span class="sk sk-copy"></span></div><span class="sk sk-button-short"></span></div>
+              <section class="sk-card history-donut-skeleton"><span class="sk sk-donut"></span><div class="legend-skeleton">@for (row of [1, 2, 3, 4]; track row) { <span class="sk sk-list-line"></span> }</div></section>
+              <div class="summary-grid">@for (card of [1, 2, 3, 4]; track card) { <span class="sk sk-summary-card"></span> }</div>
+              <span class="sk sk-search"></span>
+              <section class="sk-card list-skeleton"><span class="sk sk-title"></span>@for (row of [1, 2, 3, 4, 5]; track row) { <div class="transaction-row"><span class="sk sk-avatar"></span><span class="sk sk-row-main"></span><span class="sk sk-amount"></span></div> }</section>
+            }
+            @case ('profile') {
+              <div class="narrow-page"><div><span class="sk sk-kicker"></span><span class="sk sk-heading"></span><span class="sk sk-copy"></span></div><section class="sk-card identity-skeleton"><span class="sk sk-profile-avatar"></span><div><span class="sk sk-title"></span><span class="sk sk-copy"></span></div></section><section class="sk-card form-skeleton"><span class="sk sk-title"></span><span class="sk sk-copy"></span><span class="sk sk-input"></span><span class="sk sk-list-line"></span><span class="sk sk-button-short"></span></section><span class="sk sk-danger-card"></span></div>
+            }
+            @case ('splits') {
+              <div class="page-heading-skeleton"><div><span class="sk sk-kicker"></span><span class="sk sk-heading"></span></div><span class="sk sk-button-short"></span></div><span class="sk sk-banner"></span><div class="two-panel-grid">@for (card of [1, 2]; track card) { <section class="sk-card kpi-skeleton"><span class="sk sk-title"></span><span class="sk sk-stat"></span><span class="sk sk-chart"></span></section> }</div><section class="sk-card list-skeleton"><span class="sk sk-title"></span><span class="sk sk-search"></span>@for (row of [1, 2, 3, 4]; track row) { <div class="transaction-row"><span class="sk sk-avatar"></span><span class="sk sk-row-main"></span><span class="sk sk-amount"></span></div> }</section>
+            }
+            @case ('editor') {
+              <div class="narrow-page"><div class="page-heading-skeleton"><div><span class="sk sk-kicker"></span><span class="sk sk-heading"></span><span class="sk sk-copy"></span></div><span class="sk sk-button-short"></span></div><section class="sk-card form-skeleton">@for (field of [1, 2, 3, 4]; track field) { <div class="field-skeleton"><span class="sk sk-label"></span><span class="sk sk-input"></span></div> }<span class="sk sk-button"></span></section></div>
+            }
+            @case ('intake') {
+              <div class="page-heading-skeleton"><div><span class="sk sk-kicker"></span><span class="sk sk-heading"></span><span class="sk sk-copy"></span></div><span class="sk sk-button-short"></span></div><section class="sk-card intake-skeleton"><div class="conversation-skeleton"><span class="sk sk-title"></span><div class="message left sk"></div><div class="message right sk"></div><div class="message left short sk"></div><span class="sk sk-chat-input"></span></div><aside class="draft-skeleton"><span class="sk sk-title"></span>@for (card of [1, 2]; track card) { <span class="sk sk-draft-card"></span> }</aside></section>
+            }
+            @default {
+              <div class="narrow-page"><span class="sk sk-heading"></span><section class="sk-card detail-skeleton"><span class="sk sk-title"></span><span class="sk sk-stat"></span>@for (row of [1, 2, 3, 4]; track row) { <span class="sk sk-list-line"></span> }</section></div>
+            }
+          }
+        </main>
+      </div>
+    </div>
+  }
+</div>

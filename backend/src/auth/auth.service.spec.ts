@@ -1,131 +1,104 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+/** Verifies that Nest auth delegates credentials to Supabase Auth. */
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UsersService, User } from '../users/users.service';
-
-const existingUser: User = {
-  id: 7,
-  username: 'Existing User',
-  email: 'existing@example.com',
-  password: 'password123',
-};
+import { SupabaseRequestError, SupabaseService } from '../supabase/supabase.service';
 
 describe('AuthService', () => {
-  let service: AuthService;
-  let usersService: {
-    findByEmail: jest.Mock;
-    normalizeEmail: jest.Mock;
-    create: jest.Mock;
+  const supabase = {
+    signUp: jest.fn(),
+    signInWithPassword: jest.fn(),
+    resendSignupConfirmation: jest.fn(),
   };
-  let jwtService: { signAsync: jest.Mock };
+  let service: AuthService;
 
-  beforeEach(async () => {
-    usersService = {
-      findByEmail: jest.fn(),
-      normalizeEmail: jest.fn((email: string) => email.trim().toLowerCase()),
-      create: jest.fn(),
-    };
-    jwtService = { signAsync: jest.fn().mockResolvedValue('test-token') };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        { provide: JwtService, useValue: jwtService },
-        { provide: UsersService, useValue: usersService },
-      ],
-    }).compile();
-
-    service = module.get<AuthService>(AuthService);
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new AuthService(supabase as unknown as SupabaseService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
-  it('signs up a new persisted user', () => {
-    usersService.findByEmail.mockReturnValue(undefined);
-    usersService.create.mockReturnValue({
-      id: 8,
-      username: 'New User',
-      email: 'new@example.com',
-      password: 'password123',
-    });
-
-    const result = service.signup({
-      username: 'New User',
+  it('creates a fresh Supabase account with normalized identity fields', async () => {
+    supabase.signUp.mockResolvedValue({ user: { id: 'user-1', email: 'new@example.com' } });
+    await expect(service.signup({
+      username: ' New User ',
       email: ' NEW@EXAMPLE.COM ',
       password: 'password123',
-    });
-
-    expect(usersService.normalizeEmail).toHaveBeenCalledWith(' NEW@EXAMPLE.COM ');
-    expect(usersService.findByEmail).toHaveBeenCalledWith('new@example.com');
-    expect(usersService.create).toHaveBeenCalledWith('New User', 'new@example.com', 'password123');
-    expect(result).toEqual({
+    })).resolves.toEqual({
       message: 'Signup successful',
       email: 'new@example.com',
       username: 'New User',
     });
-    expect(result).not.toHaveProperty('password');
+    expect(supabase.signUp).toHaveBeenCalledWith('New User', 'new@example.com', 'password123');
   });
 
-  it('rejects duplicate email during signup', () => {
-    usersService.findByEmail.mockReturnValue(existingUser);
-
-    expect(() =>
-      service.signup({
-        username: 'Another User',
-        email: 'EXISTING@example.com',
-        password: 'password123',
-      }),
-    ).toThrow(ConflictException);
-
-    expect(usersService.create).not.toHaveBeenCalled();
+  it('maps a duplicate Supabase signup to a conflict', async () => {
+    supabase.signUp.mockRejectedValue(new SupabaseRequestError(422, 'already registered'));
+    await expect(service.signup({
+      username: 'User', email: 'user@example.com', password: 'password123',
+    })).rejects.toThrow(ConflictException);
   });
 
-  it('authenticates a persisted user and signs the persisted identity into the JWT', async () => {
-    usersService.findByEmail.mockReturnValue(existingUser);
+  it('keeps non-duplicate signup validation errors distinct', async () => {
+    supabase.signUp.mockRejectedValue(new SupabaseRequestError(400, 'Email address is invalid'));
+    await expect(service.signup({
+      username: 'User', email: 'user@example.com', password: 'password123',
+    })).rejects.toThrow(BadRequestException);
+  });
 
-    const result = await service.login({
-      email: ' EXISTING@example.com ',
-      password: 'password123',
-    });
+  it('returns a useful response when Supabase signup is rate limited', async () => {
+    supabase.signUp.mockRejectedValue(new SupabaseRequestError(429, 'Email rate limit exceeded'));
+    await expect(service.signup({
+      username: 'User', email: 'user@example.com', password: 'password123',
+    })).rejects.toMatchObject({ status: 429 });
+  });
 
-    expect(usersService.findByEmail).toHaveBeenCalledWith('existing@example.com');
-    expect(jwtService.signAsync).toHaveBeenCalledWith({
-      sub: existingUser.id,
-      email: existingUser.email,
+  it('returns the Supabase access token used by the frontend', async () => {
+    supabase.signInWithPassword.mockResolvedValue({
+      access_token: 'access-token',
+      user: { id: 'user-1', email: 'user@example.com' },
     });
-    expect(result).toEqual({
+    await expect(service.login({
+      email: ' USER@EXAMPLE.COM ', password: 'password123',
+    })).resolves.toEqual({
       message: 'Login successful',
-      email: existingUser.email,
-      accessToken: 'test-token',
+      email: 'user@example.com',
+      accessToken: 'access-token',
     });
   });
 
-  it('rejects an unknown login email', async () => {
-    usersService.findByEmail.mockReturnValue(undefined);
-
-    await expect(
-      service.login({ email: 'missing@example.com', password: 'password123' }),
-    ).rejects.toThrow(UnauthorizedException);
-    expect(jwtService.signAsync).not.toHaveBeenCalled();
+  it('maps invalid Supabase credentials to an unauthorized response', async () => {
+    supabase.signInWithPassword.mockRejectedValue(new SupabaseRequestError(400, 'invalid'));
+    await expect(service.login({
+      email: 'user@example.com', password: 'wrong-password',
+    })).rejects.toThrow(UnauthorizedException);
   });
 
-  it('rejects an invalid password', async () => {
-    usersService.findByEmail.mockReturnValue(existingUser);
-
-    await expect(
-      service.login({ email: existingUser.email, password: 'wrong-password' }),
-    ).rejects.toThrow(UnauthorizedException);
-    expect(jwtService.signAsync).not.toHaveBeenCalled();
+  it('keeps an unconfirmed login distinct so the UI can offer resend', async () => {
+    supabase.signInWithPassword.mockRejectedValue(
+      new SupabaseRequestError(400, 'Email not confirmed', 'email_not_confirmed'),
+    );
+    await expect(service.login({
+      email: 'user@example.com', password: 'password123',
+    })).rejects.toThrow(ForbiddenException);
   });
 
-  it('does not authenticate the former hardcoded admin when it is not persisted', async () => {
-    usersService.findByEmail.mockReturnValue(undefined);
+  it('resends a confirmation email using a normalized address', async () => {
+    supabase.resendSignupConfirmation.mockResolvedValue({});
+    await expect(service.resendConfirmation({ email: ' USER@EXAMPLE.COM ' })).resolves.toEqual({
+      message: 'If an unconfirmed account exists, a new confirmation email has been sent.',
+    });
+    expect(supabase.resendSignupConfirmation).toHaveBeenCalledWith('user@example.com');
+  });
 
-    await expect(
-      service.login({ email: 'admin@test.com', password: 'password123' }),
-    ).rejects.toThrow(UnauthorizedException);
+  it('reports confirmation email rate limits without confirming or signing in the user', async () => {
+    supabase.resendSignupConfirmation.mockRejectedValue(
+      new SupabaseRequestError(429, 'Email rate limit exceeded', 'over_email_send_rate_limit'),
+    );
+    await expect(service.resendConfirmation({ email: 'user@example.com' }))
+      .rejects.toMatchObject({ status: 429 });
   });
 });

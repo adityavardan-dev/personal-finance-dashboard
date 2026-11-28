@@ -1,5 +1,15 @@
+/**
+ * Purpose: Defines and validates the data shape accepted or returned by this backend feature.
+ */
 import { Type } from 'class-transformer';
-import { IsArray, IsEnum, IsNumber, IsPositive, ValidateIf, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsNumber,
+  IsPositive,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
 import { CurrencyCode } from '../currency-code';
 import { CategoryBudgetLimitDto } from './category-budget-limit.dto';
 
