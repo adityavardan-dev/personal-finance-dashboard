@@ -57,6 +57,26 @@ The package does not read environment variables itself. NestJS, Fastify,
 Express, a CLI, a worker, or a test can obtain configuration however it wants
 and pass it to the constructor.
 
+## How another application uses this provider
+
+The provider is only the model connection. A consuming application still
+creates the domain-specific pieces:
+
+1. Define the input the model should understand.
+2. Define the JSON proposal the model should return.
+3. Write a prompt with the application's instructions and examples.
+4. Pass a JSON schema to `generateStructured`.
+5. Validate the parsed result with application rules.
+6. Decide whether to show it, ask for clarification, or execute it.
+
+For example, a support application might request `topic` and `priority`, while
+an expense application might request `segments`, `amount`, and `date`. The
+provider does not know or enforce either application's business meaning.
+
+Use `@adityavardan/semantic-core` when you want the common provider execution,
+fallback, and accepted/rejected/unavailable result envelope around this
+transport.
+
 ## Structured-output example
 
 ```ts

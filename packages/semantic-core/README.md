@@ -21,6 +21,61 @@ more AI providers:
 The model proposes meaning. Your application remains responsible for deciding
 whether that proposal is valid and whether any external action should happen.
 
+## Using it in different applications
+
+The package does not contain one universal set of fields such as
+`allowedCategories` or `allowedPriorities`. Each application defines the
+fields and rules that make sense for its own domain.
+
+| Application | Input | Proposal | Typical validation |
+| --- | --- | --- | --- |
+| Expense | A natural-language expense message | Amounts, dates, categories, participants | Amounts came from the message; no participant or transaction was invented |
+| Customer support | A customer message | Topic, priority, sentiment, suggested action | Topic and priority are allowed; required case fields exist |
+| HR assistant | An employee request | Request type, urgency, department | No unsupported decision or sensitive action was invented |
+
+The engine is the same in all three cases. The application changes the input
+type, proposal type, provider adapter, prompt, and domain validator.
+
+## What every consuming AI application should provide
+
+Even a small application should provide:
+
+1. An input type describing what the model receives.
+2. A proposal type describing the output the application expects.
+3. A provider adapter that calls the chosen model.
+4. A prompt and structured-output schema.
+5. At least a basic validator that checks required fields and types.
+6. A safe response for rejection or provider failure.
+
+If the application has no business rules yet, begin with structural validation
+instead of accepting everything:
+
+```ts
+const basicDomain: SemanticDomain<{ message: string }, { answer: string }> = {
+  name: "basic-answer",
+  schemaVersion: 1,
+  validate: (proposal) =>
+    typeof proposal.answer === "string" && proposal.answer.trim().length > 0,
+};
+```
+
+An application may use `validate: () => true`, but that means the engine only
+checks the provider result status. It does not protect against invented,
+omitted, or unsafe business data, so this should be reserved for experiments
+that have no side effects.
+
+## What the host application does after the result
+
+`semantic-core` never saves data or performs an external action. The host
+application decides what to do:
+
+- `ACCEPTED`: show or use the typed proposal.
+- `REJECTED`: discard it, ask the user to clarify, or use a deterministic fallback.
+- `UNAVAILABLE`: retry according to application policy or use another path.
+
+For money, account changes, notifications, or other side effects, require a
+separate deterministic validation and user-confirmation step before execution.
+
 ## Installation
 
 ```bash

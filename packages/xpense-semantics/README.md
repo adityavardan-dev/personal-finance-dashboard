@@ -17,6 +17,35 @@ entry point for semantic operations such as:
 This is an integration layer, not a complete expense application or trained
 Penny agent.
 
+## Is this package for every AI application?
+
+No. This package is intentionally expense-specific. It contains XPENSE
+operation kinds such as `PEER_SPLIT` and `PERSONAL_FOLLOW_UP`.
+
+- Expense applications can use `xpense-semantics` plus `semantic-core`.
+- Customer-support, HR, or commerce applications should use `semantic-core`
+  and define their own domain contracts.
+- Any application can use `provider-cloudflare` if it wants Cloudflare Workers
+  AI, regardless of its business domain.
+
+The consuming application still supplies its own UI, API routes, persistence,
+authentication, prompts, provider configuration, validation, and confirmation
+flow.
+
+## What an expense application must provide
+
+Before using this SDK in another expense app, provide:
+
+1. A local parser or model adapter for the chosen operations.
+2. A provider configuration, such as Cloudflare credentials, kept server-side.
+3. Validation for amounts, dates, categories, participants, and requested actions.
+4. A draft-review screen so users can correct AI proposals.
+5. Deterministic ledger calculations for splits and balances.
+6. Persistence only after explicit confirmation.
+7. Error, clarification, and provider-unavailable handling.
+
+Installing the package does not automatically create these application pieces.
+
 ## Runtime flow
 
 1. The user sends an expense message.
