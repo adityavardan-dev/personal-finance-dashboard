@@ -95,3 +95,51 @@ export interface PersonalSemanticInterpreter {
     accessToken?: string,
   ): Promise<PersonalEditProposal[] | null>;
 }
+
+interface XpenseSemanticRequestBase {
+  text: string;
+  trace?: XpenseRequestTrace;
+  accessToken?: string;
+}
+
+export interface TransactionSegmentationRequest
+  extends XpenseSemanticRequestBase {
+  kind: "TRANSACTION_SEGMENTATION";
+}
+
+export interface PeerSplitRequest extends XpenseSemanticRequestBase {
+  kind: "PEER_SPLIT";
+}
+
+export interface PeerFollowUpRequest extends XpenseSemanticRequestBase {
+  kind: "PEER_FOLLOW_UP";
+  pending: PendingSplitContext[];
+}
+
+export interface PersonalFollowUpRequest extends XpenseSemanticRequestBase {
+  kind: "PERSONAL_FOLLOW_UP";
+  drafts: PersonalDraftContext[];
+  referenceTimestamp: string;
+  timeZone?: string;
+  mode?: "EDIT" | "FILL_MISSING";
+}
+
+/** One public request contract for every XPENSE semantic operation. */
+export type XpenseSemanticRequest =
+  | TransactionSegmentationRequest
+  | PeerSplitRequest
+  | PeerFollowUpRequest
+  | PersonalFollowUpRequest;
+
+export type XpenseSemanticOperation = XpenseSemanticRequest["kind"];
+
+export type XpenseSemanticResponse<T extends XpenseSemanticRequest> =
+  T extends TransactionSegmentationRequest
+    ? string[] | null
+    : T extends PeerSplitRequest
+      ? ProposedSplit[] | null
+      : T extends PeerFollowUpRequest
+        ? SplitFollowUpProposal[] | null
+        : T extends PersonalFollowUpRequest
+          ? PersonalEditProposal[] | null
+          : never;

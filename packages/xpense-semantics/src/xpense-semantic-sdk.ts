@@ -9,6 +9,9 @@ import type {
   SplitFollowUpProposal,
   TransactionSegmentationInput,
   TransactionSegmentationProvider,
+  XpenseSemanticOperation,
+  XpenseSemanticRequest,
+  XpenseSemanticResponse,
   XpenseRequestTrace,
 } from "./contracts";
 import { TRANSACTION_SEGMENTATION_DOMAIN } from "./transaction-segmentation.domain";
@@ -22,8 +25,78 @@ export class XpenseSemanticSdk {
     private readonly personalInterpreter?: PersonalSemanticInterpreter,
   ) {}
 
-  isConfigured(): boolean {
-    return this.transactionProvider.isConfigured();
+  isConfigured(
+    kind: XpenseSemanticOperation = "TRANSACTION_SEGMENTATION",
+  ): boolean {
+    switch (kind) {
+      case "TRANSACTION_SEGMENTATION":
+        return this.transactionProvider.isConfigured();
+      case "PEER_SPLIT":
+      case "PEER_FOLLOW_UP":
+        return this.splitInterpreter?.isConfigured() ?? false;
+      case "PERSONAL_FOLLOW_UP":
+        return this.personalInterpreter?.isConfigured() ?? false;
+    }
+  }
+
+  /** Routes every semantic task through one stable public contract. */
+  async interpret<T extends XpenseSemanticRequest>(
+    request: T,
+  ): Promise<XpenseSemanticResponse<T>> {
+    let response:
+      | string[]
+      | ProposedSplit[]
+      | SplitFollowUpProposal[]
+      | PersonalEditProposal[]
+      | null;
+
+    switch (request.kind) {
+      case "TRANSACTION_SEGMENTATION": {
+        const input: TransactionSegmentationInput = request;
+        const result = await this.engine.interpret(
+          input,
+          TRANSACTION_SEGMENTATION_DOMAIN,
+          [this.transactionProvider],
+        );
+        response =
+          result.status === "ACCEPTED" ? result.value.segments : null;
+        break;
+      }
+      case "PEER_SPLIT":
+        response = this.splitInterpreter
+          ? await this.splitInterpreter.interpret(
+              request.text,
+              request.trace,
+              request.accessToken,
+            )
+          : null;
+        break;
+      case "PEER_FOLLOW_UP":
+        response = this.splitInterpreter
+          ? await this.splitInterpreter.interpretFollowUp(
+              request.text,
+              request.pending,
+              request.trace,
+              request.accessToken,
+            )
+          : null;
+        break;
+      case "PERSONAL_FOLLOW_UP":
+        response = this.personalInterpreter
+          ? await this.personalInterpreter.interpret(
+              request.text,
+              request.drafts,
+              request.referenceTimestamp,
+              request.timeZone,
+              request.mode ?? "EDIT",
+              request.trace,
+              request.accessToken,
+            )
+          : null;
+        break;
+    }
+
+    return response as XpenseSemanticResponse<T>;
   }
 
   async segment(
@@ -31,17 +104,16 @@ export class XpenseSemanticSdk {
     trace?: XpenseRequestTrace,
     accessToken?: string,
   ): Promise<string[] | null> {
-    const input: TransactionSegmentationInput = { text, trace, accessToken };
-    const result = await this.engine.interpret(
-      input,
-      TRANSACTION_SEGMENTATION_DOMAIN,
-      [this.transactionProvider],
-    );
-    return result.status === "ACCEPTED" ? result.value.segments : null;
+    return this.interpret({
+      kind: "TRANSACTION_SEGMENTATION",
+      text,
+      trace,
+      accessToken,
+    });
   }
 
   isPeerConfigured(): boolean {
-    return this.splitInterpreter?.isConfigured() ?? false;
+    return this.isConfigured("PEER_SPLIT");
   }
 
   interpretPeerSplits(
@@ -49,10 +121,7 @@ export class XpenseSemanticSdk {
     trace?: XpenseRequestTrace,
     accessToken?: string,
   ): Promise<ProposedSplit[] | null> {
-    return (
-      this.splitInterpreter?.interpret(text, trace, accessToken) ??
-      Promise.resolve(null)
-    );
+    return this.interpret({ kind: "PEER_SPLIT", text, trace, accessToken });
   }
 
   interpretPeerFollowUp(
@@ -61,18 +130,17 @@ export class XpenseSemanticSdk {
     trace?: XpenseRequestTrace,
     accessToken?: string,
   ): Promise<SplitFollowUpProposal[] | null> {
-    return (
-      this.splitInterpreter?.interpretFollowUp(
-        text,
-        pending,
-        trace,
-        accessToken,
-      ) ?? Promise.resolve(null)
-    );
+    return this.interpret({
+      kind: "PEER_FOLLOW_UP",
+      text,
+      pending,
+      trace,
+      accessToken,
+    });
   }
 
   isPersonalFollowUpConfigured(): boolean {
-    return this.personalInterpreter?.isConfigured() ?? false;
+    return this.isConfigured("PERSONAL_FOLLOW_UP");
   }
 
   interpretPersonalFollowUp(
@@ -84,16 +152,15 @@ export class XpenseSemanticSdk {
     trace?: XpenseRequestTrace,
     accessToken?: string,
   ): Promise<PersonalEditProposal[] | null> {
-    return (
-      this.personalInterpreter?.interpret(
-        text,
-        drafts,
-        referenceTimestamp,
-        timeZone,
-        mode,
-        trace,
-        accessToken,
-      ) ?? Promise.resolve(null)
-    );
+    return this.interpret({
+      kind: "PERSONAL_FOLLOW_UP",
+      text,
+      drafts,
+      referenceTimestamp,
+      timeZone,
+      mode,
+      trace,
+      accessToken,
+    });
   }
 }

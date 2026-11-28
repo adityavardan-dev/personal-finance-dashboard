@@ -25,8 +25,16 @@ const sdk = new XpenseSemanticSdk(
   personalFollowUpInterpreter,
 );
 
-const segments = await sdk.segment("coffee 180, metro 70 and lunch 350 today");
+const segments = await sdk.interpret({
+  kind: "TRANSACTION_SEGMENTATION",
+  text: "coffee 180, metro 70 and lunch 350 today",
+});
 ```
+
+The same `interpret(request)` entry point handles `PEER_SPLIT`,
+`PEER_FOLLOW_UP`, and `PERSONAL_FOLLOW_UP`. The `kind` field selects the
+operation and TypeScript requires only the context needed by that operation.
+The older named methods remain as compatibility wrappers during migration.
 
 ## Adapter responsibilities
 

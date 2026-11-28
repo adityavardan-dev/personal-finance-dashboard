@@ -22,6 +22,38 @@ describe('XpenseSemanticSdk', () => {
     ]);
   });
 
+  it('routes semantic operations through one request contract', async () => {
+    const provider = {
+      name: 'test-provider',
+      isConfigured: () => true,
+      extract: jest.fn().mockResolvedValue({
+        status: 'SUCCESS',
+        value: { segments: ['coffee 180', 'metro 70'] },
+      }),
+    } as unknown as CloudflareTransactionSegmentationProvider;
+    const splitInterpreter = {
+      isConfigured: () => true,
+      interpret: jest
+        .fn()
+        .mockResolvedValue([{ amount: '900', peopleCount: '3' }]),
+    } as unknown as CloudflareSplitInterpreter;
+    const sdk = new XpenseSemanticSdk(
+      new SemanticEngine(),
+      provider,
+      splitInterpreter,
+    );
+
+    await expect(
+      sdk.interpret({
+        kind: 'TRANSACTION_SEGMENTATION',
+        text: 'coffee 180 metro 70',
+      }),
+    ).resolves.toEqual(['coffee 180', 'metro 70']);
+    await expect(
+      sdk.interpret({ kind: 'PEER_SPLIT', text: 'split 900 among three' }),
+    ).resolves.toEqual([{ amount: '900', peopleCount: '3' }]);
+  });
+
   it('returns null when XPENSE rejects invented provider text', async () => {
     const provider = {
       name: 'test-provider',
