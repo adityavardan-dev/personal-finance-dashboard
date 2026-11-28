@@ -131,3 +131,14 @@ for debugging and observability.
 
 This package is currently in the `0.x` release line. Public contracts may
 evolve between minor releases; pin the version when adopting it in production.
+
+## License & Attribution
+
+This package is licensed under the Apache License, Version 2.0. Copyright 2026
+Adityavardan. Forks, modified versions, and derivative redistributions must
+retain the included `LICENSE` and `NOTICE` attribution files crediting
+Adityavardan as the original creator.
+
+Applications using `@adityavardan/provider-cloudflare` supply their own
+Cloudflare account ID and API token. Any optional managed hosted service is a
+separate offering and is not required to use this open-source package.

@@ -1,3 +1,5 @@
+// Copyright 2026 Adityavardan. Licensed under the Apache License, Version 2.0.
+
 import type { SemanticProviderResult } from "@adityavardan/semantic-core";
 
 const DEFAULT_MODEL = "@cf/google/gemma-4-26b-a4b-it";

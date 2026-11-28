@@ -1,3 +1,5 @@
+// Copyright 2026 Adityavardan. Licensed under the Apache License, Version 2.0.
+
 export type SemanticProviderResult<T> =
   | { status: "SUCCESS"; value: T }
   | { status: "UNAVAILABLE"; reason?: string }

@@ -1,6 +1,14 @@
 {
   "name": "personal-finance-dashboard-workspace",
   "private": true,
+  "license": "Apache-2.0",
+  "author": "adityavardan",
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
   "workspaces": [
     "backend",
     "packages/*"
